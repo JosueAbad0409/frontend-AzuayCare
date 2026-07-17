@@ -1,0 +1,23 @@
+<div class="login-container">
+  <div class="login-card">
+    <h1 class="title">AzuayCare</h1>
+    <p class="subtitle">Acceso exclusivo para la comunidad del Tec Azuay</p>
+
+    <!-- Alerta de error si existe -->
+    @if (error()) {
+      <div class="error-alert" style="color: #ef4444; background-color: #fee2e2; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; text-align: center;">
+        {{ error() }}
+      </div>
+    }
+
+    <!-- Indicador de carga -->
+    @if (isLoading()) {
+      <div class="loading-spinner" style="text-align: center; padding: 1rem;">
+        <p>Iniciando sesión en AzuayCare...</p>
+      </div>
+    }
+
+    <!-- Contenedor donde Google renderizará el botón oficial -->
+    <div id="googleBtn" [style.display]="isLoading() ? 'none' : 'block'"></div>
+  </div>
+</div>
