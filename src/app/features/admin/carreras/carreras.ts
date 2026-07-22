@@ -8,8 +8,8 @@ import { CarreraService } from '../../../core/services/carrera/carrera.service';
   selector: 'app-carreras',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './carreras.component.html',
-  styleUrls: ['./carreras.component.css']
+  templateUrl: './carreras.html',
+  styleUrls: ['./carreras.css']
 })
 // IMPORTANTE: Mantenemos el nombre con "Component" al final
 export class Carreras implements OnInit {
