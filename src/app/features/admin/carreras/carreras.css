@@ -1,4 +1,122 @@
-/* --- ESTILOS DE LA TARJETA DEL FORMULARIO --- */
+/* =========================================
+   1. CONTENEDOR PRINCIPAL Y CABECERA
+   ========================================= */
+.carreras-container {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    color: #333;
+    /* Para que las letras no se pierdan en fondos oscuros */
+}
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.header-actions h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.btn-primary {
+    background-color: #9333ea;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #7e22ce;
+}
+
+/* =========================================
+   2. ESTILOS DE LA TABLA
+   ========================================= */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.admin-table th {
+    text-align: left;
+    padding: 1rem;
+    background-color: #f8fafc;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.admin-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge.active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin-right: 0.8rem;
+    transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 0.7;
+}
+
+.text-blue {
+    color: #3b82f6;
+}
+
+.text-red {
+    color: #ef4444;
+}
+
+.empty-state,
+.loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: #64748b;
+}
+
+/* =========================================
+   3. ESTILOS DE LA TARJETA DEL FORMULARIO
+   ========================================= */
 .form-card {
     background-color: #f8fafc;
     border: 1px solid #e2e8f0;
