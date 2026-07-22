@@ -1,13 +1,31 @@
 :host {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 1rem;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Capa de fondo optimizada: colores más vivos y difuminado sutil */
+:host::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Degradado con mayor transparencia (0.45) para recuperar la viveza de la foto original */
+  background: 
+    linear-gradient(135deg, rgba(15, 23, 42, 0.45) 0%, rgba(21, 128, 61, 0.45) 100%), 
+    var(--bg-image) no-repeat center center / cover;
+  filter: blur(5px); /* Difuminado ideal: se distingue el campus pero mantiene el enfoque en la tarjeta */
+  transform: scale(1.08); /* Evita bordes blancos por el blur */
+  z-index: 0;
 }
 
 .login-container {
@@ -15,48 +33,85 @@
   justify-content: center;
   align-items: center;
   width: 100%;
+  z-index: 10;
 }
 
+/* Tarjeta con efecto Glassmorphism Premium y Animación de entrada */
 .login-card {
-  background: #ffffff;
-  padding: 2.5rem 2rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  max-width: 400px;
+  background: rgba(255, 255, 255, 0.88); /* Equilibrio perfecto entre legibilidad y transparencia */
+  padding: 3.5rem 2.5rem;
+  border-radius: 24px;
+  /* Sombra suave y difusa de alta gama */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); 
+  max-width: 420px;
   width: 100%;
   text-align: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  
+  /* Animación de entrada fluida acelerada por hardware */
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .title {
   color: #15803d; /* Verde institucional */
-  font-size: 2.25rem;
-  font-weight: 800;
+  font-size: 2.85rem;
+  font-weight: 850;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.05em;
+  /* Animación para el título */
+  animation: fadeIn 1s ease-out 0.2s both;
 }
 
 .subtitle {
-  color: #64748b;
+  color: #475569;
   font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0 0 2rem 0;
+  font-weight: 500;
+  line-height: 1.6;
+  margin: 0 0 2.5rem 0;
+  /* Animación retrasada para que aparezca después del título */
+  animation: fadeIn 1s ease-out 0.4s both;
 }
 
-.google-btn-wrapper {
+/* Estilo del botón de Google para integrarlo estéticamente */
+#googleBtn {
   margin-top: 1.5rem;
   display: flex;
   justify-content: center;
   min-height: 44px;
+  animation: fadeIn 1s ease-out 0.6s both;
 }
 
-/* Spinner de carga */
+/* Spinner de carga estilizado */
 .loading-spinner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   color: #15803d;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.95rem;
+}
+
+/* === ANIMACIONES LIGERAS (CSS puro, sin JavaScript) === */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px); /* Empieza un poco más abajo */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); /* Sube suavemente a su posición final */
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

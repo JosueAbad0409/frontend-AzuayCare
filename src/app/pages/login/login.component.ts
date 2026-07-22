@@ -11,6 +11,9 @@ const GOOGLE_CLIENT_ID = '474214477775-havio993ai951vg8511jfrtovtb66cjc.apps.goo
   imports: [CommonModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
+  host: {
+    style: "--bg-image: url('/images/tec-azuay-inicio-sesion.jpg');"
+  }
 })
 export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
@@ -47,7 +50,6 @@ export class LoginComponent implements OnInit {
         cancel_on_tap_outside: true,
       });
 
-      // Renderiza el botón oficial automáticamente en el elemento "googleBtn"
       google.accounts.id.renderButton(
         document.getElementById('googleBtn'),
         { theme: 'outline', size: 'large', width: '100%', shape: 'rectangular' }
