@@ -1,0 +1,111 @@
+<div class="carreras-card animate-fade-in">
+  
+  <!-- CABECERA -->
+  <div class="header-section">
+    <div>
+      <h3 class="title">Gestión de Carreras</h3>
+      <p class="subtitle">Administra las especialidades tecnológicas del Instituto Tec Azuay.</p>
+    </div>
+    
+    <button class="btn btn-purple" (click)="abrirNuevoFormulario()" *ngIf="!showForm()">
+      <i class="fas fa-plus"></i> Nueva Carrera
+    </button>
+  </div>
+
+  <!-- FORMULARIO DE CREACIÓN/EDICIÓN -->
+  <div class="form-card animate-slide-down" *ngIf="showForm()">
+    <div class="form-header">
+      <h4>{{ isEditing() ? 'Editar Carrera' : 'Registrar Nueva Carrera' }}</h4>
+      <p>Ingresa los datos institucionales correspondientes.</p>
+    </div>
+
+    <form [formGroup]="carreraForm" (ngSubmit)="guardarCarrera()">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre de la Carrera</label>
+          <input type="text" formControlName="nombre" placeholder="Ej. Desarrollo de Software" class="form-control">
+          <span class="error-msg" *ngIf="carreraForm.get('nombre')?.touched && carreraForm.get('nombre')?.invalid">
+            El nombre es obligatorio.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Correo Institucional</label>
+          <input type="email" formControlName="correo_institucional" placeholder="ejemplo@tecazuay.edu.ec" class="form-control">
+          <span class="error-msg" *ngIf="carreraForm.get('correo_institucional')?.touched && carreraForm.get('correo_institucional')?.invalid">
+            Ingresa un correo institucional válido.
+          </span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" (click)="cancelarFormulario()">Cancelar</button>
+        <button type="submit" class="btn btn-purple" [disabled]="carreraForm.invalid">
+          <i class="fas fa-save"></i> Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- BUSCADOR -->
+  <div class="search-bar-wrapper" *ngIf="!isLoading()">
+    <div class="search-input-box">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        placeholder="Buscar por carrera o correo..." 
+        [value]="searchTerm()"
+        (input)="onSearchChange($event)"
+        class="search-control"
+      />
+    </div>
+    <span class="count-badge">{{ carrerasFiltradas().length }} Carrera(s)</span>
+  </div>
+
+  <!-- ESTADO DE CARGA -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
+    <p>Cargando lista de carreras...</p>
+  </div>
+
+  <!-- TABLA DE DATOS -->
+  <div class="table-container" *ngIf="!isLoading()">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Nombre de la Carrera</th>
+          <th>Correo Institucional</th>
+          <th>Estado</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let carrera of carrerasFiltradas()">
+          <td><strong>{{ carrera.nombre }}</strong></td>
+          <td class="text-muted">{{ carrera.correo_institucional }}</td>
+          <td>
+            <span class="badge" [ngClass]="{'badge-success': !carrera.fecha_desactivacion, 'badge-danger': carrera.fecha_desactivacion}">
+              <i class="fas" [ngClass]="carrera.fecha_desactivacion ? 'fa-times-circle' : 'fa-check-circle'"></i>
+              {{ carrera.fecha_desactivacion ? 'Inactiva' : 'Activa' }}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <button class="btn-icon text-blue" (click)="abrirEditarFormulario(carrera)" title="Editar">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-icon text-red" (click)="eliminarCarrera(carrera.id)" title="Eliminar">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="carrerasFiltradas().length === 0">
+          <td colspan="4" class="empty-state">
+            <i class="fas fa-folder-open empty-icon"></i>
+            <p>No se encontraron carreras que coincidan con la búsqueda.</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

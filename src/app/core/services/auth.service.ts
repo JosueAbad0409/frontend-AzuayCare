@@ -1,8 +1,8 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 const STORAGE_KEY = 'azuaycare_access_token';
 
-// Interfaz estricta para el usuario logueado en AzuayCare
 export interface UsuarioLogueado {
   id: string;
   email: string;
@@ -16,10 +16,9 @@ export class AuthService {
   readonly token = signal<string | null>(null);
   readonly user = signal<UsuarioLogueado | null>(null);
   
-  // Signal calculado para validar la sesión de forma instantánea
   readonly isLoggedIn = computed(() => !!this.token());
 
-  private readonly apiUrl = 'https://azuaycare-backend.onrender.com/auth'; 
+  private readonly apiUrl = `${environment.apiUrl}/auth`; 
 
   constructor() {
     this.loadFromStorage();
