@@ -7,25 +7,23 @@ import { CarreraService } from '../../../core/services/carrera/carrera.service';
 @Component({
   selector: 'app-carreras',
   standalone: true,
-  // IMPORTANTE: Añadimos ReactiveFormsModule para poder usar formularios
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './carreras.component.html',
   styleUrls: ['./carreras.component.css']
 })
+// IMPORTANTE: Mantenemos el nombre con "Component" al final
 export class Carreras implements OnInit {
   private readonly carreraService = inject(CarreraService);
-  private readonly fb = inject(FormBuilder);
   
   carreras = signal<Carrera[]>([]);
   isLoading = signal<boolean>(true);
   
-  // Variables para controlar la tarjeta del formulario
   showForm = signal<boolean>(false);
   isEditing = signal<boolean>(false);
   currentId = signal<string | null>(null);
   
-  // Nuestro formulario reactivo con las validaciones de tu DTO
-  carreraForm: FormGroup = this.fb.group({
+  // SOLUCIÓN: Inyectamos el FormBuilder directamente aquí para evitar el error de "undefined"
+  carreraForm: FormGroup = inject(FormBuilder).group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     correo_institucional: ['', [Validators.required, Validators.email, Validators.maxLength(150)]]
   });
@@ -51,6 +49,7 @@ export class Carreras implements OnInit {
   // --- BOTONES DE ACCIÓN ---
 
   abrirNuevoFormulario() {
+    console.log('¡Botón Nueva Carrera presionado!'); // <- Si esto sale en F12, el click funciona
     this.carreraForm.reset();
     this.isEditing.set(false);
     this.currentId.set(null);
@@ -58,9 +57,9 @@ export class Carreras implements OnInit {
   }
 
   abrirEditarFormulario(carrera: Carrera) {
+    console.log('¡Botón Editar presionado!', carrera);
     this.isEditing.set(true);
     this.currentId.set(carrera.id);
-    // Llenamos el formulario con los datos actuales
     this.carreraForm.patchValue({
       nombre: carrera.nombre,
       correo_institucional: carrera.correo_institucional
@@ -77,26 +76,26 @@ export class Carreras implements OnInit {
 
   guardarCarrera() {
     if (this.carreraForm.invalid) {
+      console.log('Formulario inválido, revisa los campos requeridos.');
       this.carreraForm.markAllAsTouched();
       return;
     }
 
     const formData = this.carreraForm.value;
+    console.log('Enviando datos al backend...', formData);
 
     if (this.isEditing() && this.currentId()) {
-      // ACTUALIZAR
       this.carreraService.updateCarrera(this.currentId()!, formData).subscribe({
         next: () => {
-          this.cargarCarreras(); // Recargamos la tabla
+          this.cargarCarreras(); 
           this.cancelarFormulario();
         },
         error: (err) => console.error('Error al actualizar', err)
       });
     } else {
-      // CREAR
       this.carreraService.createCarrera(formData).subscribe({
         next: () => {
-          this.cargarCarreras(); // Recargamos la tabla
+          this.cargarCarreras(); 
           this.cancelarFormulario();
         },
         error: (err) => console.error('Error al crear', err)
