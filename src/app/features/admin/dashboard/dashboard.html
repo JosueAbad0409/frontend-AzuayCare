@@ -3,7 +3,6 @@
     <nav class="top-navbar">
         <div class="brand-section">
             <div class="logo-icon">
-                <!-- Puedes poner un icono SVG aquí -->
                 <i class="fas fa-layer-group"></i>
             </div>
             <div class="brand-text">
@@ -12,16 +11,16 @@
             </div>
         </div>
 
-        <!-- INDICADORES DE ROL ESTÁTICOS -->
+        <!-- INDICADORES DE ROL -->
         <div class="role-indicators">
             <div class="role-badge inactive"><i class="fas fa-user"></i> Estudiante</div>
-            <div class="role-badge inactive"><i class="fas fa-chalkboard-teacher"></i> Coordinador de Carrera</div>
-            <div class="role-badge active"><i class="fas fa-shield-alt"></i> Bienestar Estudiantil / Admin</div>
+            <div class="role-badge inactive"><i class="fas fa-chalkboard-teacher"></i> Coord. Carrera</div>
+            <div class="role-badge active"><i class="fas fa-shield-alt"></i> Bienestar Estudiantil</div>
         </div>
 
         <!-- ACCIONES DE SESIÓN -->
         <div class="session-actions">
-            <span class="global-access">• ACCESO GLOBAL • ISTA</span>
+            <span class="global-access">• ACCESO GLOBAL •</span>
             <button class="btn-logout" (click)="logout()">
                 <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
             </button>
@@ -29,23 +28,21 @@
     </nav>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="dashboard-content">
+    <main class="dashboard-content animate-fade-in">
 
-        <!-- BANNER OSCURO -->
+        <!-- BANNER PRINCIPAL -->
         <header class="main-banner">
             <div class="banner-info">
                 <span class="banner-subtitle">BIENESTAR ESTUDIANTIL Y RECTORADO • ISTA</span>
                 <h2>Tablero de Control Socioeconómico Global</h2>
-                <p>Vista consolidadora de las especialidades tecnológicas. Monitoreo en tiempo real de vulnerabilidades,
-                    becas, y adaptaciones pedagógicas.</p>
+                <p>Vista consolidadora de las especialidades tecnológicas. Monitoreo en tiempo real de vulnerabilidades, becas y estadísticas socioeconómicas.</p>
             </div>
             <div class="banner-actions">
-                <a routerLink="/admin/carreras" class="btn-primary"
-                    style="background-color: #3b82f6; text-decoration: none;">
+                <a routerLink="/admin/carreras" class="btn btn-blue">
                     <i class="fas fa-university"></i> Gestionar Carreras
                 </a>
-                <button class="btn-primary"><i class="fas fa-file-excel"></i> Exportar General a Excel</button>
-                <button class="btn-secondary"><i class="fas fa-file-pdf"></i> Reporte PDF</button>
+                <button class="btn btn-primary"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                <button class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.3);"><i class="fas fa-file-pdf"></i> Reporte PDF</button>
             </div>
         </header>
 
@@ -53,13 +50,12 @@
         <nav class="tabs-nav">
             <button class="tab-btn active"><i class="fas fa-chart-bar"></i> Estadísticas y Gráficas</button>
             <button class="tab-btn"><i class="fas fa-search"></i> Buscador General Estudiantes</button>
-            <button class="tab-btn"><i class="fas fa-heart"></i> Reporte Necesidades Educativas</button>
-            <button class="tab-btn"><i class="fas fa-exclamation-triangle"></i> Permisos de Edición (1)</button>
+            <button class="tab-btn"><i class="fas fa-heart"></i> Necesidades Educativas</button>
+            <button class="tab-btn"><i class="fas fa-exclamation-triangle"></i> Permisos de Edición</button>
         </nav>
 
-        <!-- AQUÍ IRÁN LAS TARJETAS (KPIs) Y GRÁFICAS -->
         <section class="metrics-area">
-            <!-- El contenido de las tarjetas blancas lo agregaremos en el siguiente paso -->
+            <!-- Espacio reservado para las tarjetas KPIs/Métricas -->
         </section>
 
     </main>
