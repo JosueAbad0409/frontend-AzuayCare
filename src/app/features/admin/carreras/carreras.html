@@ -1,0 +1,44 @@
+<div class="carreras-container">
+    <div class="header-actions">
+        <h3>Gestión de Carreras</h3>
+        <button class="btn-primary"><i class="fas fa-plus"></i> Nueva Carrera</button>
+    </div>
+
+    <div *ngIf="isLoading()" class="loading-state">
+        <p>Cargando carreras...</p>
+    </div>
+
+    <div *ngIf="error()" class="error-state">
+        <p>{{ error() }}</p>
+    </div>
+
+    <table class="admin-table" *ngIf="!isLoading() && !error()">
+        <thead>
+            <tr>
+                <th>Nombre de la Carrera</th>
+                <th>Correo Institucional</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let carrera of carreras()">
+                <td>{{ carrera.nombre }}</td>
+                <td>{{ carrera.correo_institucional }}</td>
+                <td>
+                    <span class="badge"
+                        [ngClass]="{'active': !carrera.fecha_desactivacion, 'inactive': carrera.fecha_desactivacion}">
+                        {{ carrera.fecha_desactivacion ? 'Inactiva' : 'Activa' }}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-icon text-blue"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon text-red"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr *ngIf="carreras().length === 0">
+                <td colspan="4" class="empty-state">No hay carreras registradas.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
