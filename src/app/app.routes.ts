@@ -13,8 +13,19 @@ export const routes: Routes = [
   // EL ADMIN SÍ LLEVA AUTHGUARD (Está protegido)
   { 
     path: 'admin',
-    loadComponent: () => import('./features/admin/dashboard/dashboard').then(m => m.Dashboard),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard],
+    // Fíjate que aquí usamos un "Layout" principal si tuviéramos uno, pero como tu Dashboard 
+    // es tu vista principal, lo dejaremos como la raíz del admin.
+    children: [
+      { 
+        path: '', // La ruta por defecto (/admin)
+        loadComponent: () => import('./features/admin//dashboard/dashboard').then(m => m.Dashboard)
+      },
+      { 
+        path: 'carreras', // La nueva ruta (/admin/carreras)
+        loadComponent: () => import('./features/admin/carreras/carreras').then(m => m.Carreras)
+      }
+    ]
   },
 
   // COMODÍN PARA RUTAS NO ENCONTRADAS
