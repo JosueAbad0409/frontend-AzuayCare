@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
-const GOOGLE_CLIENT_ID = '474214477775-havio993ai951vg8511jfrtovtb66cjc.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '474214477775-m9ci1dg4p6i20s7548et5sfto14750lp.apps.googleusercontent.com';
 
 @Component({
   selector: 'app-login',
