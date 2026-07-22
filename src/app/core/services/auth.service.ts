@@ -19,7 +19,7 @@ export class AuthService {
   // Signal calculado para validar la sesión de forma instantánea
   readonly isLoggedIn = computed(() => !!this.token());
 
-  private readonly apiUrl = 'https://azuaycare-backend.onrender.com'; 
+  private readonly apiUrl = 'https://azuaycare-backend.onrender.com/auth'; 
 
   constructor() {
     this.loadFromStorage();
