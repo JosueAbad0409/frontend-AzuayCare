@@ -1,280 +1,150 @@
 @import "tailwindcss";
 
-/* ==========================================================================
-   1. VARIABLES DE TEMA (Design Tokens)
-   ========================================================================== */
+/* ==========================================
+   1. VARIABLES DE DISEÑO & TEMA GLOBAL
+   ========================================== */
 :root {
-  /* Paleta Principal AzuayCare / Tec Azuay */
   --primary: #15803d;
   --primary-hover: #166534;
-  --primary-light: #dcfce7;
-  
-  --secondary: #9333ea;
-  --secondary-hover: #7e22ce;
-  --secondary-light: #f3e8ff;
+  --primary-light: rgba(21, 128, 61, 0.08);
 
-  --accent-blue: #3b82f6;
-  --accent-blue-hover: #2563eb;
-  
-  --dark-nav: #0f172a;
-  --dark-banner: #1e1b4b;
+  --accent-purple: #9333ea;
+  --accent-purple-hover: #7e22ce;
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+
+  --bg-dark: #0f172a;
   --bg-main: #f8fafc;
   --card-bg: #ffffff;
 
-  /* Estados */
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --info: #06b6d4;
-
-  /* Bordes & Sombras */
   --border-color: #e2e8f0;
-  --text-primary: #0f172a;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
 
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 40px -10px rgba(15, 23, 42, 0.12);
   --shadow-glow: 0 0 20px rgba(147, 51, 234, 0.25);
 }
 
-/* ==========================================================================
-   2. REGLAS BASE Y RESET
-   ========================================================================== */
-* {
-  box-sizing: border-box;
-}
-
-body {
+/* ==========================================
+   2. RESETEO Y RENDIMIENTO GLOBAL
+   ========================================== */
+html, body {
+  height: 100%;
+  width: 100%;
   margin: 0;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
+  padding: 0;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ==========================================================================
-   3. COMPONENTES REUTILIZABLES DE ALTA GAMA
-   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
-/* --- BOTONES BASE --- */
+/* ==========================================
+   3. CLASES DE BOTONES REUSABLES (UI KIT)
+   ========================================== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
-  border-radius: var(--radius-sm);
+  padding: 0.65rem 1.3rem;
   font-size: 0.875rem;
   font-weight: 600;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
   text-decoration: none;
-  user-select: none;
-}
-
-.btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.97) !important;
 }
 
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none !important;
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
 }
 
-/* Variantes de Botón */
-.btn-primary { background-color: var(--primary); color: #ffffff; }
-.btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(21, 128, 61, 0.35);
+}
 
-.btn-secondary { background-color: var(--secondary); color: #ffffff; }
-.btn-secondary:hover:not(:disabled) { background-color: var(--secondary-hover); }
+.btn-purple {
+  background-color: var(--accent-purple);
+  color: white;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
+}
 
-.btn-blue { background-color: var(--accent-blue); color: #ffffff; }
-.btn-blue:hover:not(:disabled) { background-color: var(--accent-blue-hover); }
+.btn-purple:hover:not(:disabled) {
+  background-color: var(--accent-purple-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(147, 51, 234, 0.35);
+}
+
+.btn-blue {
+  background-color: var(--accent-blue);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-blue:hover:not(:disabled) {
+  background-color: var(--accent-blue-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
 
 .btn-outline {
-  background-color: transparent;
+  background: transparent;
   border-color: var(--border-color);
   color: var(--text-secondary);
 }
+
 .btn-outline:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--text-muted);
+  color: var(--text-main);
+  transform: translateY(-1px);
 }
 
-.btn-danger { background-color: var(--danger); color: #ffffff; }
-.btn-danger:hover:not(:disabled) { background-color: #dc2626; }
-
-.btn-icon {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.45rem;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-.btn-icon:hover {
-  background-color: #f1f5f9;
-  color: var(--text-primary);
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* --- TARJETAS GLASSMORPHISM & CARD --- */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-md);
-  transition: border-color 0.2s ease;
-}
-
-.card-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-}
-
-/* --- TABLAS ELEGANTES --- */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background-color: var(--card-bg);
-}
-
-.table-custom {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.table-custom th {
-  background-color: #f8fafc;
-  color: var(--text-secondary);
-  padding: 1rem 1.25rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid var(--border-color);
-}
-
-.table-custom td {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-}
-
-.table-custom tr:last-child td {
-  border-bottom: none;
-}
-
-.table-custom tr:hover {
-  background-color: #f8fafc;
-}
-
-/* --- BADGES / ETIQUETAS DE ESTADO --- */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem 0.75rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.025em;
 }
 
-.badge-success { background-color: #d1fae5; color: #065f46; }
-.badge-danger { background-color: #fee2e2; color: #991b1b; }
-.badge-warning { background-color: #fef3c7; color: #92400e; }
-.badge-info { background-color: #dbeafe; color: #1e40af; }
-
-/* --- CONTROLES DE FORMULARIO --- */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 1.2rem;
-}
-
-.form-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.7rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  background-color: #ffffff;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.form-control:focus {
-  border-color: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
-}
-
-.form-control::placeholder {
-  color: var(--text-muted);
-}
-
-/* ==========================================================================
-   4. ANIMACIONES FLUIDAS Y TRANSICIONES
-   ========================================================================== */
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-fade-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-slide-down { animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-danger { background: #fee2e2; color: #991b1b; }

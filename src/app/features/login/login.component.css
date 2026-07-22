@@ -1,117 +1,122 @@
 :host {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  margin: 0;
-  padding: 1rem;
-  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
   overflow: hidden;
 }
 
-/* Capa de fondo optimizada: colores más vivos y difuminado sutil */
+/* Fondo dinámico difuminado */
 :host::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Degradado con mayor transparencia (0.45) para recuperar la viveza de la foto original */
+  inset: 0;
   background: 
-    linear-gradient(135deg, rgba(15, 23, 42, 0.45) 0%, rgba(21, 128, 61, 0.45) 100%), 
+    radial-gradient(circle at 15% 20%, rgba(21, 128, 61, 0.45), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(147, 51, 234, 0.35), transparent 45%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%),
     var(--bg-image) no-repeat center center / cover;
-  filter: blur(5px); /* Difuminado ideal: se distingue el campus pero mantiene el enfoque en la tarjeta */
-  transform: scale(1.08); /* Evita bordes blancos por el blur */
+  filter: blur(6px);
+  transform: scale(1.08);
   z-index: 0;
+  will-change: transform;
 }
 
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  z-index: 10;
-}
-
-/* Tarjeta con efecto Glassmorphism Premium y Animación de entrada */
 .login-card {
-  background: rgba(255, 255, 255, 0.88); /* Equilibrio perfecto entre legibilidad y transparencia */
-  padding: 3.5rem 2.5rem;
-  border-radius: 24px;
-  /* Sombra suave y difusa de alta gama */
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); 
-  max-width: 420px;
-  width: 100%;
+  position: relative;
+  z-index: 10;
+  width: 90%;
+  max-width: 440px;
+  padding: 3rem 2.25rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-lg);
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(12px); 
-  -webkit-backdrop-filter: blur(12px);
-  
-  /* Animación de entrada fluida acelerada por hardware */
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: rgba(21, 128, 61, 0.1);
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.25rem;
 }
 
 .title {
-  color: #15803d; /* Verde institucional */
-  font-size: 2.85rem;
-  font-weight: 850;
+  color: #0f172a;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   margin: 0 0 0.5rem 0;
-  letter-spacing: -0.05em;
-  /* Animación para el título */
-  animation: fadeIn 1s ease-out 0.2s both;
 }
 
 .subtitle {
-  color: #475569;
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.6;
-  margin: 0 0 2.5rem 0;
-  /* Animación retrasada para que aparezca después del título */
-  animation: fadeIn 1s ease-out 0.4s both;
+  color: #64748b;
+  font-size: 0.925rem;
+  line-height: 1.5;
+  margin: 0 0 2rem 0;
 }
 
-/* Estilo del botón de Google para integrarlo estéticamente */
-#googleBtn {
-  margin-top: 1.5rem;
+.google-btn-wrapper {
   display: flex;
   justify-content: center;
-  min-height: 44px;
-  animation: fadeIn 1s ease-out 0.6s both;
+  align-items: center;
+  min-height: 50px;
+  margin-top: 1rem;
 }
 
-/* Spinner de carga estilizado */
-.loading-spinner {
+.error-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  animation: shakeAlert 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Spinner Animado */
+.spinner-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  color: #15803d;
-  font-weight: 600;
-  font-size: 0.95rem;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem 0;
 }
 
-/* === ANIMACIONES LIGERAS (CSS puro, sin JavaScript) === */
-
-@keyframes fadeInUp {
+@keyframes modalEntrance {
   from {
     opacity: 0;
-    transform: translateY(30px); /* Empieza un poco más abajo */
+    transform: translateY(20px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0); /* Sube suavemente a su posición final */
+    transform: translateY(0) scale(1);
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+@keyframes shakeAlert {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }

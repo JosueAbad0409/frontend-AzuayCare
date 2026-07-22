@@ -4,30 +4,28 @@ import { AuthGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
-  // EL LOGIN NO LLEVA AUTHGUARD (Debe ser público)
+  // LOGIN (Público)
   { 
     path: 'login', 
     loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent)
   },
 
-  // EL ADMIN SÍ LLEVA AUTHGUARD (Está protegido)
+  // ADMIN (Protegido por AuthGuard)
   { 
     path: 'admin',
     canActivate: [AuthGuard],
-    // Fíjate que aquí usamos un "Layout" principal si tuviéramos uno, pero como tu Dashboard 
-    // es tu vista principal, lo dejaremos como la raíz del admin.
     children: [
       { 
-        path: '', // La ruta por defecto (/admin)
-        loadComponent: () => import('./features/admin//dashboard/dashboard').then(m => m.Dashboard)
+        path: '', 
+        loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.Dashboard)
       },
       { 
-        path: 'carreras', // La nueva ruta (/admin/carreras)
-        loadComponent: () => import('./features/admin/carreras/carreras').then(m => m.Carreras)
+        path: 'carreras', 
+        loadComponent: () => import('./features/admin/carreras/carreras.component').then(m => m.Carreras)
       }
     ]
   },
 
-  // COMODÍN PARA RUTAS NO ENCONTRADAS
+  // COMODÍN (Cualquier ruta no encontrada redirige a Login)
   { path: '**', redirectTo: 'login' }
 ];
