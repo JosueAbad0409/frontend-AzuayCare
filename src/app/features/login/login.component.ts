@@ -71,7 +71,7 @@ export class LoginComponent implements OnInit {
       this.isLoading.set(true);
       this.error.set('');
       await this.auth.loginWithBackend(credential);
-      await this.router.navigate(['/admin']);
+      await this.router.navigate(['/home']);
     } catch (err: any) {
       this.error.set(err?.message ?? 'Ocurrió un error al iniciar sesión en el servidor.');
     } finally {
