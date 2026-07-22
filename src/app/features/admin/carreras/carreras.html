@@ -1,45 +1,52 @@
-<div class="carreras-container">
-
-    <div class="header-actions">
-        <h3>Gestión de Carreras</h3>
-        <button class="btn-primary" (click)="abrirNuevoFormulario()" *ngIf="!showForm()">
+<div class="card animate-fade-in">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                Gestión de Carreras
+            </h3>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+                Administra las especialidades tecnológicas del Instituto Tec Azuay.
+            </p>
+        </div>
+        
+        <button class="btn btn-secondary" (click)="abrirNuevoFormulario()" *ngIf="!showForm()">
             <i class="fas fa-plus"></i> Nueva Carrera
         </button>
     </div>
 
-    <!-- TARJETA DEL FORMULARIO -->
-    <div class="form-card" *ngIf="showForm()">
-        <div class="form-header">
-            <h4>{{ isEditing() ? 'Editar Carrera' : 'Registrar Nueva Carrera' }}</h4>
-            <p>Completa los datos de la especialidad tecnológica.</p>
+    <!-- FORMULARIO DE CREACIÓN/EDICIÓN -->
+    <div class="card animate-slide-down" style="background-color: #f8fafc; margin-bottom: 2rem;" *ngIf="showForm()">
+        <div style="margin-bottom: 1.25rem;">
+            <h4 style="margin: 0; font-size: 1.05rem; color: var(--text-primary);">
+                {{ isEditing() ? 'Editar Carrera' : 'Registrar Nueva Carrera' }}
+            </h4>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+                Ingresa los datos institucionales correspondientes.
+            </p>
         </div>
 
         <form [formGroup]="carreraForm" (ngSubmit)="guardarCarrera()">
-            <div class="form-grid">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                 <div class="form-group">
                     <label>Nombre de la Carrera</label>
-                    <input type="text" formControlName="nombre" placeholder="Ej. Desarrollo de Software"
-                        class="form-control">
-                    <span class="error-msg"
-                        *ngIf="carreraForm.get('nombre')?.touched && carreraForm.get('nombre')?.invalid">
+                    <input type="text" formControlName="nombre" placeholder="Ej. Desarrollo de Software" class="form-control">
+                    <span style="color: var(--danger); font-size: 0.75rem;" *ngIf="carreraForm.get('nombre')?.touched && carreraForm.get('nombre')?.invalid">
                         El nombre es obligatorio.
                     </span>
                 </div>
 
                 <div class="form-group">
                     <label>Correo Institucional</label>
-                    <input type="email" formControlName="correo_institucional" placeholder="ejemplo@ista.edu.ec"
-                        class="form-control">
-                    <span class="error-msg"
-                        *ngIf="carreraForm.get('correo_institucional')?.touched && carreraForm.get('correo_institucional')?.invalid">
-                        Ingresa un correo válido.
+                    <input type="email" formControlName="correo_institucional" placeholder="ejemplo@tecazuay.edu.ec" class="form-control">
+                    <span style="color: var(--danger); font-size: 0.75rem;" *ngIf="carreraForm.get('correo_institucional')?.touched && carreraForm.get('correo_institucional')?.invalid">
+                        Ingresa un correo institucional válido.
                     </span>
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button type="button" class="btn-cancel" (click)="cancelarFormulario()">Cancelar</button>
-                <button type="submit" class="btn-submit" [disabled]="carreraForm.invalid">
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-outline" (click)="cancelarFormulario()">Cancelar</button>
+                <button type="submit" class="btn btn-secondary" [disabled]="carreraForm.invalid">
                     <i class="fas fa-save"></i> Guardar Cambios
                 </button>
             </div>
@@ -47,47 +54,48 @@
     </div>
 
     <!-- ESTADO DE CARGA -->
-    <div *ngIf="isLoading()" class="loading-state">
-        <i class="fas fa-spinner fa-spin"></i> Cargando carreras...
+    <div *ngIf="isLoading()" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+        <i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--secondary); margin-bottom: 0.5rem;"></i>
+        <p>Cargando lista de carreras...</p>
     </div>
 
     <!-- TABLA DE DATOS -->
-    <table class="admin-table" *ngIf="!isLoading()">
-        <thead>
-            <tr>
-                <th>Nombre de la Carrera</th>
-                <th>Correo Institucional</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr *ngFor="let carrera of carreras()">
-                <td><strong>{{ carrera.nombre }}</strong></td>
-                <td>{{ carrera.correo_institucional }}</td>
-                <td>
-                    <span class="badge"
-                        [ngClass]="{'active': !carrera.fecha_desactivacion, 'inactive': carrera.fecha_desactivacion}">
-                        {{ carrera.fecha_desactivacion ? 'Inactiva' : 'Activa' }}
-                    </span>
-                </td>
-                <td>
-                    <!-- Botón Editar -->
-                    <button class="btn-icon text-blue" (click)="abrirEditarFormulario(carrera)" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <!-- Botón Eliminar -->
-                    <button class="btn-icon text-red" (click)="eliminarCarrera(carrera.id)" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-            <tr *ngIf="carreras().length === 0">
-                <td colspan="4" class="empty-state">
-                    <i class="fas fa-folder-open"></i><br>
-                    No hay carreras registradas en el sistema.
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-container" *ngIf="!isLoading()">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Nombre de la Carrera</th>
+                    <th>Correo Institucional</th>
+                    <th>Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let carrera of carreras()">
+                    <td><strong>{{ carrera.nombre }}</strong></td>
+                    <td>{{ carrera.correo_institucional }}</td>
+                    <td>
+                        <span class="badge" [ngClass]="{'badge-success': !carrera.fecha_desactivacion, 'badge-danger': carrera.fecha_desactivacion}">
+                            <i class="fas" [ngClass]="carrera.fecha_desactivacion ? 'fa-times-circle' : 'fa-check-circle'"></i>
+                            {{ carrera.fecha_desactivacion ? 'Inactiva' : 'Activa' }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="btn-icon" (click)="abrirEditarFormulario(carrera)" title="Editar" style="color: var(--accent-blue);">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon" (click)="eliminarCarrera(carrera.id)" title="Eliminar" style="color: var(--danger);">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="carreras().length === 0">
+                    <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <i class="fas fa-folder-open fa-2x" style="margin-bottom: 0.5rem;"></i>
+                        <p>No se encontraron carreras registradas.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
