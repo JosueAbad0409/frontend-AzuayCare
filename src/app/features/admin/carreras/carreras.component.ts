@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Carrera } from '../../../core/models/carrera.model';
@@ -9,10 +9,12 @@ import { CarreraService } from '../../../core/services/carrera/carrera.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './carreras.component.html',
-  styleUrls: ['./carreras.component.css']
+  styleUrls: ['./carreras.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Carreras implements OnInit {
   private readonly carreraService = inject(CarreraService);
+  private readonly fb = inject(FormBuilder);
   
   carreras = signal<Carrera[]>([]);
   isLoading = signal<boolean>(true);
@@ -22,12 +24,11 @@ export class Carreras implements OnInit {
   isEditing = signal<boolean>(false);
   currentId = signal<string | null>(null);
   
-  carreraForm: FormGroup = inject(FormBuilder).group({
+  carreraForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     correo_institucional: ['', [Validators.required, Validators.email, Validators.maxLength(150)]]
   });
 
-  // Signal calculada para filtrar la tabla al instante sin recargar el backend
   carrerasFiltradas = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
     if (!term) return this.carreras();

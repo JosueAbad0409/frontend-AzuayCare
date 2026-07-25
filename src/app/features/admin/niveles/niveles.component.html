@@ -1,0 +1,82 @@
+<div class="carreras-card animate-fade-in">
+  <div class="header-section">
+    <div>
+      <h3 class="title">Niveles Socioeconómicos</h3>
+      <p class="subtitle">Configura los rangos de ingresos para la clasificación automática de los estudiantes.</p>
+    </div>
+    
+    @if (!showForm()) {
+      <button class="btn btn-purple" (click)="showForm.set(true)">
+        <i class="fas fa-plus"></i> Nuevo Nivel
+      </button>
+    }
+  </div>
+
+  @if (showForm()) {
+    <div class="form-card animate-slide-down">
+      <h4>Registrar Rango Socioeconómico</h4>
+      <form [formGroup]="nivelForm" (ngSubmit)="guardarNivel()">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre del Nivel *</label>
+            <input type="text" formControlName="nombre" class="form-control" placeholder="Ej. NIVEL A (Vulnerable)">
+          </div>
+          <div class="form-group">
+            <label>Periodo Académico *</label>
+            <select formControlName="periodo_id" class="form-control">
+              <option value="">-- Seleccionar --</option>
+              @for (p of periodos(); track p.id) {
+                <option [value]="p.id">{{ p.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Valor Mínimo ($) *</label>
+            <input type="number" formControlName="valor_min" class="form-control" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Valor Máximo ($) (Opcional)</label>
+            <input type="number" formControlName="valor_max" class="form-control" placeholder="Ej. 300">
+          </div>
+          <div class="form-group">
+            <label>Orden de Jerarquía *</label>
+            <input type="number" formControlName="orden" class="form-control" placeholder="1">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" (click)="showForm.set(false)">Cancelar</button>
+          <button type="submit" class="btn btn-purple" [disabled]="nivelForm.invalid">Guardar Rango</button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <div class="table-container">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Jerarquía</th>
+          <th>Nombre del Nivel</th>
+          <th>Rango de Balance</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (n of niveles(); track n.id) {
+          <tr>
+            <td><span class="badge badge-blue">#{{ n.orden }}</span></td>
+            <td><strong>{{ n.nombre }}</strong></td>
+            <td>${{ n.valor_min | number:'1.2-2' }} — {{ n.valor_max ? ('$' + (n.valor_max | number:'1.2-2')) : 'En adelante' }}</td>
+            <td style="text-align: right;">
+              <button class="btn-icon text-red" (click)="eliminarNivel(n.id)" title="Eliminar">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="4" class="empty-state">No hay niveles configurados.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

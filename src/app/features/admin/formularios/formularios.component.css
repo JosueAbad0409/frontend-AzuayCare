@@ -1,0 +1,20 @@
+.carreras-card { background: #ffffff; border-radius: 16px; padding: 2rem; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
+.header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; }
+.title { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; }
+.subtitle { margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #64748b; }
+.table-container { overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th { text-align: left; padding: 1rem 1.25rem; background-color: #f8fafc; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 0.825rem; text-transform: uppercase; }
+.admin-table td { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 0.925rem; }
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 1.05rem; margin-left: 0.75rem; padding: 0.4rem; border-radius: 6px; }
+.text-blue { color: #2563eb; } .text-red { color: #ef4444; } .text-muted { color: #64748b; }
+.loading-state, .empty-state { text-align: center; padding: 3.5rem 1rem; color: #64748b; }
+.spinner-icon, .empty-icon { font-size: 2rem; color: #9333ea; margin-bottom: 0.75rem; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-box { background: white; padding: 2rem; border-radius: 20px; width: 90%; max-width: 520px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.modal-box h3 { margin-top: 0; font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #0f172a; margin-bottom: 0.4rem; }
+.form-control { width: 100%; padding: 0.65rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none; background: #ffffff; }
+.form-control:focus { border-color: #9333ea; box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1); }
+.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-top: 1rem; }

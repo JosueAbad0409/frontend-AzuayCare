@@ -1,7 +1,7 @@
 .carreras-card {
   background: #ffffff;
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: 2.25rem;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
 }
@@ -10,76 +10,77 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: var(--text-main);
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  font-size: 0.875rem;
+  margin: 0.35rem 0 0 0;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 
-/* Buscador */
+/* BUSCADOR PRO */
 .search-bar-wrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
+  margin-bottom: 1.75rem;
+  gap: 1.25rem;
 }
 
 .search-input-box {
   position: relative;
   flex: 1;
-  max-width: 400px;
+  max-width: 440px;
 }
 
 .search-icon {
   position: absolute;
-  left: 1rem;
+  left: 1.1rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  color: #94a3b8;
+  font-size: 0.95rem;
 }
 
 .search-control {
   width: 100%;
-  padding: 0.65rem 1rem 0.65rem 2.5rem;
+  padding: 0.75rem 1.1rem 0.75rem 2.75rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   outline: none;
-  background-color: var(--bg-main);
-  transition: all 0.2s ease;
+  background-color: #f8fafc;
+  transition: all 0.25s ease;
 }
 
 .search-control:focus {
   background-color: #ffffff;
   border-color: var(--accent-purple);
-  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
 }
 
 .count-badge {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.825rem;
+  font-weight: 800;
   color: var(--text-muted);
-  background: var(--bg-main);
-  padding: 0.4rem 0.8rem;
+  background: #f8fafc;
+  padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
 }
 
-/* Tabla */
+/* ESTRUCTURA TABLA */
 .table-container {
   overflow-x: auto;
   border-radius: var(--radius-md);
@@ -93,133 +94,103 @@
 
 .admin-table th {
   text-align: left;
-  padding: 1rem 1.25rem;
-  background-color: var(--bg-main);
+  padding: 1.15rem 1.5rem;
+  background-color: #f8fafc;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-color);
-  font-weight: 700;
-  font-size: 0.825rem;
+  font-weight: 800;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .admin-table td {
-  padding: 1rem 1.25rem;
+  padding: 1.15rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
-  font-size: 0.925rem;
-}
-
-.admin-table tbody tr {
-  transition: background-color 0.15s ease;
-}
-
-.admin-table tbody tr:hover {
-  background-color: rgba(248, 250, 252, 0.8);
+  font-size: 0.95rem;
 }
 
 .btn-icon {
-  background: none;
-  border: none;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  font-size: 1.05rem;
-  margin-left: 0.75rem;
-  padding: 0.4rem;
-  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  margin-left: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-icon:hover {
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
-.text-blue { color: var(--accent-blue); }
-.text-red { color: var(--danger); }
-.text-muted { color: var(--text-muted); }
+.text-blue:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+.text-red:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
-/* Form Card */
+/* FORMULARIO EXPANDIBLE */
 .form-card {
-  background-color: var(--bg-main);
+  background-color: #f8fafc;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 1.75rem;
-  margin-bottom: 2rem;
+  padding: 2rem;
+  margin-bottom: 2.25rem;
   box-shadow: var(--shadow-sm);
 }
 
 .form-header h4 {
-  margin: 0 0 0.2rem 0;
+  margin: 0 0 0.25rem 0;
   color: var(--text-main);
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
 }
 
 .form-header p {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.75rem 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .form-control {
   width: 100%;
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1.1rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   outline: none;
   background-color: #ffffff;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .form-control:focus {
   border-color: var(--accent-purple);
-  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
-}
-
-.error-msg {
-  display: block;
-  color: var(--danger);
-  font-size: 0.75rem;
-  margin-top: 0.35rem;
-  font-weight: 500;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.85rem;
   border-top: 1px solid var(--border-color);
-  padding-top: 1.25rem;
-}
-
-.loading-state, .empty-state {
-  text-align: center;
-  padding: 3.5rem 1rem;
-  color: var(--text-muted);
-}
-
-.spinner-icon {
-  font-size: 2rem;
-  color: var(--accent-purple);
-  margin-bottom: 0.75rem;
-}
-
-.empty-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  padding-top: 1.5rem;
 }

@@ -1,0 +1,130 @@
+<div class="carreras-card animate-fade-in">
+  <div class="header-section">
+    <div>
+      <h3 class="title">Periodos de Matrícula</h3>
+      <p class="subtitle">Gestiona los ciclos académicos activos para los formularios y fichas.</p>
+    </div>
+    
+    @if (!showForm()) {
+      <button class="btn btn-purple" (click)="abrirNuevoFormulario()">
+        <i class="fas fa-plus"></i> Nuevo Periodo
+      </button>
+    }
+  </div>
+
+  @if (showForm()) {
+    <div class="form-card animate-slide-down">
+      <div class="form-header">
+        <h4>{{ isEditing() ? 'Editar Periodo' : 'Registrar Nuevo Periodo' }}</h4>
+        <p>Define las fechas de vigencia del periodo académico.</p>
+      </div>
+
+      <form [formGroup]="periodoForm" (ngSubmit)="guardarPeriodo()">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre del Periodo</label>
+            <input type="text" formControlName="nombre" placeholder="Ej. Abril - Agosto 2026" class="form-control">
+            @if (periodoForm.get('nombre')?.touched && periodoForm.get('nombre')?.invalid) {
+              <span class="error-msg">El nombre es obligatorio.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Inicio</label>
+            <input type="date" formControlName="fecha_inicio" class="form-control">
+            @if (periodoForm.get('fecha_inicio')?.touched && periodoForm.get('fecha_inicio')?.invalid) {
+              <span class="error-msg">Requerido.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Fin</label>
+            <input type="date" formControlName="fecha_fin" class="form-control">
+            @if (periodoForm.get('fecha_fin')?.touched && periodoForm.get('fecha_fin')?.invalid) {
+              <span class="error-msg">Requerido.</span>
+            }
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: flex-end; padding-bottom: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; font-weight: 600;">
+              <input type="checkbox" formControlName="activo" style="width: 1.2rem; height: 1.2rem;">
+              Establecer como periodo ACTIVO
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" (click)="cancelarFormulario()">Cancelar</button>
+          <button type="submit" class="btn btn-purple" [disabled]="periodoForm.invalid">
+            <i class="fas fa-save"></i> Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <div class="search-bar-wrapper">
+      <div class="search-input-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          placeholder="Buscar por nombre de periodo..." 
+          [value]="searchTerm()"
+          (input)="onSearchChange($event)"
+          class="search-control"
+        />
+      </div>
+      <span class="count-badge">{{ periodosFiltrados().length }} Periodo(s)</span>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
+      <p>Cargando lista de periodos...</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Nombre del Periodo</th>
+            <th>Fechas (Inicio - Fin)</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (periodo of periodosFiltrados(); track periodo.id) {
+            <tr>
+              <td><strong>{{ periodo.nombre }}</strong></td>
+              <td class="text-muted">{{ periodo.fecha_inicio | date:'shortDate' }} - {{ periodo.fecha_fin | date:'shortDate' }}</td>
+              <td>
+                <span class="badge" [ngClass]="{'badge-success': periodo.activo, 'badge-danger': !periodo.activo}">
+                  <i class="fas" [ngClass]="periodo.activo ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                  {{ periodo.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td style="text-align: right;">
+                <button class="btn-icon text-blue" (click)="abrirEditarFormulario(periodo)" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon text-red" (click)="eliminarPeriodo(periodo.id)" title="Eliminar">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty-state">
+                <i class="fas fa-folder-open empty-icon"></i>
+                <p>No se encontraron periodos registrados.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

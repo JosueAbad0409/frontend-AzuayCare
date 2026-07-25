@@ -1,0 +1,227 @@
+/* ==========================================
+   MÓDULO DE GESTIÓN DE USUARIOS Y ROLES
+   ========================================== */
+
+.carreras-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cabecera de la sección */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Buscador Filtro */
+.search-bar-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.search-input-box {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.search-control {
+  width: 100%;
+  padding: 0.7rem 1rem 0.7rem 2.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  outline: none;
+  background-color: #f8fafc;
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
+.search-control:focus {
+  background-color: #ffffff;
+  border-color: #9333ea;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.12);
+}
+
+.count-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+/* Contenedor y Estructura de Tabla */
+.table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-table th {
+  padding: 1rem 1.25rem;
+  background-color: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-table td {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 0.925rem;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.admin-table tbody tr:hover {
+  background-color: rgba(248, 250, 252, 0.85);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges de Roles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid rgba(21, 128, 61, 0.2);
+}
+
+.badge-purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid rgba(147, 51, 234, 0.2);
+}
+
+.badge-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+/* Estados Vacío y de Carga */
+.loading-state, 
+.empty-state {
+  text-align: center;
+  padding: 3.5rem 1rem;
+  color: #64748b;
+}
+
+.spinner-icon {
+  font-size: 2.25rem;
+  color: #9333ea;
+  margin-bottom: 0.85rem;
+}
+
+.empty-state p {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.text-muted {
+  color: #64748b;
+}
+
+/* Animaciones */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ajustes Responsivos */
+@media (max-width: 640px) {
+  .carreras-card {
+    padding: 1.25rem;
+  }
+
+  .search-bar-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-box {
+    max-width: 100%;
+  }
+
+  .admin-table td, 
+  .admin-table th {
+    padding: 0.85rem 1rem;
+  }
+}

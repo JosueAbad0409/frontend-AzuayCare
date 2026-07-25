@@ -1,0 +1,162 @@
+<div class="carreras-card animate-fade-in">
+  <div class="header-section">
+    <div>
+      <h3 class="title">Gestión de Usuarios y Asignación de Coordinaciones</h3>
+      <p class="subtitle">Administra roles y asigna coordinadores a sus respectivas carreras.</p>
+    </div>
+    <button class="btn btn-purple" (click)="abrirModalAsignar()">
+      <i class="fas fa-user-tag"></i> Asignar Coordinador a Carrera
+    </button>
+  </div>
+
+  @if (!isLoading()) {
+    <div class="search-bar-wrapper">
+      <div class="search-input-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          placeholder="Buscar por correo o nombre..." 
+          [value]="searchTerm()"
+          (input)="onSearchChange($event)"
+          class="search-control"
+        />
+      </div>
+      <span class="count-badge">{{ usuariosFiltrados().length }} Usuario(s)</span>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
+      <p>Cargando lista de usuarios y asignaciones...</p>
+    </div>
+  } @else {
+    <div class="table-container mb-6">
+      <h4 class="px-4 pt-4 font-bold text-gray-800 text-base">Directorio de Usuarios</h4>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Nombre Completo</th>
+            <th>Correo Institucional</th>
+            <th>Cédula</th>
+            <th>Rol Asignado</th>
+            <th>Carrera Asignada</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of usuariosFiltrados(); track u.id) {
+            <tr>
+              <td><strong>{{ u.primer_nombre }} {{ u.primer_apellido }}</strong></td>
+              <td class="text-muted">{{ u.email_institucional }}</td>
+              <td>{{ u.cedula || 'N/A' }}</td>
+              <td>
+                <span class="badge" [ngClass]="{
+                  'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR',
+                  'badge-blue': u.rol?.nombre === 'COORDINADOR_CARRERA',
+                  'badge-success': u.rol?.nombre === 'ESTUDIANTE'
+                }">
+                  {{ u.rol?.nombre || 'ESTUDIANTE' }}
+                </span>
+              </td>
+              <td>
+                <span class="text-xs font-semibold text-gray-700">
+                  {{ getCarreraNombreDeAsignacion(u.id) }}
+                </span>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-state">
+                <p>No se encontraron usuarios que coincidan con la búsqueda.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TABLA DE ASIGNACIONES ACTIVAS -->
+    <div class="table-container mt-6">
+      <h4 class="px-4 pt-4 font-bold text-gray-800 text-base">Asignaciones Activas de Coordinadores</h4>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Coordinador</th>
+            <th>Carrera</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (asig of asignaciones(); track asig.usuario_id + '_' + asig.carrera_id) {
+            <tr>
+              <td><strong>{{ asig.usuario?.primer_nombre }} {{ asig.usuario?.primer_apellido }}</strong></td>
+              <td><span class="badge badge-blue">{{ asig.carrera?.nombre }}</span></td>
+              <td class="text-muted">{{ asig.fecha_inicio | date:'shortDate' }}</td>
+              <td class="text-muted">{{ asig.fecha_fin ? (asig.fecha_fin | date:'shortDate') : 'Indefinido' }}</td>
+              <td style="text-align: right;">
+                <button class="btn-icon text-red" (click)="desasignar(asig.usuario_id, asig.carrera_id)" title="Desasignar">
+                  <i class="fas fa-user-minus"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-state">No hay asignaciones de coordinación activas.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- MODAL ASIGNAR COORDINADOR -->
+  @if (showModalAsignar()) {
+    <div class="modal-backdrop">
+      <div class="modal-box animate-pop">
+        <h3>Asignar Coordinador a Carrera</h3>
+        <form [formGroup]="asignacionForm" (ngSubmit)="guardarAsignacion()">
+          
+          <div class="form-group mb-3">
+            <label>Seleccionar Usuario Coordinador *</label>
+            <select formControlName="usuario_id" class="form-control">
+              <option value="">-- Seleccione Usuario --</option>
+              @for (u of coordinadoresCarreraList(); track u.id) {
+                <option [value]="u.id">{{ u.primer_nombre }} {{ u.primer_apellido }} ({{ u.email_institucional }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label>Seleccionar Carrera *</label>
+            <select formControlName="carrera_id" class="form-control">
+              <option value="">-- Seleccione Carrera --</option>
+              @for (c of carreras(); track c.id) {
+                <option [value]="c.id">{{ c.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="form-group">
+              <label>Fecha Inicio *</label>
+              <input type="date" formControlName="fecha_inicio" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label>Fecha Fin (Opcional)</label>
+              <input type="date" formControlName="fecha_fin" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" (click)="showModalAsignar.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-purple" [disabled]="asignacionForm.invalid">Guardar Asignación</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  }
+</div>
