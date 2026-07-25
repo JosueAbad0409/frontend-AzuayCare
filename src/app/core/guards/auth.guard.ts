@@ -1,18 +1,30 @@
-import { Injectable, inject } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-@Injectable({ providedIn: 'root' })
-export class AuthGuard implements CanActivate {
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
+export const authGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-  canActivate(): boolean {
-    if (this.auth.isLoggedIn()) {
-      return true;
-    }
-    
-    this.router.navigate(['/login']);
+  if (!authService.isLoggedIn()) {
+    router.navigate(['/login']);
     return false;
   }
-}
+
+  const expectedRoles = route.data['roles'] as Array<string>;
+  const userRole = authService.getUserRole();
+
+  if (expectedRoles && expectedRoles.length > 0) {
+    if (!userRole || !expectedRoles.includes(userRole)) {
+      // Redirección defensiva con verificación segura de nulos
+      if (userRole && ['ADMIN', 'COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'].includes(userRole)) {
+        router.navigate(['/admin/dashboard']);
+      } else {
+        router.navigate(['/estudiante/ficha']);
+      }
+      return false;
+    }
+  }
+
+  return true;
+};

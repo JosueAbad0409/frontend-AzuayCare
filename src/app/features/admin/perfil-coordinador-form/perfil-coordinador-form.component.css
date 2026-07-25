@@ -1,0 +1,68 @@
+.perfil-card {
+  max-width: 800px;
+  margin: 1.5rem auto;
+  background: #ffffff;
+  border-radius: var(--radius-lg, 24px);
+  padding: 2.25rem;
+  box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.perfil-card h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.perfil-card p.desc {
+  margin: 0 0 1.75rem 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.925rem;
+  outline: none;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}
+
+.alert-success {
+  background: #dcfce7;
+  border: 1px solid rgba(21, 128, 61, 0.2);
+  color: #15803d;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+}

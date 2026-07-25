@@ -1,62 +1,72 @@
-<div class="admin-layout">
-    <!-- BARRA SUPERIOR (NAVBAR) -->
-    <nav class="top-navbar">
-        <div class="brand-section">
-            <div class="logo-icon">
-                <i class="fas fa-layer-group"></i>
-            </div>
-            <div class="brand-text">
-                <h1>ISTA - Ficha Socioeconómica</h1>
-                <span>ENTORNO DE ADMINISTRACIÓN GLOBAL</span>
-            </div>
-        </div>
+<div class="dashboard-wrapper">
+  <!-- BANNER DE BIENVENIDA -->
+  <header class="hero-banner">
+    <div class="hero-text">
+      <span class="hero-tag">INSTITUTO SUPERIOR TECNOLÓGICO AZUAY</span>
+      <h1>Bienestar Estudiantil & Control Socioeconómico</h1>
+      <p>Gestión integral de vulnerabilidad socioeconómica, formularios dinámicos y reportes institucionalizados.</p>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-purple" (click)="descargarReporteExcel()">
+        <i class="fas fa-file-excel"></i> Exportar Reporte Excel
+      </button>
+      <a routerLink="/admin/carreras" class="btn btn-outline-light">
+        <i class="fas fa-university"></i> Ver Carreras
+      </a>
+    </div>
+  </header>
 
-        <!-- INDICADORES DE ROL -->
-        <div class="role-indicators">
-            <div class="role-badge inactive"><i class="fas fa-user"></i> Estudiante</div>
-            <div class="role-badge inactive"><i class="fas fa-chalkboard-teacher"></i> Coord. Carrera</div>
-            <div class="role-badge active"><i class="fas fa-shield-alt"></i> Bienestar Estudiantil</div>
-        </div>
+  <!-- TARJETAS DE MÉTRICAS (KPIs) -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon icon-green"><i class="fas fa-graduation-cap"></i></div>
+      <div class="kpi-details">
+        <span class="kpi-title">Carreras Activas</span>
+        <h3 class="kpi-value">{{ totalCarreras() }}</h3>
+        <span class="kpi-sub">Especialidades tecnológicas</span>
+      </div>
+    </div>
 
-        <!-- ACCIONES DE SESIÓN -->
-        <div class="session-actions">
-            <span class="global-access">• ACCESO GLOBAL •</span>
-            <button class="btn-logout" (click)="logout()">
-                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-            </button>
-        </div>
-    </nav>
+    <div class="kpi-card">
+      <div class="kpi-icon icon-purple"><i class="fas fa-file-alt"></i></div>
+      <div class="kpi-details">
+        <span class="kpi-title">Formularios / Fichas</span>
+        <h3 class="kpi-value">{{ totalFormularios() }}</h3>
+        <span class="kpi-sub">Fichas socioeconómicas creadas</span>
+      </div>
+    </div>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="dashboard-content animate-fade-in">
+    <div class="kpi-card">
+      <div class="kpi-icon icon-blue"><i class="fas fa-users"></i></div>
+      <div class="kpi-details">
+        <span class="kpi-title">Nivel Socioeconómico</span>
+        <h3 class="kpi-value">Auto-calculado</h3>
+        <span class="kpi-sub">Basado en Ingresos vs. Egresos</span>
+      </div>
+    </div>
+  </section>
 
-        <!-- BANNER PRINCIPAL -->
-        <header class="main-banner">
-            <div class="banner-info">
-                <span class="banner-subtitle">BIENESTAR ESTUDIANTIL Y RECTORADO • ISTA</span>
-                <h2>Tablero de Control Socioeconómico Global</h2>
-                <p>Vista consolidadora de las especialidades tecnológicas. Monitoreo en tiempo real de vulnerabilidades, becas y estadísticas socioeconómicas.</p>
-            </div>
-            <div class="banner-actions">
-                <a routerLink="/admin/carreras" class="btn-secondary" style="text-decoration: none;">
-                    <i class="fas fa-university"></i> Gestionar Carreras
-                </a>
-                <button class="btn-primary"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                <button class="btn-secondary" style="border: 1px solid rgba(255,255,255,0.3);"><i class="fas fa-file-pdf"></i> Reporte PDF</button>
-            </div>
-        </header>
+  <!-- SECCIÓN DE ACCESO RÁPIDO -->
+  <section class="quick-access-section">
+    <h3><i class="fas fa-rocket"></i> Acceso Rápido a Módulos</h3>
+    <div class="quick-grid">
+      <a routerLink="/admin/carreras" class="quick-card">
+        <i class="fas fa-building card-icon"></i>
+        <h4>Administrar Carreras</h4>
+        <p>Añade o actualiza correos institucionales de carreras.</p>
+      </a>
 
-        <!-- NAVEGACIÓN POR PESTAÑAS -->
-        <nav class="tabs-nav">
-            <button class="tab-btn active"><i class="fas fa-chart-bar"></i> Estadísticas y Gráficas</button>
-            <button class="tab-btn"><i class="fas fa-search"></i> Buscador General Estudiantes</button>
-            <button class="tab-btn"><i class="fas fa-heart"></i> Necesidades Educativas</button>
-            <button class="tab-btn"><i class="fas fa-exclamation-triangle"></i> Permisos de Edición</button>
-        </nav>
+      <a routerLink="/admin/formularios" class="quick-card">
+        <i class="fas fa-tasks card-icon"></i>
+        <h4>Constructor de Fichas</h4>
+        <p>Crea preguntas, opciones y categorías financieras.</p>
+      </a>
 
-        <section class="metrics-area">
-            <!-- Espacio reservado para las tarjetas KPIs/Métricas -->
-        </section>
-
-    </main>
+      <a routerLink="/admin/usuarios" class="quick-card">
+        <i class="fas fa-user-shield card-icon"></i>
+        <h4>Usuarios y Coordinación</h4>
+        <p>Gestiona accesos de coordinadores y estudiantes.</p>
+      </a>
+    </div>
+  </section>
 </div>

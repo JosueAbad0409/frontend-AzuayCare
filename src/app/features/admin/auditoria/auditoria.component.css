@@ -1,0 +1,83 @@
+.carreras-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg, 24px);
+  padding: 2.25rem;
+  box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin: 0 0 1.75rem 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 1.15rem 1.5rem;
+  background-color: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 0.925rem;
+}
+
+/* Visor JSON Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box-lg {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+pre.json-viewer {
+  background-color: #0f172a;
+  color: #38bdff;
+  padding: 1rem;
+  border-radius: 12px;
+  font-family: monospace;
+  font-size: 0.825rem;
+  overflow-x: auto;
+  max-height: 300px;
+}

@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { jwtDecode } from 'jwt-decode';
 
 const STORAGE_KEY = 'azuaycare_access_token';
 
@@ -9,6 +10,15 @@ export interface UsuarioLogueado {
   nombre: string;
   rol: 'ESTUDIANTE' | 'INVITADO' | 'COORDINADOR_BIENESTAR' | 'COORDINADOR_CARRERA';
   carrera_id?: string | null;
+}
+
+interface JwtPayloadCustom {
+  sub: string;
+  email: string;
+  nombre?: string;
+  rol: 'ESTUDIANTE' | 'INVITADO' | 'COORDINADOR_BIENESTAR' | 'COORDINADOR_CARRERA';
+  carrera_id?: string | null;
+  exp: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,12 +42,17 @@ export class AuthService {
   }
 
   setToken(token: string | null) {
-    this.token.set(token);
     if (token) {
+      if (this.isTokenExpired(token)) {
+        this.logout();
+        return;
+      }
       localStorage.setItem(STORAGE_KEY, token);
+      this.token.set(token);
       this.decodeAndSetUser(token);
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      this.token.set(null);
       this.user.set(null);
     }
   }
@@ -46,35 +61,39 @@ export class AuthService {
     this.setToken(null);
   }
 
+  getUserRole(): string | null {
+    return this.user()?.rol || null;
+  }
+
+  getUsuario(): UsuarioLogueado | null {
+    return this.user();
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const decoded = jwtDecode<JwtPayloadCustom>(token);
+      if (!decoded.exp) return false;
+      const currentTime = Math.floor(Date.now() / 1000);
+      return decoded.exp < currentTime;
+    } catch {
+      return true;
+    }
+  }
+
   private decodeAndSetUser(token: string) {
     try {
-      const parts = token.split('.');
-      if (parts.length < 2) {
-        this.user.set(null);
-        return;
-      }
-      
-      const payload = parts[1];
-      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join(''),
-      );
-      
-      const obj = JSON.parse(json);
+      const decoded = jwtDecode<JwtPayloadCustom>(token);
       
       this.user.set({
-        id: obj.sub,
-        email: obj.email,
-        nombre: obj.nombre || 'Usuario',
-        rol: obj.rol,
-        carrera_id: obj.carrera_id || null
+        id: decoded.sub,
+        email: decoded.email,
+        nombre: decoded.nombre || 'Usuario',
+        rol: decoded.rol,
+        carrera_id: decoded.carrera_id || null
       });
     } catch (error) {
-      console.error('Error decodificando el token de sesión:', error);
-      this.user.set(null);
+      console.error('Error decodificando el token con jwt-decode:', error);
+      this.logout();
     }
   }
 

@@ -2,8 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-
-const GOOGLE_CLIENT_ID = '474214477775-m9ci1dg4p6i20s7548et5sfto14750lp.apps.googleusercontent.com';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -45,7 +44,7 @@ export class LoginComponent implements OnInit {
     try {
       const google = (window as any).google;
       google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: environment.googleClientId,
         callback: (response: any) => this.handleCredentialResponse(response),
         cancel_on_tap_outside: true,
       });
@@ -71,7 +70,14 @@ export class LoginComponent implements OnInit {
       this.isLoading.set(true);
       this.error.set('');
       await this.auth.loginWithBackend(credential);
-      await this.router.navigate(['/admin']);
+
+      // Redirección adaptativa según el rol decodificado del JWT
+      const rol = this.auth.user()?.rol;
+      if (rol === 'ESTUDIANTE' || rol === 'INVITADO') {
+        await this.router.navigate(['/estudiante/ficha']);
+      } else {
+        await this.router.navigate(['/admin/dashboard']);
+      }
     } catch (err: any) {
       this.error.set(err?.message ?? 'Ocurrió un error al iniciar sesión en el servidor.');
     } finally {

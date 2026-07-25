@@ -1,0 +1,123 @@
+/* Hereda exactamente la paleta y contenedores de la plataforma */
+.carreras-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg, 24px);
+  padding: 2.25rem;
+  box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md, 16px);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 1.15rem 1.5rem;
+  background-color: #f8fafc;
+  color: var(--text-muted, #64748b);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-table td {
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-main, #0f172a);
+  font-size: 0.95rem;
+}
+
+.btn-icon {
+  background: #f1f5f9;
+  border: 1px solid var(--border-color, #e2e8f0);
+  cursor: pointer;
+  font-size: 0.95rem;
+  margin-left: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon.text-blue:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+.btn-icon.text-red:hover { background: #ef4444; color: white; border-color: #ef4444; }
+
+/* Modal y Formulario */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.4rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  outline: none;
+  background: #ffffff;
+}
+
+.form-control:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}

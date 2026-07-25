@@ -1,0 +1,274 @@
+@if (!isLoading() && formulario()) {
+  <div class="builder-container animate-fade-in">
+
+    <!-- CABECERA -->
+    <header class="builder-header">
+      <div class="header-left">
+        <a routerLink="/admin/formularios" class="btn-back">
+          <i class="fas fa-arrow-left"></i> Volver a Lista
+        </a>
+        <div>
+          <div class="title-row">
+            <h2>{{ formulario()?.titulo }}</h2>
+            <span class="badge" [ngClass]="formulario()?.publicado ? 'badge-success' : 'badge-warning'">
+              <i class="fas" [ngClass]="formulario()?.publicado ? 'fa-check-circle' : 'fa-clock'"></i>
+              {{ formulario()?.publicado ? 'PUBLICADO' : 'BORRADOR (V' + formulario()?.version + ')' }}
+            </span>
+          </div>
+          <p class="subtitle">{{ formulario()?.descripcion || 'Sin descripción asignada' }}</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-outline" (click)="showDependenciaModal.set(true)">
+          <i class="fas fa-code-branch"></i> Reglas de Dependencia
+        </button>
+        <button class="btn btn-outline" (click)="showSeccionModal.set(true)">
+          <i class="fas fa-folder-plus"></i> Nueva Sección
+        </button>
+        @if (!formulario()?.publicado) {
+          <button class="btn btn-purple" (click)="publicarFormulario()">
+            <i class="fas fa-paper-plane"></i> Publicar Ficha
+          </button>
+        }
+      </div>
+    </header>
+
+    <!-- LISTADO DE SECCIONES -->
+    <main class="sections-list">
+      @for (seccion of secciones(); track seccion.id || $index; let i = $index) {
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="section-number">Bloque {{ i + 1 }}</span>
+              <h3>{{ seccion.nombre }}</h3>
+            </div>
+            <button class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+
+          <div class="questions-container">
+            @for (pregunta of seccion.preguntas; track pregunta.id || $index; let j = $index) {
+              <div class="question-item flex-col gap-3">
+                <div class="flex justify-between w-full items-start">
+                  <div class="question-main">
+                    <span class="question-num">{{ j + 1 }}.</span>
+                    <div class="question-content">
+                      <strong>{{ pregunta.enunciado }}</strong>
+                      <div class="question-badges">
+                        <span class="tag tag-tipo">{{ pregunta.tipoCampo?.nombre || 'PREGUNTA' }}</span>
+                        @if (pregunta.requiere_evidencia) {
+                          <span class="tag tag-evid"><i class="fas fa-paperclip"></i> Evidencia Requerida</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <button class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)"><i class="fas fa-times"></i></button>
+                </div>
+
+                <!-- OPCIONES SELECCIÓN -->
+                @if (esTipoSeleccion(pregunta.tipo_campo_id)) {
+                  <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2">
+                    <h5 class="font-bold text-sm text-blue-900"><i class="fas fa-list-ul"></i> Opciones de Respuesta</h5>
+                    <ul class="text-xs space-y-1">
+                      @for (opcion of pregunta.opciones; track opcion.id || $index) {
+                        <li class="bg-white p-2 rounded border flex justify-between items-center">
+                          <span>• {{ opcion.texto_opcion }}</span>
+                        </li>
+                      } @empty {
+                        <p class="text-xs text-gray-400">Sin opciones agregadas.</p>
+                      }
+                    </ul>
+                    <div class="flex gap-2 pt-1">
+                      <input type="text" [value]="nuevaOpcionTexto()" (input)="nuevaOpcionTexto.set($any($event.target).value)" placeholder="Añadir opción..." class="form-control text-xs">
+                      <button (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
+                    </div>
+                  </div>
+                }
+
+                <!-- CONFIGURACIÓN MATRIZ -->
+                @if (esTipoMatriz(pregunta.tipo_campo_id)) {
+                  <div class="w-full bg-purple-50 p-4 rounded-xl border border-purple-200 mt-2 space-y-3">
+                    <h5 class="font-bold text-sm text-purple-900 mb-2"><i class="fas fa-th"></i> Configuración de Matriz (Filas y Columnas)</h5>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <!-- Filas -->
+                      <div class="bg-white p-3 rounded-lg border">
+                        <span class="text-xs font-bold text-gray-700 block mb-2">Filas (Items):</span>
+                        <ul class="text-xs space-y-1 mb-2">
+                          @for (f of pregunta.filasMatriz; track f.id || $index) {
+                            <li class="bg-gray-100 p-1.5 rounded flex justify-between">
+                              <span>• {{ f.texto_fila }}</span>
+                            </li>
+                          }
+                        </ul>
+                        <div class="flex gap-2">
+                          <input type="text" [value]="nuevaFilaTexto()" (input)="nuevaFilaTexto.set($any($event.target).value)" placeholder="Nueva fila..." class="form-control text-xs">
+                          <button (click)="agregarFilaMatriz(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
+                        </div>
+                      </div>
+
+                      <!-- Columnas -->
+                      <div class="bg-white p-3 rounded-lg border">
+                        <span class="text-xs font-bold text-gray-700 block mb-2">Columnas (Criterios):</span>
+                        <ul class="text-xs space-y-1 mb-2">
+                          @for (c of pregunta.columnasMatriz; track c.id || $index) {
+                            <li class="bg-gray-100 p-1.5 rounded flex justify-between">
+                              <span>• {{ c.texto_columna }}</span>
+                            </li>
+                          }
+                        </ul>
+                        <div class="flex gap-2">
+                          <input type="text" [value]="nuevaColumnaTexto()" (input)="nuevaColumnaTexto.set($any($event.target).value)" placeholder="Nueva columna..." class="form-control text-xs">
+                          <button (click)="agregarColumnaMatriz(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- FORMULARIO NUEVA PREGUNTA -->
+            @if (activeSeccionIdForQuestion() === seccion.id) {
+              <div class="new-question-box">
+                <h4><i class="fas fa-plus-circle"></i> Nueva Pregunta</h4>
+                <form [formGroup]="preguntaForm" (ngSubmit)="guardarPregunta(seccion.id)">
+                  <div class="form-group mb-3">
+                    <label>Enunciado *</label>
+                    <input type="text" formControlName="enunciado" class="form-control">
+                  </div>
+                  <div class="grid-2 mb-3">
+                    <div class="form-group">
+                      <label>Tipo de Campo *</label>
+                      <select formControlName="tipo_campo_id" class="form-control">
+                        <option value="">-- Seleccionar --</option>
+                        @for (tipo of tiposCampo(); track tipo.id) {
+                          <option [value]="tipo.id">{{ tipo.nombre }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Categoría Financiera</label>
+                      <select formControlName="categoria_financiera" class="form-control">
+                        <option value="NINGUNO">NINGUNO</option>
+                        <option value="INGRESO">INGRESO</option>
+                        <option value="EGRESO">EGRESO</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex-options mb-3">
+                    <label class="checkbox-label">
+                      <input type="checkbox" formControlName="es_obligatorio"> Obligatorio
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" formControlName="requiere_evidencia"> Requiere Documento / Evidencia
+                    </label>
+                  </div>
+                  <div class="form-actions">
+                    <button type="button" class="btn btn-outline" (click)="cancelarPregunta()">Cancelar</button>
+                    <button type="submit" class="btn btn-purple" [disabled]="preguntaForm.invalid">Guardar Pregunta</button>
+                  </div>
+                </form>
+              </div>
+            } @else {
+              <button class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
+                <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </main>
+
+    <!-- MODAL REGLAS DE DEPENDENCIA -->
+    @if (showDependenciaModal()) {
+      <div class="modal-backdrop">
+        <div class="modal-box animate-pop" style="max-width: 600px;">
+          <h3>Configurar Reglas de Dependencia</h3>
+          <p class="text-xs text-gray-500 mb-4">Define qué pregunta se mostrará dinámicamente según la opción elegida.</p>
+
+          <form [formGroup]="dependenciaForm" (ngSubmit)="guardarDependencia()" class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold mb-1">Si responde en la pregunta disparadora *</label>
+              <select formControlName="pregunta_disparadora_id" class="form-control text-sm">
+                <option value="">-- Seleccionar Pregunta Padre --</option>
+                @for (sec of secciones(); track sec.id) {
+                  @for (p of sec.preguntas; track p.id) {
+                    <option [value]="p.id">{{ p.enunciado }}</option>
+                  }
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1">Y elige la opción *</label>
+              <select formControlName="opcion_disparadora_id" class="form-control text-sm">
+                <option value="">-- Seleccionar Opción Disparadora --</option>
+                @for (opc of opcionesDisparadoras(); track opc.id) {
+                  <option [value]="opc.id">{{ opc.texto_opcion }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1">Entonces MOSTRAR la pregunta *</label>
+              <select formControlName="pregunta_dependiente_id" class="form-control text-sm">
+                <option value="">-- Seleccionar Pregunta Hijo --</option>
+                @for (sec of secciones(); track sec.id) {
+                  @for (p of sec.preguntas; track p.id) {
+                    <option [value]="p.id">{{ p.enunciado }}</option>
+                  }
+                }
+              </select>
+            </div>
+
+            <div class="form-actions mt-4">
+              <button type="button" class="btn btn-outline" (click)="showDependenciaModal.set(false)">Cerrar</button>
+              <button type="submit" class="btn btn-purple" [disabled]="dependenciaForm.invalid">Guardar Regla</button>
+            </div>
+          </form>
+
+          <div class="mt-6 border-t pt-3">
+            <h4 class="font-bold text-xs mb-2">Reglas Activas en este Formulario:</h4>
+            <div class="space-y-2 max-h-40 overflow-y-auto">
+              @for (dep of dependencias(); track dep.id) {
+                <div class="flex justify-between items-center text-xs p-2 bg-gray-50 border rounded">
+                  <span>Mostrar pregunta <code>{{ dep.pregunta_dependiente_id }}</code> al marcar opción <code>{{ dep.opcion_disparadora_id }}</code></span>
+                  <button (click)="eliminarDependencia(dep.id)" class="text-red-600 font-bold"><i class="fas fa-trash"></i></button>
+                </div>
+              } @empty {
+                <p class="text-xs text-gray-400">No hay reglas condicionales creadas.</p>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- MODAL SECCIÓN -->
+    @if (showSeccionModal()) {
+      <div class="modal-backdrop">
+        <div class="modal-box animate-pop">
+          <h3>Nueva Sección</h3>
+          <form [formGroup]="seccionForm" (ngSubmit)="guardarSeccion()">
+            <div class="form-group mb-3">
+              <label>Nombre de Sección *</label>
+              <input type="text" formControlName="nombre" class="form-control">
+            </div>
+            <div class="form-group mb-3">
+              <label>Descripción</label>
+              <input type="text" formControlName="descripcion" class="form-control">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-outline" (click)="showSeccionModal.set(false)">Cancelar</button>
+              <button type="submit" class="btn btn-purple" [disabled]="seccionForm.invalid">Guardar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+  </div>
+}

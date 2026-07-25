@@ -1,20 +1,28 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-    // Inyectamos tu servicio de autenticación para leer el token
-    const authService = inject(AuthService);
-    const token = authService.token();
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  const token = authService.token();
 
-    // Si existe un token, clonamos la petición y le agregamos la cabecera de Autorización
-    if (token) {
-        const clonedReq = req.clone({
-            headers: req.headers.set('Authorization', `Bearer ${token}`)
-        });
-        return next(clonedReq); // Mandamos la petición modificada
-    }
+  let clonedReq = req;
+  if (token) {
+    clonedReq = req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${token}`)
+    });
+  }
 
-    // Si no hay token (ej. en el login), mandamos la petición tal como está
-    return next(req);
+  return next(clonedReq).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        authService.logout();
+        router.navigate(['/login']);
+      }
+      return throwError(() => error);
+    })
+  );
 };

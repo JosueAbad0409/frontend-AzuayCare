@@ -1,0 +1,112 @@
+<div class="app-layout" [class.collapsed]="isSidebarCollapsed()">
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      @if (!isSidebarCollapsed()) {
+        <div class="brand">
+          <div class="brand-logo"><i class="fas fa-heartbeat"></i></div>
+          <div class="brand-info">
+            <h2>AzuayCare</h2>
+            <span>IST AZUAY</span>
+          </div>
+        </div>
+      }
+      <button class="btn-toggle" (click)="toggleSidebar()" title="Plegar / Desplegar Menú">
+        <i class="fas" [class.fa-chevron-left]="!isSidebarCollapsed()" [class.fa-chevron-right]="isSidebarCollapsed()"></i>
+      </button>
+    </div>
+
+    <!-- MENÚ DE NAVEGACIÓN -->
+    <nav class="sidebar-nav">
+      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item" title="Dashboard">
+        <i class="fas fa-chart-pie nav-icon"></i>
+        @if (!isSidebarCollapsed()) { <span class="nav-text">Dashboard</span> }
+      </a>
+
+      @if (authService.user()?.rol === 'COORDINADOR_BIENESTAR') {
+        <a routerLink="/admin/carreras" routerLinkActive="active" class="nav-item" title="Carreras">
+          <i class="fas fa-graduation-cap nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Carreras</span> }
+        </a>
+
+        <a routerLink="/admin/ciclos" routerLinkActive="active" class="nav-item" title="Ciclos Académicos">
+          <i class="fas fa-list-ol nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Ciclos</span> }
+        </a>
+
+        <a routerLink="/admin/periodos" routerLinkActive="active" class="nav-item" title="Periodos">
+          <i class="fas fa-calendar-alt nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Periodos</span> }
+        </a>
+
+        <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
+          <i class="fas fa-file-signature nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
+        </a>
+
+        <a routerLink="/admin/niveles" routerLinkActive="active" class="nav-item" title="Niveles Económicos">
+          <i class="fas fa-layer-group nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Niveles Económicos</span> }
+        </a>
+      }
+
+      <a routerLink="/admin/revision-fichas" routerLinkActive="active" class="nav-item" title="Revisión de Fichas">
+        <i class="fas fa-clipboard-check nav-icon"></i>
+        @if (!isSidebarCollapsed()) { <span class="nav-text">Revisión de Fichas</span> }
+      </a>
+
+      @if (authService.user()?.rol === 'COORDINADOR_BIENESTAR') {
+        <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item" title="Usuarios y Roles">
+          <i class="fas fa-users-cog nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Usuarios y Roles</span> }
+        </a>
+
+        <a routerLink="/admin/auditoria" routerLinkActive="active" class="nav-item" title="Auditoría del Sistema">
+          <i class="fas fa-user-shield nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Auditoría</span> }
+        </a>
+      }
+
+      <a routerLink="/admin/perfil-coordinador" routerLinkActive="active" class="nav-item" title="Mi Perfil de Atención">
+        <i class="fas fa-id-card nav-icon"></i>
+        @if (!isSidebarCollapsed()) { <span class="nav-text">Perfil Atención</span> }
+      </a>
+    </nav>
+    
+    <!-- USUARIO PERFIL FOOTER -->
+    <div class="sidebar-footer">
+      @if (!isSidebarCollapsed()) {
+        <div class="user-profile">
+          <div class="avatar"><i class="fas fa-user-circle"></i></div>
+          <div class="user-info">
+            <span class="user-name">{{ authService.user()?.nombre || 'Coordinador' }}</span>
+            <span class="user-role">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
+          </div>
+        </div>
+      }
+      <button class="btn-logout-icon" (click)="logout()" title="Cerrar Sesión">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO DINÁMICO -->
+  <div class="main-wrapper">
+    <header class="top-header">
+      <div class="header-status">
+        <span class="live-dot"></span>
+        <span class="status-text">Sistema Socioeconómico Activo</span>
+      </div>
+      <div class="header-user">
+        <span class="role-chip">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
+        <button class="btn-logout" (click)="logout()">
+          <i class="fas fa-sign-out-alt"></i> Salir
+        </button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

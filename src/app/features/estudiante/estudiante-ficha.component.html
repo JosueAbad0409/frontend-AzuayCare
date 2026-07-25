@@ -1,0 +1,149 @@
+<div class="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-8">
+  <header class="max-w-4xl mx-auto flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-bold text-slate-900 shadow-lg shadow-emerald-500/20">AC</div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Ficha Socioeconómica Estudiantil</h1>
+        <p class="text-xs text-slate-400">{{ authService.user()?.nombre }} ({{ authService.user()?.rol }})</p>
+      </div>
+    </div>
+    <button (click)="logout()" class="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white transition-all">
+      Cerrar Sesión
+    </button>
+  </header>
+
+  <main class="max-w-4xl mx-auto">
+    @if (isLoading()) {
+      <div class="text-center py-12">
+        <i class="fas fa-circle-notch fa-spin text-3xl text-emerald-400 mb-3"></i>
+        <p class="text-slate-400 text-sm">Cargando formulario en tiempo real...</p>
+      </div>
+    } @else if (fichaActiva() && formularioActivo()) {
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
+          <div>
+            <h2 class="text-xl font-bold text-white">{{ formularioActivo()?.titulo }}</h2>
+            <p class="text-xs text-slate-400 mt-1">{{ formularioActivo()?.descripcion }}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="{
+            'bg-amber-500/20 text-amber-400 border border-amber-500/30': fichaActiva()?.estado_ficha === 'BORRADOR',
+            'bg-blue-500/20 text-blue-400 border border-blue-500/30': fichaActiva()?.estado_ficha === 'ENVIADO',
+            'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': fichaActiva()?.estado_ficha === 'VALIDADO'
+          }">
+            {{ fichaActiva()?.estado_ficha }}
+          </span>
+        </div>
+
+        <form [formGroup]="respuestasForm" (ngSubmit)="guardarYEnviar()">
+          @for (sec of secciones(); track sec.id) {
+            <div class="mb-8 bg-slate-900/60 p-5 rounded-xl border border-slate-700/60 shadow-inner">
+              <h3 class="font-bold text-emerald-400 text-sm mb-4 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-folder-open text-xs"></i> {{ sec.nombre }}
+              </h3>
+              
+              <div class="space-y-6">
+                @for (p of sec.preguntas; track p.id) {
+                  @if (esPreguntaVisible(p.id)) {
+                    <div class="flex flex-col gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/30 animate-fade-in">
+                      <label class="text-xs font-semibold text-slate-200">
+                        {{ p.enunciado }}
+                        @if (p.es_obligatorio) { <span class="text-red-400 font-bold">*</span> }
+                      </label>
+
+                      <!-- 1. CAMPO MATRIZ DINÁMICA -->
+                      @if (p.tipoCampo?.nombre === 'MATRIZ' && p.filasMatriz && p.columnasMatriz) {
+                        <div class="overflow-x-auto mt-2 rounded-lg border border-slate-700">
+                          <table class="w-full text-xs text-left text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 uppercase font-bold border-b border-slate-700">
+                              <tr>
+                                <th class="p-3">Criterios</th>
+                                @for (col of p.columnasMatriz; track col.id) {
+                                  <th class="p-3 text-center">{{ col.texto_columna }}</th>
+                                }
+                              </tr>
+                            </thead>
+                            <tbody [formGroup]="$any(matricesGroup.get(p.id))">
+                              @for (fila of p.filasMatriz; track fila.id) {
+                                <tr class="border-b border-slate-800 hover:bg-slate-800/80 transition-colors">
+                                  <td class="p-3 font-medium text-white">{{ fila.texto_fila }}</td>
+                                  @for (col of p.columnasMatriz; track col.id) {
+                                    <td class="p-3 text-center">
+                                      <input 
+                                        type="radio" 
+                                        [formControlName]="fila.id" 
+                                        [value]="col.id"
+                                        class="w-4 h-4 accent-emerald-500 cursor-pointer"
+                                      >
+                                    </td>
+                                  }
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      } 
+
+                      <!-- 2. CAMPO SELECCIÓN ÚNICA -->
+                      @else if (p.tipoCampo?.nombre === 'SELECCION_UNICA' && p.opciones) {
+                        <div [formGroup]="respuestasGroup">
+                          <select [formControlName]="p.id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                            <option value="">-- Seleccionar opción --</option>
+                            @for (op of p.opciones; track op.id) {
+                              <option [value]="op.id">{{ op.texto_opcion }}</option>
+                            }
+                          </select>
+                        </div>
+                      }
+
+                      <!-- 3. CAMPO NUMÉRICO -->
+                      @else if (p.tipoCampo?.nombre === 'NUMERICO') {
+                        <div [formGroup]="respuestasGroup">
+                          <input type="number" [formControlName]="p.id" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                        </div>
+                      }
+
+                      <!-- 4. CAMPO TEXTO POR DEFECTO -->
+                      @else {
+                        <div [formGroup]="respuestasGroup">
+                          <input type="text" [formControlName]="p.id" placeholder="Escribe tu respuesta..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                        </div>
+                      }
+
+                      <!-- SUBIDA DE EVIDENCIA -->
+                      @if (p.requiere_evidencia) {
+                        <div class="mt-2 flex items-center gap-2 text-xs text-amber-400">
+                          <i class="fas fa-paperclip"></i>
+                          <span>Adjuntar documento de respaldo:</span>
+                          <input type="file" (change)="subirArchivoEvidencia($event, p.id)" class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:bg-slate-700 file:text-slate-200">
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+
+          @if (fichaActiva()?.estado_ficha === 'BORRADOR') {
+            <div class="flex justify-end mt-8 pt-4 border-t border-slate-700">
+              <button type="submit" [disabled]="enviando()" class="px-8 py-3 bg-emerald-500 text-slate-900 font-extrabold rounded-xl hover:bg-emerald-400 transition-all text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2">
+                @if (enviando()) {
+                  <i class="fas fa-circle-notch fa-spin"></i>
+                } @else {
+                  <i class="fas fa-paper-plane"></i>
+                }
+                {{ enviando() ? 'Guardando...' : 'Finalizar y Enviar Ficha' }}
+              </button>
+            </div>
+          }
+        </form>
+      </div>
+    } @else {
+      <div class="text-center py-16 bg-slate-800 rounded-2xl border border-slate-700 p-8 shadow-xl">
+        <i class="fas fa-folder-open text-5xl text-slate-600 mb-4 block"></i>
+        <h3 class="font-bold text-white text-lg mb-1">No hay fichas socioeconómicas disponibles</h3>
+        <p class="text-xs text-slate-400 max-w-md mx-auto">Actualmente no existe un formulario publicado activo para el periodo académico en curso.</p>
+      </div>
+    }
+  </main>
+</div>
