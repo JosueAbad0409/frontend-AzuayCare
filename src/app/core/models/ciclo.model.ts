@@ -1,20 +1,22 @@
 export interface Ciclo {
   id?: string;
   nombre: string; 
-  carreraId: string;
-  carreraNombre?: string;
-  activo: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  carrera_id: string;
+  carrera?: {
+    id: string;
+    nombre: string;
+  };
+  fecha_desactivacion?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateCicloDto {
   nombre: string;
-  carreraId: string;
+  carrera_id: string;
 }
 
 export interface UpdateCicloDto {
   nombre?: string;
-  carreraId?: string;
-  activo?: boolean;
+  carrera_id?: string;
 }
