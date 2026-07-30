@@ -11,208 +11,97 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="documentos-container">
-      <div class="header-section">
-        <h2>📁 Mis Documentos de Respaldo</h2>
-        <p>Sube y gestiona tus archivos personales para respaldar tu ficha socioeconómica.</p>
+    <div class="max-w-5xl mx-auto space-y-6 animate-fade-in relative z-10">
+      
+      <!-- Header -->
+      <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-6 sm:p-8 rounded-[2rem] shadow-xl">
+        <h2 class="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
+          <i class="fas fa-folder-open text-indigo-400"></i> Repositorio de Documentos
+        </h2>
+        <p class="text-slate-400 mt-2 font-medium">Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos por Bienestar Estudiantil.</p>
       </div>
 
-      <!-- Zona de Carga / Drag and Drop -->
-      <div class="upload-card">
-        <div class="upload-zone" (click)="fileInput.click()">
-          <input #fileInput type="file" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg" style="display: none;" />
-          <span class="upload-icon">☁️</span>
-          <h3>Haz clic o arrastra aquí un archivo</h3>
-          <p>Formatos permitidos: PDF, PNG, JPG (Máx. 5MB)</p>
+      <!-- Drag & Drop Zone -->
+      <div class="bg-slate-900/40 backdrop-blur-md border-2 border-dashed border-indigo-500/30 hover:border-indigo-400 transition-all rounded-[2rem] p-10 text-center cursor-pointer group shadow-lg" (click)="fileInput.click()">
+        <input #fileInput type="file" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg" class="hidden" />
+        <div class="w-20 h-20 mx-auto bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform mb-4 border border-indigo-500/20 shadow-inner">
+          <i class="fas fa-cloud-upload-alt"></i>
         </div>
+        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">Haz clic aquí para seleccionar un archivo</h3>
+        <p class="text-sm text-slate-500 font-medium">Formatos soportados: PDF, JPG, PNG (Máx. 10MB)</p>
       </div>
 
-      <!-- Lista de Documentos -->
-      <div class="list-section">
-        <h3>Archivos Guardados ({{ misDocumentos().length }})</h3>
+      <!-- Galería de Documentos -->
+      <div class="pt-4">
+        <h3 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
+          <i class="fas fa-archive text-slate-500"></i> Archivos Subidos ({{ misDocumentos().length }})
+        </h3>
         
-        <div class="grid-documentos" *ngIf="misDocumentos().length > 0; else emptyState">
-          <div class="doc-card" *ngFor="let doc of misDocumentos()">
-            <div class="doc-icon">
-              {{ doc.tipo_mime?.includes('pdf') ? '📄' : '🖼️' }}
-            </div>
-            <div class="doc-info">
-              <h4 class="doc-title">{{ doc.nombre_archivo }}</h4>
-              <p class="doc-meta">{{ doc.created_at | date:'dd/MM/yyyy' }}</p>
-            </div>
-            <div class="doc-actions">
-              <!-- Botón Previsualizar -->
-              <button class="btn-icon" (click)="abrirPreview(doc)" title="Ver / Previsualizar">👁️</button>
-              <button class="btn-icon danger" (click)="eliminarDocumento(doc.id)" title="Eliminar">🗑️</button>
-            </div>
+        @if (misDocumentos().length > 0) {
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @for (doc of misDocumentos(); track doc.id) {
+              <div class="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-md group flex flex-col justify-between h-full">
+                <div class="flex items-start gap-4 mb-4">
+                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-inner"
+                       [ngClass]="doc.tipo_mime?.includes('pdf') ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'">
+                    <i class="fas" [ngClass]="doc.tipo_mime?.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'"></i>
+                  </div>
+                  <div class="overflow-hidden">
+                    <h4 class="font-bold text-slate-200 text-sm truncate" [title]="doc.nombre_archivo">{{ doc.nombre_archivo }}</h4>
+                    <p class="text-xs text-slate-500 mt-0.5 font-medium">{{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-2 mt-auto pt-4 border-t border-slate-800/80">
+                  <button (click)="abrirPreview(doc)" class="flex-1 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white rounded-xl text-xs font-bold transition-colors">
+                    <i class="fas fa-eye mr-1"></i> Ver
+                  </button>
+                  <button (click)="eliminarDocumento(doc.id)" class="w-10 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-colors border border-rose-500/20">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+            }
           </div>
-        </div>
-
-        <ng-template #emptyState>
-          <div class="empty-box">
-            <p>No tienes documentos guardados aún. Sube tu cédula o planillas de servicio para usarlas después.</p>
+        } @else {
+          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-10 text-center">
+            <i class="fas fa-folder-open text-4xl text-slate-600 mb-3"></i>
+            <p class="text-slate-400 font-medium text-sm">Tu repositorio está vacío. Sube documentos para respaldar tu ficha.</p>
           </div>
-        </ng-template>
+        }
       </div>
     </div>
 
-    <!-- MODAL LIVE PREVIEW -->
-    <div class="modal-backdrop" *ngIf="docPreview()" (click)="cerrarPreview()">
-      <div class="modal-box-preview" (click)="$event.stopPropagation()">
-        <div class="preview-header">
-          <span style="display: flex; align-items: center; gap: 8px;">
-            📄 {{ docPreview()?.nombre_archivo }}
-          </span>
-          <button class="close-btn" (click)="cerrarPreview()" title="Cerrar">❌</button>
-        </div>
-        <div class="preview-body">
-          <iframe *ngIf="docPreview()?.tipo_mime?.includes('pdf')" [src]="safePreviewUrl()" width="100%" height="100%" style="border:none;"></iframe>
-          <img *ngIf="!docPreview()?.tipo_mime?.includes('pdf')" [src]="docPreview()?.url_archivo" class="preview-img" />
+    <!-- Modal de Previsualización -->
+    @if (docPreview()) {
+      <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-pop">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md" (click)="cerrarPreview()"></div>
+        
+        <div class="relative w-full max-w-4xl h-[85vh] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
+          <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+            <h3 class="font-bold text-white text-sm flex items-center gap-2 truncate pr-4">
+              <i class="fas" [ngClass]="docPreview()?.tipo_mime?.includes('pdf') ? 'fa-file-pdf text-rose-400' : 'fa-image text-blue-400'"></i>
+              {{ docPreview()?.nombre_archivo }}
+            </h3>
+            <button (click)="cerrarPreview()" class="w-8 h-8 bg-slate-800 text-slate-400 rounded-xl hover:text-white hover:bg-slate-700 transition-colors shrink-0 flex items-center justify-center">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div class="flex-1 bg-slate-950 overflow-hidden flex items-center justify-center relative">
+            @if (docPreview()?.tipo_mime?.includes('pdf')) {
+              <iframe [src]="safePreviewUrl()" class="w-full h-full border-none"></iframe>
+            } @else {
+              <img [src]="docPreview()?.url_archivo" class="max-w-full max-h-full object-contain p-4" />
+            }
+          </div>
         </div>
       </div>
-    </div>
+    }
   `,
   styles: [`
-    .documentos-container {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .header-section h2 {
-      margin: 0 0 6px 0;
-      color: #fff;
-    }
-
-    .header-section p {
-      margin: 0;
-      color: #9ca3af;
-    }
-
-    .upload-card {
-      background: #111827;
-      border: 2px dashed #374151;
-      border-radius: 12px;
-      padding: 32px;
-      text-align: center;
-      transition: border-color 0.2s;
-    }
-
-    .upload-card:hover {
-      border-color: #10b981;
-    }
-
-    .upload-zone {
-      cursor: pointer;
-    }
-
-    .upload-icon {
-      font-size: 2.5rem;
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .grid-documentos {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .doc-card {
-      background: #1f2937;
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid #374151;
-    }
-
-    .doc-icon {
-      font-size: 1.8rem;
-    }
-
-    .doc-info {
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .doc-title {
-      margin: 0;
-      font-size: 0.95rem;
-      color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .doc-meta {
-      margin: 4px 0 0 0;
-      font-size: 0.8rem;
-      color: #9ca3af;
-    }
-
-    .doc-actions {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-
-    .btn-icon {
-      background: #374151;
-      border: none;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-    }
-
-    .btn-icon:hover {
-      background: #4b5563;
-    }
-
-    .btn-icon.danger:hover {
-      background: #ef4444;
-    }
-
-    .empty-box {
-      background: #111827;
-      padding: 24px;
-      border-radius: 8px;
-      text-align: center;
-      color: #6b7280;
-    }
-
-    /* Modal Backdrop Específico del Componente */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      backdrop-filter: blur(4px);
-    }
-    
-    .close-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      font-size: 1rem;
-      opacity: 0.7;
-    }
-    
-    .close-btn:hover {
-      opacity: 1;
-    }
+    .animate-pop { animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   `]
 })
 export class EstudianteDocumentosComponent implements OnInit {
@@ -224,7 +113,6 @@ export class EstudianteDocumentosComponent implements OnInit {
   misDocumentos = signal<DocumentoRespaldo[]>([]);
   fichaIdActiva = signal<string | null>(null);
 
-  // Estado para Live Preview
   docPreview = signal<DocumentoRespaldo | null>(null);
   safePreviewUrl = signal<SafeResourceUrl | null>(null);
 
@@ -235,7 +123,6 @@ export class EstudianteDocumentosComponent implements OnInit {
   cargarFichaYDocumentos(): void {
     this.fichaService.getMisFichas().subscribe({
       next: (fichas) => {
-        // Se cambió 'ENVIADO' por 'ENVIADA' para coincidir con la definición de tipo exacta
         const activa = fichas.find(f => f.estado_ficha === 'BORRADOR' || f.estado_ficha === 'ENVIADA');
         if (activa) {
           this.fichaIdActiva.set(activa.id);
@@ -248,7 +135,7 @@ export class EstudianteDocumentosComponent implements OnInit {
   cargarDocumentos(fichaId: string): void {
     this.documentosService.getDocumentosByFicha(fichaId).subscribe({
       next: (docs) => this.misDocumentos.set(docs),
-      error: (err: any) => this.toastService.show('Error al cargar los documentos de respaldo.', 'error')
+      error: () => this.toastService.show('Error al cargar documentos.', 'error')
     });
   }
 
@@ -256,7 +143,7 @@ export class EstudianteDocumentosComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       if (!this.fichaIdActiva()) {
-        this.toastService.show('Debes iniciar una ficha socioeconómica antes de subir documentos.', 'error');
+        this.toastService.show('Debes tener una ficha activa para subir documentos.', 'warning');
         return;
       }
 
@@ -264,21 +151,21 @@ export class EstudianteDocumentosComponent implements OnInit {
       this.documentosService.subirDocumento(this.fichaIdActiva()!, file).subscribe({
         next: (nuevoDoc) => {
           this.misDocumentos.update(docs => [...docs, nuevoDoc]);
-          this.toastService.show('Documento subido con éxito.', 'success');
+          this.toastService.show('Archivo subido correctamente.', 'success');
         },
-        error: (err: any) => this.toastService.show(err?.error?.message || 'Error al subir el documento.', 'error')
+        error: (err: any) => this.toastService.show(err?.error?.message || 'Error al subir el archivo.', 'error')
       });
     }
   }
 
   eliminarDocumento(id: string): void {
-    if (confirm('¿Deseas eliminar este documento?')) {
+    if (confirm('¿Eliminar definitivamente este archivo?')) {
       this.documentosService.deleteDocumento(id).subscribe({
         next: () => {
           this.misDocumentos.update(docs => docs.filter(d => d.id !== id));
-          this.toastService.show('Documento eliminado exitosamente.', 'success');
+          this.toastService.show('Archivo eliminado.', 'success');
         },
-        error: (err: any) => this.toastService.show('Error al intentar eliminar el documento.', 'error')
+        error: () => this.toastService.show('Error al eliminar el archivo.', 'error')
       });
     }
   }
@@ -286,7 +173,6 @@ export class EstudianteDocumentosComponent implements OnInit {
   abrirPreview(doc: DocumentoRespaldo): void {
     this.docPreview.set(doc);
     if (doc.tipo_mime?.includes('pdf')) {
-      // Necesitamos sanitizar la URL para que Angular permita cargar el iframe
       this.safePreviewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(doc.url_archivo));
     }
   }

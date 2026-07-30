@@ -14,237 +14,77 @@ interface MenuItem {
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <div class="layout-container" [class.collapsed]="isSidebarCollapsed()">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="logo-box">
-            <span class="logo-icon">🎓</span>
-            <span class="logo-text" *ngIf="!isSidebarCollapsed()">AzuayCare</span>
+    <div class="min-h-screen bg-[#090a0f] text-slate-200 font-sans selection:bg-emerald-500/30 relative flex flex-col md:flex-row">
+      <!-- Ambient Glow (Luces de Fondo) -->
+      <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-emerald-500/10 blur-[120px] pointer-events-none z-0"></div>
+      <div class="fixed bottom-0 right-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[150px] pointer-events-none z-0"></div>
+
+      <!-- Barra de Navegación Flotante -->
+      <nav class="fixed top-0 w-full z-50 px-4 py-3 transition-all duration-300">
+        <div class="max-w-6xl mx-auto bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 rounded-2xl px-5 py-3 flex items-center justify-between shadow-2xl shadow-black/60">
+          
+          <!-- Marca / Logo -->
+          <div class="flex items-center gap-3 cursor-pointer group" routerLink="/estudiante/inicio">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-black text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] group-hover:scale-105 transition-transform">
+              AC
+            </div>
+            <div class="hidden sm:block">
+              <h1 class="text-sm font-extrabold text-white tracking-wide leading-tight">AzuayCare</h1>
+              <p class="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase">Portal Estudiantil</p>
+            </div>
           </div>
-          <button class="toggle-btn" (click)="toggleSidebar()" type="button" [attr.aria-label]="isSidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'">
-            {{ isSidebarCollapsed() ? '❯' : '❮' }}
-          </button>
-        </div>
 
-        <nav class="sidebar-nav">
-          <ul>
-            <li *ngFor="let item of menuItems">
-              <a 
-                [routerLink]="item.route" 
-                routerLinkActive="active" 
-                class="nav-item"
-                [title]="isSidebarCollapsed() ? item.label : ''">
-                <span class="nav-icon">{{ item.icon }}</span>
-                <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-
-        <div class="sidebar-footer">
-          <button class="logout-btn" (click)="logout()" type="button" [title]="isSidebarCollapsed() ? 'Cerrar Sesión' : ''">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-label" *ngIf="!isSidebarCollapsed()">Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Main Content -->
-      <main class="main-content">
-        <header class="top-header">
-          <h1 class="header-title">Portal Estudiantil</h1>
-          <div class="user-badge">
-            <span class="avatar">👤</span>
-            <span class="username">{{ usuarioNombre() }}</span>
+          <!-- Rutas Principales -->
+          <div class="flex items-center gap-1 sm:gap-2">
+            <a *ngFor="let item of menuItems"
+              [routerLink]="item.route" 
+              routerLinkActive="bg-white/10 text-white border-white/20" 
+              class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-all border border-transparent flex items-center gap-2">
+              <span>{{ item.icon }}</span>
+              <span class="hidden md:inline">{{ item.label }}</span>
+            </a>
           </div>
-        </header>
 
-        <div class="content-body">
-          <router-outlet></router-outlet>
+          <!-- Usuario y Salida -->
+          <div class="flex items-center gap-3 border-l border-slate-700/60 pl-3 sm:pl-4">
+            <div class="flex flex-col items-end hidden lg:flex">
+              <span class="text-xs font-bold text-white">{{ usuarioNombre() }}</span>
+              <span class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">{{ authService.user()?.rol || 'ESTUDIANTE' }}</span>
+            </div>
+            <button (click)="logout()" class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-500/20 group cursor-pointer" title="Cerrar Sesión">
+              <i class="fas fa-sign-out-alt group-hover:scale-110 transition-transform"></i>
+            </button>
+          </div>
+
         </div>
+      </nav>
+
+      <!-- Áreas de Contenido -->
+      <main class="relative z-10 pt-28 pb-12 px-4 w-full flex-1 max-w-6xl mx-auto">
+        <router-outlet></router-outlet>
       </main>
     </div>
-  `,
-  styles: [`
-    .layout-container {
-      display: flex;
-      min-height: 100vh;
-      background-color: #0b0f19;
-      color: #e2e8f0;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-
-    .sidebar {
-      width: 260px;
-      background: #111827;
-      border-right: 1px solid #1f2937;
-      display: flex;
-      flex-direction: column;
-      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 100;
-    }
-
-    .layout-container.collapsed .sidebar {
-      width: 80px;
-    }
-
-    .sidebar-header {
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-bottom: 1px solid #1f2937;
-    }
-
-    .logo-box {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: bold;
-      font-size: 1.2rem;
-      color: #10b981;
-    }
-
-    .logo-icon {
-      font-size: 1.5rem;
-    }
-
-    .toggle-btn {
-      background: transparent;
-      border: 1px solid #374151;
-      color: #9ca3af;
-      border-radius: 6px;
-      padding: 4px 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .toggle-btn:hover {
-      color: #fff;
-      border-color: #6b7280;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      padding: 16px 8px;
-    }
-
-    .sidebar-nav ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      color: #9ca3af;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .nav-item:hover, .nav-item.active {
-      background: #1f2937;
-      color: #10b981;
-    }
-
-    .nav-icon {
-      font-size: 1.2rem;
-      min-width: 24px;
-      text-align: center;
-    }
-
-    .sidebar-footer {
-      padding: 16px 8px;
-      border-top: 1px solid #1f2937;
-    }
-
-    .logout-btn {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border: none;
-      background: transparent;
-      color: #ef4444;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.2s;
-    }
-
-    .logout-btn:hover {
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
-
-    .top-header {
-      height: 64px;
-      background: #111827;
-      border-bottom: 1px solid #1f2937;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-    }
-
-    .header-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin: 0;
-    }
-
-    .user-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #1f2937;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-    }
-
-    .content-body {
-      padding: 24px;
-      flex: 1;
-    }
-  `]
+  `
 })
 export class EstudianteLayoutComponent implements OnInit {
   private readonly router = inject(Router);
-  private readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
 
   isSidebarCollapsed = signal<boolean>(false);
-  // Eliminado el texto estático inicial
-  usuarioNombre = signal<string>('Cargando...'); 
+  usuarioNombre = signal<string>('Cargando...');
 
   menuItems: MenuItem[] = [
     { label: 'Inicio', icon: '🏠', route: '/estudiante/inicio' },
-    { label: 'Ficha Socioeconómica', icon: '📝', route: '/estudiante/ficha' },
-    { label: 'Mis Documentos', icon: '📁', route: '/estudiante/documentos' }
+    { label: 'Mi Ficha', icon: '📝', route: '/estudiante/ficha' },
+    { label: 'Documentos', icon: '📁', route: '/estudiante/documentos' }
   ];
 
   ngOnInit(): void {
     const user = this.authService.user();
     if (user?.nombre) {
-      this.usuarioNombre.set(user.nombre);
+      this.usuarioNombre.set(user.nombre.split(' ')[0]); // Solo el primer nombre
     } else {
-      this.usuarioNombre.set('Invitado');
+      this.usuarioNombre.set('Estudiante');
     }
   }
 
