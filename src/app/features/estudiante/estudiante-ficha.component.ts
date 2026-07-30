@@ -1,5 +1,3 @@
-// C:\Proyecto AzuayCare\frontend-AzuayCare\src\app\pages\estudiante\ficha\estudiante-ficha.component.ts
-
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, ElementRef, ViewChild, afterNextRender, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -22,8 +20,6 @@ import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
 import { EstudiantePerfilModalComponent } from './components/estudiante-perfil-modal.component';
-
-// Se agregó debounceTime a la importación de rxjs
 import { forkJoin, of, catchError, debounceTime } from 'rxjs';
 
 function minSelectedCheckboxesValidator(min = 1) {
@@ -64,17 +60,13 @@ export class EstudianteFichaComponent implements OnInit {
   
   isLoading = signal<boolean>(true);
   enviando = signal<boolean>(false);
-
-  // Estados de UX/UI
   isSavingLocal = signal<boolean>(false);
   mostrarBannerPrecarga = signal<boolean>(false);
 
-  // Repositorio "Mis Documentos"
   misDocumentosGuardados = signal<DocumentoEstudiante[]>([]);
   mostrarModalSeleccionDoc = signal<boolean>(false);
   respuestaIdParaAdjunto = signal<string | null>(null);
 
-  // Perfil del Estudiante
   perfilEstudiante = signal<EstudiantePerfil | null>(null);
   mostrarModalPerfil = signal<boolean>(false);
 
@@ -84,9 +76,8 @@ export class EstudianteFichaComponent implements OnInit {
 
   seccionActualIndex = signal<number>(0);
 
-  // Progreso incluyendo el paso adicional de Resumen
   progreso = computed(() => {
-    const totalPasos = this.secciones().length + 1; // +1 para la sección de resumen
+    const totalPasos = this.secciones().length + 1;
     if (totalPasos === 1) return 0;
     return ((this.seccionActualIndex() + 1) / totalPasos) * 100;
   });
@@ -118,13 +109,15 @@ export class EstudianteFichaComponent implements OnInit {
     this.cargarPerfilUsuario();
     this.cargarDatosEstudiante();
 
-    // Se aplicó la opción recomendada: debounceTime de 500ms
     this.respuestasForm.valueChanges
       .pipe(
-        debounceTime(500),
+        debounceTime(600),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(val => {
+        // No autosavear si la ficha no es un borrador
+        if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+
         this.isSavingLocal.set(true);
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
@@ -139,7 +132,6 @@ export class EstudianteFichaComponent implements OnInit {
       try { 
         this.autosaveData = JSON.parse(saved); 
       } catch (e) {
-        console.warn('Error al parsear autosave local, limpiando caché corrupta:', e);
         localStorage.removeItem(this.AUTOSAVE_KEY);
         this.autosaveData = null;
       }
@@ -153,9 +145,9 @@ export class EstudianteFichaComponent implements OnInit {
         cedula: (user as any).cedula || (user as any).identificacion || 'N/A',
         rol: (user.rol as any) || 'ESTUDIANTE',
         correo: user.email || user.nombre,
-        carrera: (user as any).carrera || 'Tecnología Superior en Enfermería',
-        ciclo: (user as any).ciclo || '3er Ciclo',
-        periodoAcademico: (user as any).periodo || '2026 - Periodo I',
+        carrera: (user as any).carrera || 'General',
+        ciclo: (user as any).ciclo || 'N/A',
+        periodoAcademico: (user as any).periodo || 'Actual',
         estadoMatricula: (user as any).estadoMatricula || 'MATRICULADO'
       });
     }
@@ -172,7 +164,7 @@ export class EstudianteFichaComponent implements OnInit {
       this.seccionActualIndex.set(index);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      this.toastService.show('Por favor, completa los campos obligatorios antes de avanzar.', 'error');
+      this.toastService.show('Por favor, completa los campos obligatorios antes de avanzar.', 'warning');
     }
   }
 
@@ -183,7 +175,7 @@ export class EstudianteFichaComponent implements OnInit {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } else {
-      this.toastService.show('Por favor, completa los campos obligatorios de esta sección antes de continuar.', 'error');
+      this.toastService.show('Por favor, revisa que todos los campos requeridos estén llenos.', 'warning');
     }
   }
 
@@ -195,7 +187,7 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   validarSeccionActual(): boolean {
-    if (this.esPasoResumen()) return true;
+    if (this.esPasoResumen() || this.fichaActiva()?.estado_ficha !== 'BORRADOR') return true;
 
     const seccionActual = this.secciones()[this.seccionActualIndex()];
     if (!seccionActual) return true;
@@ -231,21 +223,29 @@ export class EstudianteFichaComponent implements OnInit {
     .pipe(takeUntilDestroyed(this.destroyRef))
     .subscribe({
       next: ({ periodos, fichas }) => {
-        const activo = periodos.find(p => p.activo);
-        this.periodoActivo.set(activo || null);
+        const pActivo = periodos.find(p => p.activo);
+        this.periodoActivo.set(pActivo || null);
         this.misFichas.set(fichas);
 
-        const borradorOEnviada = fichas.find(f => f.estado_ficha === 'BORRADOR' || f.estado_ficha === 'ENVIADA');
-
-        if (borradorOEnviada) {
-          this.validarYBloquearFormularioObsoleto(borradorOEnviada, fichas);
+        // Prioridad 1: Buscar si ya tiene una ficha para el periodo activo
+        const fichaPeriodoActual = fichas.find(f => pActivo && (f.periodo_id === pActivo.id || (f.periodo as any)?.id === pActivo.id));
+        
+        if (fichaPeriodoActual) {
+          this.validarYBloquearFormularioObsoleto(fichaPeriodoActual, fichas);
         } else {
-          this.buscarFormularioVigente();
+          // Prioridad 2: Buscar cualquier otra ficha en borrador/enviada (periodos anteriores)
+          const borradorOEnviada = fichas.find(f => f.estado_ficha === 'BORRADOR' || f.estado_ficha === 'ENVIADA');
+          if (borradorOEnviada) {
+            this.validarYBloquearFormularioObsoleto(borradorOEnviada, fichas);
+          } else {
+            // Prioridad 3: No tiene fichas válidas. Crear una para el formulario vigente.
+            this.buscarFormularioVigente();
+          }
         }
       },
       error: (err) => {
         console.error('Error al cargar datos iniciales del estudiante:', err);
-        this.toastService.show('Error al cargar datos del estudiante', 'error');
+        this.toastService.show('Error de conexión al cargar tus datos.', 'error');
         this.isLoading.set(false);
       }
     });
@@ -257,12 +257,18 @@ export class EstudianteFichaComponent implements OnInit {
       .subscribe({
         next: (formActual: Formulario) => {
           const pActivo = this.periodoActivo();
+          const formPeriodoId = formActual.periodo_id || (formActual as any).periodo?.id;
 
-          if (!formActual.publicado || (pActivo && formActual.periodo_id !== pActivo.id)) {
-            this.toastService.show(
-              'La versión de la ficha que tenías en borrador ha sido desactualizada. Redirigiendo a la versión publicada oficial...',
-              'warning'
-            );
+          // Si el formulario ya no está publicado O no coincide con el periodo activo, redirigir a uno vigente
+          if (!formActual.publicado || (pActivo && formPeriodoId !== pActivo.id)) {
+            // Permitimos visualizar si la ficha está ya validada/rechazada históricamente, pero borramos caché
+            if (ficha.estado_ficha !== 'BORRADOR') {
+              this.fichaActiva.set(ficha);
+              this.cargarEstructuraFormulario(ficha.formulario_id);
+              return;
+            }
+
+            this.toastService.show('La versión de tu ficha ha sido desactualizada. Generando la versión vigente...', 'info');
             localStorage.removeItem(this.AUTOSAVE_KEY);
             this.autosaveData = null;
             this.buscarFormularioVigente();
@@ -272,9 +278,7 @@ export class EstudianteFichaComponent implements OnInit {
             this.evaluarPrecarga(ficha.periodo_id, todasLasFichas);
           }
         },
-        error: () => {
-          this.buscarFormularioVigente();
-        }
+        error: () => this.buscarFormularioVigente()
       });
   }
 
@@ -293,7 +297,7 @@ export class EstudianteFichaComponent implements OnInit {
     const periodoNuevoId = this.fichaActiva()?.periodo_id;
     if (!periodoNuevoId) return;
 
-    this.toastService.show('Importando datos de tu ficha anterior...', 'info');
+    this.toastService.show('Importando datos...', 'info');
     this.mostrarBannerPrecarga.set(false);
 
     this.http.get<any>(`${environment.apiUrl}/respuestas-formulario/precarga/${periodoNuevoId}`)
@@ -304,7 +308,7 @@ export class EstudianteFichaComponent implements OnInit {
             this.toastService.show('Ficha precargada exitosamente.', 'success');
             window.location.reload();
           } else {
-            this.toastService.show('No se encontraron respuestas anteriores para precargar.', 'info');
+            this.toastService.show('No hay datos para precargar.', 'info');
           }
         },
         error: () => this.toastService.show('Error al intentar precargar la ficha.', 'error')
@@ -318,14 +322,15 @@ export class EstudianteFichaComponent implements OnInit {
         next: (formularios: Formulario[]) => {
           const pActivo = this.periodoActivo();
 
-          const formPublicadoVigente = formularios.find(f => 
-            f.publicado === true && (!pActivo || f.periodo_id === pActivo.id)
-          );
+          const formPublicadoVigente = formularios.find(f => {
+            const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
+            return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
+          });
 
-          if (formPublicadoVigente && formPublicadoVigente.periodo_id) {
-            this.crearNuevaFicha(formPublicadoVigente.periodo_id, formPublicadoVigente.id);
+          if (formPublicadoVigente) {
+            const fPeriodoId = formPublicadoVigente.periodo_id || (formPublicadoVigente as any).periodo?.id;
+            this.crearNuevaFicha(fPeriodoId, formPublicadoVigente.id);
           } else {
-            this.toastService.show('No existe una ficha socioeconómica publicada para el periodo actual.', 'info');
             this.isLoading.set(false);
           }
         },
@@ -337,16 +342,32 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   crearNuevaFicha(periodoId: string, formularioId: string): void {
-    this.fichaService.crearFicha({ periodo_id: periodoId, formulario_id: formularioId })
+    // Evitamos errores de constraints forzando el envío de ingresos/egresos a 0 inicial
+    this.fichaService.crearFicha({ 
+      periodo_id: periodoId, 
+      formulario_id: formularioId,
+      total_ingresos: 0,
+      total_egresos: 0
+    } as any)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (nuevaFicha: FichaRevision) => {
           this.fichaActiva.set(nuevaFicha);
           this.cargarEstructuraFormulario(formularioId);
         },
-        error: () => {
-          this.toastService.show('Error al crear ficha', 'error');
-          this.isLoading.set(false);
+        error: (err) => {
+          // Recuperación resiliente: si el backend rechaza la creación (posible ficha ya existente), intentamos re-obtenerla.
+          this.fichaService.getMisFichas().subscribe(fichas => {
+             const found = fichas.find(f => f.periodo_id === periodoId || f.formulario_id === formularioId);
+             if (found) {
+                this.fichaActiva.set(found);
+                this.cargarEstructuraFormulario(found.formulario_id);
+             } else {
+                console.error('Error al inicializar la ficha:', err);
+                this.toastService.show('Error al crear o buscar tu ficha.', 'error');
+                this.isLoading.set(false);
+             }
+          });
         }
       });
   }
@@ -389,16 +410,23 @@ export class EstudianteFichaComponent implements OnInit {
 
               this.sanitizarAutosave(idsPreguntasExistentes);
               preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
+              
+              // Bloquear formulario para sólo lectura si no es un borrador
+              if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
+                this.respuestasGroup.disable({ emitEvent: false });
+                this.matricesGroup.disable({ emitEvent: false });
+              }
+
               this.isLoading.set(false);
             },
             error: () => {
-              this.toastService.show('Error al cargar preguntas de la sección', 'error');
+              this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
               this.isLoading.set(false);
             }
           });
       },
       error: () => {
-        this.toastService.show('Error al cargar la estructura del formulario', 'error');
+        this.toastService.show('Error de conexión con el formulario.', 'error');
         this.isLoading.set(false);
       }
     });
@@ -406,20 +434,14 @@ export class EstudianteFichaComponent implements OnInit {
 
   private sanitizarAutosave(idsPreguntasExistentes: Set<string>): void {
     if (!this.autosaveData) return;
-
     if (this.autosaveData.respuestas) {
       Object.keys(this.autosaveData.respuestas).forEach(key => {
-        if (!idsPreguntasExistentes.has(key)) {
-          delete this.autosaveData.respuestas[key];
-        }
+        if (!idsPreguntasExistentes.has(key)) delete this.autosaveData.respuestas[key];
       });
     }
-
     if (this.autosaveData.matrices) {
       Object.keys(this.autosaveData.matrices).forEach(key => {
-        if (!idsPreguntasExistentes.has(key)) {
-          delete this.autosaveData.matrices[key];
-        }
+        if (!idsPreguntasExistentes.has(key)) delete this.autosaveData.matrices[key];
       });
     }
   }
@@ -437,7 +459,6 @@ export class EstudianteFichaComponent implements OnInit {
           savedArr.map(id => this.fb.control(id)),
           p.es_obligatorio ? minSelectedCheckboxesValidator(1) : []
         );
-
         this.respuestasGroup.addControl(p.id, formArray);
       }
     } else {
@@ -452,10 +473,12 @@ export class EstudianteFichaComponent implements OnInit {
       this.cargarEstructuraMatriz(p);
     }
     
-    this.valormap.set(this.respuestasGroup.value);
+    this.valormap.set(this.respuestasGroup.getRawValue());
   }
 
   onToggleSeleccionMultiple(preguntaId: string, opcionId: string, event: Event): void {
+    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return; // Bloquear si no es borrador
+
     const checked = (event.target as HTMLInputElement).checked;
     const formArray = this.respuestasGroup.get(preguntaId) as FormArray;
 
@@ -465,13 +488,11 @@ export class EstudianteFichaComponent implements OnInit {
       formArray.push(this.fb.control(opcionId));
     } else {
       const idx = formArray.controls.findIndex(ctrl => ctrl.value === opcionId);
-      if (idx !== -1) {
-        formArray.removeAt(idx);
-      }
+      if (idx !== -1) formArray.removeAt(idx);
     }
 
     formArray.markAsTouched();
-    this.valormap.set(this.respuestasGroup.value);
+    this.valormap.set(this.respuestasGroup.getRawValue());
   }
 
   esOpcionMultipleSeleccionada(preguntaId: string, opcionId: string): boolean {
@@ -505,9 +526,12 @@ export class EstudianteFichaComponent implements OnInit {
             matrizFormGroup.addControl(fila.id, this.fb.control(savedColVal, validator));
           });
           this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
+          
+          if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
+            matrizFormGroup.disable({ emitEvent: false });
+          }
         }
-      },
-      error: () => this.toastService.show(`Error al cargar la matriz de la pregunta`, 'error')
+      }
     });
   }
 
@@ -533,6 +557,8 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   private limpiarPreguntasOcultas(): void {
+    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+
     this.dependencias().forEach(dep => {
       if (!this.esPreguntaVisible(dep.pregunta_dependiente_id)) {
         const ctrl = this.respuestasGroup.get(dep.pregunta_dependiente_id);
@@ -549,9 +575,8 @@ export class EstudianteFichaComponent implements OnInit {
     });
   }
 
-  // --- HELPERS PARA MOSTRAR RESUMEN DE RESPUESTAS ---
   obtenerTextoRespuesta(pregunta: Pregunta): string {
-    const val = this.respuestasGroup.get(pregunta.id)?.value;
+    const val = this.respuestasGroup.getRawValue()[pregunta.id];
     if (val === null || val === undefined || val === '') return 'Sin responder';
 
     if (Array.isArray(val)) {
@@ -575,17 +600,14 @@ export class EstudianteFichaComponent implements OnInit {
     window.open(`${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`, '_blank');
   }
 
-  /**
-   * Procesa el guardado/envío de respuestas adaptado para soportar booleanos, arreglos, números,
-   * objetos de matriz y permitiendo guardar borradores remotos (esFinal: false).
-   */
   guardarYEnviar(esFinal: boolean = true): void {
     const ficha = this.fichaActiva();
     if (!ficha) return;
 
     this.enviando.set(true);
 
-    const respuestasValores = this.respuestasGroup.value;
+    // getRawValue extrae los valores aunque los inputs estén en estado disabled
+    const respuestasValores = this.respuestasGroup.getRawValue();
     const payloadRespuestas: any[] = [];
 
     Object.keys(respuestasValores).forEach(preguntaId => {
@@ -623,7 +645,7 @@ export class EstudianteFichaComponent implements OnInit {
       }
     });
 
-    const matricesValores = this.matricesGroup.value;
+    const matricesValores = this.matricesGroup.getRawValue();
     const payloadMatriz: any[] = [];
 
     Object.keys(matricesValores).forEach(preguntaId => {
@@ -667,7 +689,7 @@ export class EstudianteFichaComponent implements OnInit {
             this.finalizarEnvio();
           } else {
             this.enviando.set(false);
-            this.toastService.show('Borrador guardado exitosamente en el servidor.', 'info');
+            this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
           }
         }
       }
@@ -682,6 +704,8 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
+    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+
     const element = event.currentTarget as HTMLInputElement;
     const fileList: FileList | null = element.files;
     if (fileList && fileList.length > 0) {
@@ -695,25 +719,6 @@ export class EstudianteFichaComponent implements OnInit {
           },
           error: () => this.toastService.show('Error al subir el archivo.', 'error')
         });
-    }
-  }
-
-  abrirSeleccionMisDocumentos(preguntaId: string): void {
-    this.respuestaIdParaAdjunto.set(preguntaId);
-    this.mostrarModalSeleccionDoc.set(true);
-  }
-
-  cerrarModalSeleccionDoc(): void {
-    this.mostrarModalSeleccionDoc.set(false);
-    this.respuestaIdParaAdjunto.set(null);
-  }
-
-  seleccionarDocumentoDeBiblioteca(doc: DocumentoEstudiante): void {
-    const pregId = this.respuestaIdParaAdjunto();
-    if (pregId) {
-      this.respuestasGroup.get(pregId)?.setValue(doc.url || doc.nombreOriginal);
-      this.toastService.show(`Se adjuntó "${doc.nombreOriginal}".`, 'info');
-      this.cerrarModalSeleccionDoc();
     }
   }
 

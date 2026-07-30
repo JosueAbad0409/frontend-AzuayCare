@@ -2,24 +2,39 @@
   <div class="header-section">
     <div>
       <h3 class="title">Gestión de Ciclos Académicos</h3>
-      <p class="subtitle">Asigna y administra ciclos (1er Ciclo, 2do Ciclo, etc.) por cada carrera.</p>
+      <p class="subtitle">Asigna y administra ciclos (1er Ciclo, 2do Ciclo,3do, Ciclo etc.) por cada carrera.</p>
     </div>
     <button (click)="openModal()" class="btn btn-purple">
       <i class="fas fa-plus"></i> Nuevo Ciclo
     </button>
   </div>
 
+  @if (!loading()) {
+    <div class="search-bar-wrapper">
+      <div class="search-input-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          placeholder="Buscar por ciclo o carrera..." 
+          [value]="searchTerm()"
+          (input)="onSearchChange($event)"
+          class="search-control"
+        />
+      </div>
+      <span class="count-badge">{{ ciclosFiltrados().length }} Ciclo(s)</span>
+    </div>
+  }
+
   @if (loading()) {
     <div class="loading-state">
       <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
-      <p>Cargando ciclos académicos...</p>
+      <p style="font-weight: 600;">Cargando ciclos académicos...</p>
     </div>
   } @else {
     <div class="table-container">
       <table class="admin-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Nombre del Ciclo</th>
             <th>Carrera Asignada</th>
             <th>Estado</th>
@@ -27,30 +42,33 @@
           </tr>
         </thead>
         <tbody>
-          @for (ciclo of ciclos(); track ciclo.id) {
+          @for (ciclo of ciclosFiltrados(); track ciclo.id) {
             <tr>
-              <td><span class="badge badge-blue">#{{ ciclo.id }}</span></td>
               <td><strong>{{ ciclo.nombre }}</strong></td>
-              <td>{{ ciclo.carreraNombre || getCarreraNombre(ciclo.carreraId) }}</td>
+              <td class="text-muted">{{ ciclo.carrera?.nombre || getCarreraNombre(ciclo.carrera_id) }}</td>
               <td>
-                <span class="badge" [ngClass]="ciclo.activo ? 'badge-success' : 'badge-danger'">
-                  {{ ciclo.activo ? 'Activo' : 'Inactivo' }}
+                <span class="badge" [ngClass]="!ciclo.fecha_desactivacion ? 'badge-success' : 'badge-danger'">
+                  <i class="fas" [ngClass]="!ciclo.fecha_desactivacion ? 'fa-check-circle' : 'fa-times-circle'" style="margin-right: 4px;"></i>
+                  {{ !ciclo.fecha_desactivacion ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
               <td style="text-align: right;">
-                <button (click)="openModal(ciclo)" class="btn-icon text-blue" title="Editar">
+                <button (click)="openModal(ciclo)" class="btn-icon text-blue" title="Editar Ciclo">
                   <i class="fas fa-edit"></i>
                 </button>
-                @if (ciclo.activo) {
+                @if (!ciclo.fecha_desactivacion) {
                   <button (click)="darDeBaja(ciclo.id!)" class="btn-icon text-red" title="Dar de baja">
-                    <i class="fas fa-ban"></i>
+                    <i class="fas fa-trash-alt"></i>
                   </button>
                 }
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="5" class="empty-state">No hay ciclos configurados.</td>
+              <td colspan="4" class="empty-state">
+                <i class="fas fa-folder-open empty-icon"></i>
+                <p>No hay ciclos configurados o no coinciden con la búsqueda.</p>
+              </td>
             </tr>
           }
         </tbody>
@@ -62,28 +80,40 @@
   @if (modalOpen()) {
     <div class="modal-backdrop">
       <div class="modal-box animate-pop">
-        <h3>{{ editingCicloId() ? 'Editar Ciclo' : 'Nuevo Ciclo Académico' }}</h3>
-        <form [formGroup]="cicloForm" (ngSubmit)="guardarCiclo()">
-          <div class="form-group mb-3">
-            <label>Nombre del Ciclo *</label>
-            <input type="text" formControlName="nombre" class="form-control" placeholder="Ej. 1er Ciclo, 2do Ciclo">
-          </div>
+        
+        <div class="modal-header">
+          <h3>
+            <i class="fas" [ngClass]="editingCicloId() ? 'fa-edit' : 'fa-plus-circle'" style="color: #8b5cf6; margin-right: 8px;"></i>
+            {{ editingCicloId() ? 'Editar Ciclo' : 'Nuevo Ciclo Académico' }}
+          </h3>
+        </div>
 
-          <div class="form-group mb-3">
-            <label>Carrera *</label>
-            <select formControlName="carreraId" class="form-control">
-              <option value="">-- Seleccione Carrera --</option>
-              @for (c of carreras(); track c.id) {
-                <option [value]="c.id">{{ c.nombre }}</option>
-              }
-            </select>
+        <form [formGroup]="cicloForm" (ngSubmit)="guardarCiclo()">
+          <div class="modal-body">
+            <div class="form-group mb-4">
+              <label>Nombre del Ciclo <span style="color: #ef4444;">*</span></label>
+              <input type="text" formControlName="nombre" class="form-control" placeholder="Ej. 1er Ciclo, 2do Ciclo, etc.">
+            </div>
+
+            <div class="form-group">
+              <label>Carrera a la que pertenece <span style="color: #ef4444;">*</span></label>
+              <select formControlName="carrera_id" class="form-control" style="cursor: pointer;">
+                <option value="">-- Seleccione una Carrera --</option>
+                @for (c of carreras(); track c.id) {
+                  <option [value]="c.id">{{ c.nombre }}</option>
+                }
+              </select>
+            </div>
           </div>
 
           <div class="form-actions">
             <button type="button" class="btn btn-outline" (click)="closeModal()">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="cicloForm.invalid">Guardar Ciclo</button>
+            <button type="submit" class="btn btn-purple" [disabled]="cicloForm.invalid">
+              <i class="fas fa-save"></i> {{ editingCicloId() ? 'Actualizar' : 'Guardar Ciclo' }}
+            </button>
           </div>
         </form>
+
       </div>
     </div>
   }
