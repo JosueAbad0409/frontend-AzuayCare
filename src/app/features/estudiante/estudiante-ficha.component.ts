@@ -252,35 +252,36 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   private validarYBloquearFormularioObsoleto(ficha: FichaRevision, todasLasFichas: FichaRevision[]): void {
-    this.formularioService.getFormularioById(ficha.formulario_id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (formActual: Formulario) => {
-          const pActivo = this.periodoActivo();
-          const formPeriodoId = formActual.periodo_id || (formActual as any).periodo?.id;
+  this.formularioService.getFormularioById(ficha.formulario_id)
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (formActual: Formulario) => {
+        const pActivo = this.periodoActivo();
+        const formPeriodoId = formActual.periodo_id || (formActual as any).periodo?.id;
 
-          // Si el formulario ya no está publicado O no coincide con el periodo activo, redirigir a uno vigente
-          if (!formActual.publicado || (pActivo && formPeriodoId !== pActivo.id)) {
-            // Permitimos visualizar si la ficha está ya validada/rechazada históricamente, pero borramos caché
-            if (ficha.estado_ficha !== 'BORRADOR') {
-              this.fichaActiva.set(ficha);
-              this.cargarEstructuraFormulario(ficha.formulario_id);
-              return;
-            }
+        // Si la ficha está en BORRADOR, permitgnla usar directamente aunque el periodo haya variado ligeramente, 
+        // evitando el conflicto de duplicidad en la base de datos.
+        if (ficha.estado_ficha === 'BORRADOR') {
+          this.fichaActiva.set(ficha);
+          this.cargarEstructuraFormulario(ficha.formulario_id);
+          this.evaluarPrecarga(ficha.periodo_id, todasLasFichas);
+          return;
+        }
 
-            this.toastService.show('La versión de tu ficha ha sido desactualizada. Generando la versión vigente...', 'info');
-            localStorage.removeItem(this.AUTOSAVE_KEY);
-            this.autosaveData = null;
-            this.buscarFormularioVigente();
-          } else {
-            this.fichaActiva.set(ficha);
-            this.cargarEstructuraFormulario(ficha.formulario_id);
-            this.evaluarPrecarga(ficha.periodo_id, todasLasFichas);
-          }
-        },
-        error: () => this.buscarFormularioVigente()
-      });
-  }
+        // Para fichas ya enviadas o cerradas históricamente:
+        if (!formActual.publicado || (pActivo && formPeriodoId !== pActivo.id)) {
+          this.fichaActiva.set(ficha);
+          this.cargarEstructuraFormulario(ficha.formulario_id);
+          return;
+        } 
+
+        this.fichaActiva.set(ficha);
+        this.cargarEstructuraFormulario(ficha.formulario_id);
+        this.evaluarPrecarga(ficha.periodo_id, todasLasFichas);
+      },
+      error: () => this.buscarFormularioVigente()
+    });
+}
 
   evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
     const tieneBorradorLleno = localStorage.getItem(this.AUTOSAVE_KEY) !== null;
