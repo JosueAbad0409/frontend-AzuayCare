@@ -209,6 +209,48 @@
 .tag-req { background: #f3e8ff; color: #6d28d9; border: 1px solid rgba(109,40,217,0.2); }
 .tag-evid { background: #fef3c7; color: #b45309; border: 1px solid rgba(180,83,9,0.2); }
 
+/* ESTILOS NUEVOS: BADGES FINANCIEROS, CAJAS CONDICIONALES Y RANGOS */
+.badge-financiera {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.badge-financiera-ingreso {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-financiera-gasto {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.conditional-box {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1.5px dashed #0284c7;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.range-tag {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
 /* Caja Formulario Nueva Pregunta */
 .new-question-box {
   background: #ffffff;

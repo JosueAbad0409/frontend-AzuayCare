@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RevisionService } from '../../../core/services/revision/revision.service';
-import { HistorialEstadoService } from '../../../core/services/historial-estado/historial-estado.service';
+import { RevisionService } from '../../../core/services/revision.service';
+import { HistorialEstadoService } from '../../../core/services/historial-estado.service';
 import { FichaRevision } from '../../../core/models/revision-ficha.model';
 import { HistorialEstadoFicha } from '../../../core/models/historial-estado.model';
 

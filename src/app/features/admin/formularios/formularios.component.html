@@ -2,7 +2,7 @@
   <div class="header-section">
     <div>
       <h3 class="title">Gestión de Formularios / Fichas</h3>
-      <p class="subtitle">Crea y administra las fichas socioeconómicas institucionales.</p>
+      <p class="subtitle">Crea, edita, clona y gestiona el versionamiento de las fichas socioeconómicas.</p>
     </div>
     
     <button class="btn btn-purple" (click)="abrirModalCrear()">
@@ -41,11 +41,34 @@
                 </span>
               </td>
               <td style="text-align: right;" (click)="$event.stopPropagation()">
+                
+                <!-- Botón de Publicar / Despublicar (Nuevo) -->
+                <button class="btn-icon" 
+                        [ngClass]="form.publicado ? 'text-orange' : 'text-green'" 
+                        (click)="togglePublicacion(form, $event)" 
+                        [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
+                        [disabled]="isTogglingState()">
+                  <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
+                </button>
+
+                <!-- Diseñar Preguntas (Builder) -->
                 <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue" title="Diseñar Preguntas">
                   <i class="fas fa-tools"></i>
                 </a>
+
+                <!-- Editar Metadata del Formulario -->
+                <button class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
+                  <i class="fas fa-edit"></i>
+                </button>
+
+                <!-- Clonar / Crear Siguiente Versión -->
+                <button class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
+                  <i class="fas fa-clone"></i>
+                </button>
+
+                <!-- Eliminar (Solo activo si es Borrador) -->
                 @if (!form.publicado) {
-                  <button class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar">
+                  <button class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar Borrador">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 }
@@ -64,10 +87,11 @@
     </div>
   }
 
+  <!-- MODAL CREAR / EDITAR -->
   @if (showModal()) {
-    <div class="modal-backdrop">
-      <div class="modal-box animate-pop">
-        <h3>Nueva Ficha Socioeconómica</h3>
+    <div class="modal-backdrop" (click)="cerrarModales()">
+      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
+        <h3>{{ isEditMode() ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica' }}</h3>
         <form [formGroup]="formGroup" (ngSubmit)="guardarFormulario()">
           <div class="form-group mb-3">
             <label>Título de la Ficha *</label>
@@ -90,8 +114,49 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn btn-outline" (click)="showModal.set(false)">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="formGroup.invalid">Crear y Diseñar</button>
+            <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isSaving()">Cancelar</button>
+            <button type="submit" class="btn btn-purple" [disabled]="formGroup.invalid || isSaving()">
+              @if (isSaving()) {
+                <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+              } @else {
+                {{ isEditMode() ? 'Actualizar' : 'Crear y Diseñar' }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL CLONAR / CREAR NUEVA VERSIÓN -->
+  @if (showCloneModal()) {
+    <div class="modal-backdrop" (click)="cerrarModales()">
+      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
+        <h3>Clonar Formulario / Crear Nueva Versión</h3>
+        <p class="text-xs text-gray-600 mb-4">
+          Se duplicará la estructura completa de secciones, preguntas y opciones. La copia se guardará en estado <strong>BORRADOR</strong> con una versión incrementada.
+        </p>
+
+        <form [formGroup]="cloneFormGroup" (ngSubmit)="confirmarClonacion()">
+          <div class="form-group mb-3">
+            <label>Periodo Académico Destino *</label>
+            <select formControlName="periodo_destino_id" class="form-control">
+              <option value="">-- Selecciona el Periodo --</option>
+              @for (p of periodos(); track p.id) {
+                <option [value]="p.id">{{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isCloning()">Cancelar</button>
+            <button type="submit" class="btn btn-purple" [disabled]="cloneFormGroup.invalid || isCloning()">
+              @if (isCloning()) {
+                <i class="fas fa-circle-notch fa-spin"></i> Clonando...
+              } @else {
+                <i class="fas fa-copy"></i> Confirmar Clonación
+              }
+            </button>
           </div>
         </form>
       </div>

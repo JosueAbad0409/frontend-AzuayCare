@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } 
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
-import { PeriodoService } from '../../../core/services/periodo/periodo.service';
+import { PeriodoService } from '../../../core/services/periodo.service';
 
 @Component({
   selector: 'app-periodos',

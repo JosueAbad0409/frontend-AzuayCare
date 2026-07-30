@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Carrera, CreateCarreraDto } from '../../models/carrera.model';
-import { environment } from '../../../../environments/environment';
+import { Carrera, CreateCarreraDto } from '../models/carrera.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'

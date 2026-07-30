@@ -158,7 +158,6 @@ html, body {
   box-shadow: var(--shadow-md);
 }
 
-/* Badges con Brillo Neón */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -201,4 +200,85 @@ html, body {
   background-color: #f8fafc;
   transform: scale(1.002) translateX(4px);
   box-shadow: inset 3px 0 0 var(--accent-purple);
+}
+
+/* ==========================================
+   5. TOASTS GLOBALES (UX FEEDBACK)
+   ========================================== */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-toast {
+  min-width: 280px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transform: translateX(120%);
+  animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.custom-toast.fade-out {
+  animation: slideOutToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-success { border-left: 5px solid #10b981; color: #065f46; }
+.toast-error { border-left: 5px solid #ef4444; color: #991b1b; }
+.toast-info { border-left: 5px solid #3b82f6; color: #1e40af; }
+
+.custom-toast i { font-size: 1.25rem; }
+
+@keyframes slideInToast { to { transform: translateX(0); } }
+@keyframes slideOutToast { to { transform: translateX(120%); opacity: 0; } }
+
+/* ==========================================
+   6. MODAL PREVIEW DOCUMENTOS
+   ========================================== */
+.modal-box-preview {
+  background: #1e293b;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.preview-header {
+  padding: 15px 20px;
+  background: #0f172a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+}
+
+.preview-body {
+  flex: 1;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }

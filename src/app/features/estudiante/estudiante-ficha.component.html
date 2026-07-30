@@ -1,73 +1,165 @@
-<div class="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-8">
-  <header class="max-w-4xl mx-auto flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-bold text-slate-900 shadow-lg shadow-emerald-500/20">AC</div>
-      <div>
-        <h1 class="font-bold text-lg leading-tight">Ficha Socioeconómica Estudiantil</h1>
-        <p class="text-xs text-slate-400">{{ authService.user()?.nombre }} ({{ authService.user()?.rol }})</p>
-      </div>
-    </div>
-    <button (click)="logout()" class="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white transition-all">
-      Cerrar Sesión
-    </button>
-  </header>
+<!-- Capa de Fondo Estrellado -->
+<div class="stars-bg-container">
+  <div #stars id="stars" class="star-layer"></div>
+  <div #stars2 id="stars2" class="star-layer"></div>
+  <div #stars3 id="stars3" class="star-layer"></div>
+</div>
 
-  <main class="max-w-4xl mx-auto">
-    @if (isLoading()) {
-      <div class="text-center py-12">
-        <i class="fas fa-circle-notch fa-spin text-3xl text-emerald-400 mb-3"></i>
-        <p class="text-slate-400 text-sm">Cargando formulario en tiempo real...</p>
+<div class="relative min-h-screen text-slate-100 p-4 md:p-8 z-10">
+  
+  <!-- Encabezado Principal -->
+  <header class="max-w-4xl mx-auto flex flex-wrap justify-between items-center gap-4 mb-8 bg-slate-800/80 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-slate-700 shadow-xl">
+    <div class="flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-black text-slate-950 shadow-lg shadow-emerald-500/20 text-lg">
+        AC
       </div>
-    } @else if (fichaActiva() && formularioActivo()) {
-      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl">
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
-          <div>
-            <h2 class="text-xl font-bold text-white">{{ formularioActivo()?.titulo }}</h2>
-            <p class="text-xs text-slate-400 mt-1">{{ formularioActivo()?.descripcion }}</p>
-          </div>
-          <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="{
-            'bg-amber-500/20 text-amber-400 border border-amber-500/30': fichaActiva()?.estado_ficha === 'BORRADOR',
-            'bg-blue-500/20 text-blue-400 border border-blue-500/30': fichaActiva()?.estado_ficha === 'ENVIADO',
-            'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': fichaActiva()?.estado_ficha === 'VALIDADO'
-          }">
-            {{ fichaActiva()?.estado_ficha }}
+      <div>
+        <h1 class="font-extrabold text-lg md:text-xl text-white tracking-wide">Ficha Socioeconómica Estudiantil</h1>
+        <div class="flex items-center gap-2 mt-0.5">
+          <p class="text-xs font-semibold text-emerald-400">{{ authService.user()?.nombre }}</p>
+          <span class="text-xs text-slate-500">•</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 uppercase">
+            {{ perfilEstudiante()?.estadoMatricula || 'MATRICULADO' }}
           </span>
         </div>
+      </div>
+    </div>
 
+    <div class="flex items-center gap-2.5">
+      <button 
+        type="button"
+        (click)="abrirPerfil()" 
+        class="px-3.5 py-2 bg-slate-700/80 text-slate-200 border border-slate-600 rounded-xl text-xs font-bold hover:bg-slate-600 hover:text-white transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+        <i class="fas fa-id-card text-emerald-400"></i> Mi Perfil
+      </button>
+
+      <button 
+        type="button"
+        (click)="logout()" 
+        class="px-3.5 py-2 bg-red-500/15 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+        <i class="fas fa-sign-out-alt"></i> Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="max-w-4xl mx-auto">
+
+    <!-- BANNER DE PRECARGA "1-CLICK" -->
+    @if (mostrarBannerPrecarga()) {
+      <div class="bg-blue-900/40 border border-blue-500/50 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center mb-6 shadow-lg shadow-blue-900/20 animate-fade-in">
+        <div class="mb-4 md:mb-0">
+          <h4 class="text-blue-400 font-extrabold text-lg flex items-center gap-2"><i class="fas fa-magic"></i> Precarga a 1-Click</h4>
+          <p class="text-sm text-blue-200 mt-1">Hemos detectado una ficha del periodo anterior. ¿Deseas importar tus respuestas automáticamente?</p>
+        </div>
+        <div class="flex gap-3 w-full md:w-auto">
+          <button (click)="ignorarPrecarga()" class="px-4 py-2 bg-transparent border border-blue-400/50 text-blue-300 rounded-xl font-bold hover:bg-blue-800/50 transition w-full md:w-auto cursor-pointer">No, gracias</button>
+          <button (click)="ejecutarPrecarga()" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition flex items-center justify-center gap-2 w-full md:w-auto cursor-pointer">
+            <i class="fas fa-cloud-download-alt"></i> Importar Datos
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="text-center py-16 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50">
+        <i class="fas fa-circle-notch fa-spin text-4xl text-emerald-400 mb-4 block"></i>
+        <p class="text-slate-300 text-sm font-semibold">Cargando formulario y datos académicos...</p>
+      </div>
+    } @else if (fichaActiva() && formularioActivo()) {
+      
+      <div class="bg-slate-800/90 backdrop-blur-md rounded-2xl border border-slate-700 p-6 md:p-8 mb-6 shadow-2xl">
+        
+        <!-- Estado, Insignia y Barra de Progreso -->
+        <div class="mb-6 pb-6 border-b border-slate-700/80">
+          <div class="flex justify-between items-start gap-4 mb-6">
+            <div>
+              <h2 class="text-xl md:text-2xl font-black text-white">{{ formularioActivo()?.titulo }}</h2>
+              <p class="text-xs md:text-sm text-slate-400 mt-1">{{ formularioActivo()?.descripcion }}</p>
+            </div>
+            
+            <div class="flex flex-col items-end gap-2">
+              <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider whitespace-nowrap shadow-sm" [ngClass]="{
+                'bg-amber-500/15 text-amber-400 border border-amber-500/30': fichaActiva()?.estado_ficha === 'BORRADOR',
+                'bg-blue-500/15 text-blue-400 border border-blue-500/30': fichaActiva()?.estado_ficha === 'ENVIADA',
+                'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30': fichaActiva()?.estado_ficha === 'VALIDADO',
+                'bg-red-500/15 text-red-400 border border-red-500/30': fichaActiva()?.estado_ficha === 'RECHAZADO'
+              }">
+                <i class="fas fa-circle text-[8px] mr-1.5"></i> {{ fichaActiva()?.estado_ficha }}
+              </span>
+
+              <!-- INDICADOR DE AUTOGUARDADO SILENCIOSO -->
+              @if (fichaActiva()?.estado_ficha === 'BORRADOR') {
+                <div class="text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5"
+                     [ngClass]="isSavingLocal() ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'">
+                  <i class="fas" [ngClass]="isSavingLocal() ? 'fa-sync-alt fa-spin' : 'fa-check-double'"></i>
+                  {{ isSavingLocal() ? 'Guardando borrador...' : 'Borrador Sincronizado' }}
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (secciones().length > 0) {
+            <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/50">
+              <div class="flex justify-between text-xs text-slate-300 mb-2 font-bold">
+                <span class="flex items-center gap-1.5">
+                  <i class="fas fa-layer-group text-emerald-400"></i> 
+                  Paso {{ seccionActualIndex() + 1 }} de {{ secciones().length + 1 }}
+                  @if (esPasoResumen()) { (Resumen & Confirmación) }
+                </span>
+                <span class="text-emerald-400">{{ progreso() | number:'1.0-0' }}% Completado</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-3 shadow-inner overflow-hidden p-0.5 border border-slate-800">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_12px_rgba(16,185,129,0.5)]" [style.width.%]="progreso()"></div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Formulario Dinámico -->
         <form [formGroup]="respuestasForm" (ngSubmit)="guardarYEnviar()">
-          @for (sec of secciones(); track sec.id) {
-            <div class="mb-8 bg-slate-900/60 p-5 rounded-xl border border-slate-700/60 shadow-inner">
-              <h3 class="font-bold text-emerald-400 text-sm mb-4 uppercase tracking-wider flex items-center gap-2">
-                <i class="fas fa-folder-open text-xs"></i> {{ sec.nombre }}
+          
+          <!-- SECCIÓN DE RESPUESTAS REGULARES -->
+          @if (!esPasoResumen() && secciones().length > 0 && secciones()[seccionActualIndex()]) {
+            
+            <div class="mb-8 bg-slate-900/80 p-5 md:p-6 rounded-2xl border border-slate-700/70 shadow-inner animate-fade-in">
+              <h3 class="font-black text-emerald-400 text-sm md:text-base mb-5 uppercase tracking-wider flex items-center gap-2.5 pb-3 border-b border-slate-800">
+                <i class="fas fa-folder-open text-emerald-400"></i> {{ secciones()[seccionActualIndex()].nombre }}
               </h3>
               
               <div class="space-y-6">
-                @for (p of sec.preguntas; track p.id) {
+                @for (p of secciones()[seccionActualIndex()].preguntas; track p.id) {
                   @if (esPreguntaVisible(p.id)) {
-                    <div class="flex flex-col gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/30 animate-fade-in">
-                      <label class="text-xs font-semibold text-slate-200">
+                    <div 
+                      class="flex flex-col gap-2.5 p-4 rounded-xl bg-slate-800/70 border border-slate-700/50 hover:border-slate-600 transition-all shadow-sm animate-fade-in"
+                      [class.question-conditional-card]="esPreguntaDependiente(p.id)">
+                      
+                      <label class="text-xs md:text-sm font-bold text-slate-200 leading-snug flex items-center gap-1.5">
+                        @if (esPreguntaDependiente(p.id)) {
+                          <i class="fas fa-level-down-alt text-emerald-400"></i>
+                        }
                         {{ p.enunciado }}
-                        @if (p.es_obligatorio) { <span class="text-red-400 font-bold">*</span> }
+                        @if (p.es_obligatorio) { <span class="text-red-400 font-bold ml-1">*</span> }
                       </label>
 
                       <!-- 1. CAMPO MATRIZ DINÁMICA -->
                       @if (p.tipoCampo?.nombre === 'MATRIZ' && p.filasMatriz && p.columnasMatriz) {
-                        <div class="overflow-x-auto mt-2 rounded-lg border border-slate-700">
+                        <div class="overflow-x-auto mt-2 rounded-xl border border-slate-700 shadow-md">
                           <table class="w-full text-xs text-left text-slate-300">
-                            <thead class="bg-slate-950 text-slate-400 uppercase font-bold border-b border-slate-700">
+                            <thead class="bg-slate-950 text-slate-400 uppercase font-extrabold border-b border-slate-700">
                               <tr>
-                                <th class="p-3">Criterios</th>
+                                <th class="p-3.5">Criterios</th>
                                 @for (col of p.columnasMatriz; track col.id) {
-                                  <th class="p-3 text-center">{{ col.texto_columna }}</th>
+                                  <th class="p-3.5 text-center">{{ col.texto_columna }}</th>
                                 }
                               </tr>
                             </thead>
                             <tbody [formGroup]="$any(matricesGroup.get(p.id))">
                               @for (fila of p.filasMatriz; track fila.id) {
-                                <tr class="border-b border-slate-800 hover:bg-slate-800/80 transition-colors">
-                                  <td class="p-3 font-medium text-white">{{ fila.texto_fila }}</td>
+                                <tr class="border-b border-slate-800 hover:bg-slate-800/90 transition-colors">
+                                  <td class="p-3.5 font-semibold text-white">{{ fila.texto_fila }}</td>
                                   @for (col of p.columnasMatriz; track col.id) {
-                                    <td class="p-3 text-center">
+                                    <td class="p-3.5 text-center">
                                       <input 
                                         type="radio" 
                                         [formControlName]="fila.id" 
@@ -83,10 +175,13 @@
                         </div>
                       } 
 
-                      <!-- 2. CAMPO SELECCIÓN ÚNICA -->
+                      <!-- 2. CAMPO SELECCIÓN ÚNICA (<select>) -->
                       @else if (p.tipoCampo?.nombre === 'SELECCION_UNICA' && p.opciones) {
                         <div [formGroup]="respuestasGroup">
-                          <select [formControlName]="p.id" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                          <select 
+                            [formControlName]="p.id" 
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-emerald-500 focus:outline-none transition-all cursor-pointer"
+                            [ngClass]="{'border-red-500 focus:border-red-500': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                             <option value="">-- Seleccionar opción --</option>
                             @for (op of p.opciones; track op.id) {
                               <option [value]="op.id">{{ op.texto_opcion }}</option>
@@ -95,26 +190,62 @@
                         </div>
                       }
 
-                      <!-- 3. CAMPO NUMÉRICO -->
-                      @else if (p.tipoCampo?.nombre === 'NUMERICO') {
-                        <div [formGroup]="respuestasGroup">
-                          <input type="number" [formControlName]="p.id" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                      <!-- 3. CAMPO SELECCIÓN MÚLTIPLE (CHECKBOXES) -->
+                      @else if (p.tipoCampo?.nombre === 'SELECCION_MULTIPLE' && p.opciones) {
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          @for (op of p.opciones; track op.id) {
+                            <label class="flex items-center gap-3 p-3 bg-slate-950 border border-slate-700/80 rounded-xl cursor-pointer hover:border-emerald-500/50 transition-all text-xs font-semibold text-slate-200">
+                              <input 
+                                type="checkbox" 
+                                [checked]="esOpcionMultipleSeleccionada(p.id, op.id!)"
+                                (change)="onToggleSeleccionMultiple(p.id, op.id!, $event)"
+                                class="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                              >
+                              <span>{{ op.texto_opcion }}</span>
+                            </label>
+                          }
                         </div>
                       }
 
-                      <!-- 4. CAMPO TEXTO POR DEFECTO -->
+                      <!-- 4. CAMPO NUMÉRICO -->
+                      @else if (p.tipoCampo?.nombre === 'NUMERICO') {
+                        <div [formGroup]="respuestasGroup">
+                          <input 
+                            type="number" 
+                            [formControlName]="p.id" 
+                            placeholder="0.00" 
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-emerald-500 focus:outline-none transition-all"
+                            [ngClass]="{'border-red-500 focus:border-red-500': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
+                        </div>
+                      }
+
+                      <!-- 5. CAMPO TEXTO POR DEFECTO -->
                       @else {
                         <div [formGroup]="respuestasGroup">
-                          <input type="text" [formControlName]="p.id" placeholder="Escribe tu respuesta..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                          <input 
+                            type="text" 
+                            [formControlName]="p.id" 
+                            placeholder="Escribe tu respuesta..." 
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-emerald-500 focus:outline-none transition-all"
+                            [ngClass]="{'border-red-500 focus:border-red-500': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                         </div>
+                      }
+
+                      <!-- Validación de Error -->
+                      @if (respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched) {
+                        <span class="text-xs font-semibold text-red-400 mt-0.5 flex items-center gap-1">
+                          <i class="fas fa-exclamation-circle"></i> Este campo es obligatorio.
+                        </span>
                       }
 
                       <!-- SUBIDA DE EVIDENCIA -->
                       @if (p.requiere_evidencia) {
-                        <div class="mt-2 flex items-center gap-2 text-xs text-amber-400">
-                          <i class="fas fa-paperclip"></i>
-                          <span>Adjuntar documento de respaldo:</span>
-                          <input type="file" (change)="subirArchivoEvidencia($event, p.id)" class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:bg-slate-700 file:text-slate-200">
+                        <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 text-xs text-amber-300 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                          <div class="flex items-center gap-2 font-semibold whitespace-nowrap">
+                            <i class="fas fa-paperclip text-amber-400"></i>
+                            <span>Adjuntar respaldo (PDF/JPG):</span>
+                          </div>
+                          <input type="file" (change)="subirArchivoEvidencia($event, p.id)" class="text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-700 file:text-slate-200 file:font-semibold file:cursor-pointer hover:file:bg-slate-600 transition-all w-full">
                         </div>
                       }
                     </div>
@@ -124,26 +255,105 @@
             </div>
           }
 
-          @if (fichaActiva()?.estado_ficha === 'BORRADOR') {
-            <div class="flex justify-end mt-8 pt-4 border-t border-slate-700">
-              <button type="submit" [disabled]="enviando()" class="px-8 py-3 bg-emerald-500 text-slate-900 font-extrabold rounded-xl hover:bg-emerald-400 transition-all text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2">
-                @if (enviando()) {
-                  <i class="fas fa-circle-notch fa-spin"></i>
-                } @else {
-                  <i class="fas fa-paper-plane"></i>
+          <!-- PASO FINAL DE RESUMEN DE FICHA -->
+          @if (esPasoResumen()) {
+            <div class="mb-8 bg-slate-900/80 p-5 md:p-6 rounded-2xl border border-purple-500/50 shadow-2xl animate-fade-in space-y-6">
+              
+              <div class="flex flex-wrap justify-between items-center gap-4 bg-purple-950/40 p-4 rounded-xl border border-purple-800/50">
+                <div>
+                  <h3 class="font-extrabold text-white text-base md:text-lg flex items-center gap-2">
+                    <i class="fas fa-clipboard-check text-purple-400"></i> Resumen de Ficha
+                  </h3>
+                  <p class="text-xs text-slate-300 mt-0.5">Verifica tus respuestas antes de la entrega definitiva al departamento de Bienestar.</p>
+                </div>
+
+                @if (fichaActiva()?.id) {
+                  <button 
+                    type="button" 
+                    (click)="descargarPdfResumen(fichaActiva()!.id)"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-600/30 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fas fa-file-pdf"></i> Descargar Resumen PDF
+                  </button>
                 }
-                {{ enviando() ? 'Guardando...' : 'Finalizar y Enviar Ficha' }}
+              </div>
+
+              <!-- Vista Previa de Lectura por Sección -->
+              <div class="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                @for (sec of secciones(); track sec.id) {
+                  <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                    <h4 class="font-bold text-xs uppercase text-emerald-400 mb-3 tracking-wider pb-1.5 border-b border-slate-800 flex items-center gap-2">
+                      <i class="fas fa-folder text-emerald-400"></i> {{ sec.nombre }}
+                    </h4>
+                    
+                    <div class="space-y-2">
+                      @for (preg of sec.preguntas; track preg.id) {
+                        @if (esPreguntaVisible(preg.id)) {
+                          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 gap-2">
+                            <span class="font-medium text-slate-300 sm:w-2/3">{{ preg.enunciado }}:</span>
+                            <span class="font-bold text-emerald-300 sm:w-1/3 sm:text-right bg-emerald-950/40 px-2 py-1 rounded border border-emerald-800/30">
+                              {{ obtenerTextoRespuesta(preg) }}
+                            </span>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- CONTROLES DE NAVEGACIÓN -->
+          @if (fichaActiva()?.estado_ficha === 'BORRADOR') {
+            <div class="flex justify-between items-center mt-8 pt-5 border-t border-slate-700">
+              
+              <button 
+                type="button" 
+                (click)="anterior()" 
+                [disabled]="seccionActualIndex() === 0" 
+                class="px-5 py-2.5 bg-slate-700/80 text-slate-200 rounded-xl hover:bg-slate-600 transition-all text-xs md:text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm cursor-pointer">
+                <i class="fas fa-arrow-left"></i> Atrás
               </button>
+
+              @if (esPasoResumen()) {
+                <button 
+                  type="button" 
+                  (click)="guardarYEnviar()"
+                  [disabled]="enviando()" 
+                  class="px-8 py-3 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all text-xs md:text-sm shadow-lg shadow-purple-600/30 disabled:opacity-50 flex items-center gap-2 uppercase tracking-wide cursor-pointer">
+                  @if (enviando()) {
+                    <i class="fas fa-circle-notch fa-spin"></i> Enviando Ficha...
+                  } @else {
+                    <i class="fas fa-paper-plane"></i> Confirmar y Enviar Ficha
+                  }
+                </button>
+              } @else {
+                <button 
+                  type="button" 
+                  (click)="siguiente()" 
+                  class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition-all text-xs md:text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer">
+                  Siguiente <i class="fas fa-arrow-right"></i>
+                </button>
+              }
             </div>
           }
         </form>
       </div>
+
     } @else {
-      <div class="text-center py-16 bg-slate-800 rounded-2xl border border-slate-700 p-8 shadow-xl">
-        <i class="fas fa-folder-open text-5xl text-slate-600 mb-4 block"></i>
-        <h3 class="font-bold text-white text-lg mb-1">No hay fichas socioeconómicas disponibles</h3>
-        <p class="text-xs text-slate-400 max-w-md mx-auto">Actualmente no existe un formulario publicado activo para el periodo académico en curso.</p>
+      <!-- Sin Formulario Activo -->
+      <div class="text-center py-20 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700 p-8 shadow-2xl">
+        <i class="fas fa-folder-open text-6xl text-slate-600 mb-4 block"></i>
+        <h3 class="font-extrabold text-white text-xl mb-1">No hay fichas socioeconómicas disponibles</h3>
+        <p class="text-xs md:text-sm text-slate-400 max-w-md mx-auto">Actualmente no existe un formulario publicado activo para el periodo académico en curso.</p>
       </div>
     }
   </main>
 </div>
+
+<!-- Modal de Perfil del Estudiante -->
+<app-estudiante-perfil-modal 
+  [perfil]="perfilEstudiante()" 
+  [visible]="mostrarModalPerfil()" 
+  (cerrar)="cerrarPerfil()">
+</app-estudiante-perfil-modal>

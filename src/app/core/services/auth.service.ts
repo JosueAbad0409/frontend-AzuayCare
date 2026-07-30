@@ -12,6 +12,11 @@ export interface UsuarioLogueado {
   carrera_id?: string | null;
 }
 
+export interface LoginGoogleResponse {
+  accessToken: string;
+  usuario?: UsuarioLogueado;
+}
+
 interface JwtPayloadCustom {
   sub: string;
   email: string;
@@ -34,14 +39,14 @@ export class AuthService {
     this.loadFromStorage();
   }
 
-  private loadFromStorage() {
+  private loadFromStorage(): void {
     const cachedToken = localStorage.getItem(STORAGE_KEY);
     if (cachedToken) {
       this.setToken(cachedToken);
     }
   }
 
-  setToken(token: string | null) {
+  setToken(token: string | null): void {
     if (token) {
       if (this.isTokenExpired(token)) {
         this.logout();
@@ -57,7 +62,7 @@ export class AuthService {
     }
   }
 
-  logout() {
+  logout(): void {
     this.setToken(null);
   }
 
@@ -80,7 +85,7 @@ export class AuthService {
     }
   }
 
-  private decodeAndSetUser(token: string) {
+  private decodeAndSetUser(token: string): void {
     try {
       const decoded = jwtDecode<JwtPayloadCustom>(token);
       
@@ -91,13 +96,12 @@ export class AuthService {
         rol: decoded.rol,
         carrera_id: decoded.carrera_id || null
       });
-    } catch (error) {
-      console.error('Error decodificando el token con jwt-decode:', error);
+    } catch {
       this.logout();
     }
   }
 
-  async loginWithBackend(googleIdToken: string): Promise<any> {
+  async loginWithBackend(googleIdToken: string): Promise<LoginGoogleResponse> {
     const res = await fetch(`${this.apiUrl}/login-google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -109,7 +113,7 @@ export class AuthService {
       throw new Error(errorText || 'Error autenticando con el servidor');
     }
 
-    const data = await res.json();
+    const data: LoginGoogleResponse = await res.json();
     if (data?.accessToken) {
       this.setToken(data.accessToken);
     }

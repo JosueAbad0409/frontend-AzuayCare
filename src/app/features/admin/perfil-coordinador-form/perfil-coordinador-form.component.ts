@@ -1,3 +1,4 @@
+// C:\Proyecto AzuayCare\frontend-AzuayCare\src\app\features\admin\perfil-coordinador-form\perfil-coordinador-form.component.ts
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -22,13 +23,17 @@ export class PerfilCoordinadorFormComponent implements OnInit {
 
   usuarioIdActual = this.authService.user()?.id || localStorage.getItem('usuarioId') || '';
 
+  // Expresión regular corregida para permitir números, prefijos (+), espacios, guiones y extensiones (ext. 104)
   perfilForm: FormGroup = this.fb.group({
-    usuarioId: [this.usuarioIdActual, Validators.required],
-    tituloProfesional: ['', [Validators.required, Validators.minLength(5)]],
-    ubicacionOficina: ['', Validators.required],
-    horarioAtencion: ['', Validators.required],
-    telefonoContacto: ['', [Validators.required, Validators.pattern('^[0-9+ ]+$')]],
-    mensajeAyuda: ['']
+    usuario_id: [this.usuarioIdActual, Validators.required],
+    titulo_profesional: ['', [Validators.required, Validators.minLength(5)]],
+    ubicacion_oficina: ['', Validators.required],
+    horario_atencion: ['', Validators.required],
+    telefono_contacto: ['', [
+      Validators.required, 
+      Validators.pattern('^[0-9+ \\-.a-zA-ZáéíóúÁÉÍÓÚñÑ]+$')
+    ]],
+    mensaje_ayuda_estudiantes: ['']
   });
 
   ngOnInit(): void {
@@ -41,9 +46,17 @@ export class PerfilCoordinadorFormComponent implements OnInit {
     this.loading.set(true);
 
     this.perfilService.getPerfilByUsuario(this.usuarioIdActual).subscribe({
-      next: (perfil) => {
+      next: (perfil: any) => {
         if (perfil) {
-          this.perfilForm.patchValue(perfil);
+          // Mapeo defensivo para homogeneizar respuestas en snake_case o camelCase
+          this.perfilForm.patchValue({
+            usuario_id: perfil.usuario_id || perfil.usuarioId || this.usuarioIdActual,
+            titulo_profesional: perfil.titulo_profesional || perfil.tituloProfesional || '',
+            ubicacion_oficina: perfil.ubicacion_oficina || perfil.ubicacionOficina || '',
+            horario_atencion: perfil.horario_atencion || perfil.horarioAtencion || '',
+            telefono_contacto: perfil.telefono_contacto || perfil.telefonoContacto || '',
+            mensaje_ayuda_estudiantes: perfil.mensaje_ayuda_estudiantes || perfil.mensajeAyuda || ''
+          });
         }
         this.loading.set(false);
       },
@@ -64,6 +77,7 @@ export class PerfilCoordinadorFormComponent implements OnInit {
     }
 
     this.loading.set(true);
+    
     this.perfilService.saveOrUpdatePerfil(this.perfilForm.value).subscribe({
       next: () => {
         this.loading.set(false);

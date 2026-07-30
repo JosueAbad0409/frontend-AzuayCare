@@ -1,8 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FichaService } from '../../../core/services/ficha/ficha.service';
-import { PeriodoService } from '../../../core/services/periodo/periodo.service';
+import { FichaService } from '../../../core/services/ficha.service';
+import { PeriodoService } from '../../../core/services/periodo.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
@@ -16,6 +17,7 @@ import { environment } from '../../../../environments/environment';
 export class NivelesComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly periodoService = inject(PeriodoService);
+  private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly apiUrl = `${environment.apiUrl}/niveles-economicos`;
 
@@ -56,18 +58,27 @@ export class NivelesComponent implements OnInit {
 
     this.http.post(this.apiUrl, this.nivelForm.value).subscribe({
       next: () => {
+        this.toastService.show('Nivel económico guardado correctamente.', 'success');
         this.nivelForm.reset({ orden: 1, valor_min: 0 });
         this.showForm.set(false);
         this.cargarDatos();
       },
-      error: (err) => alert(err?.error?.message || 'Error al guardar nivel.')
+      error: (err) => {
+        this.toastService.show(err?.error?.message || 'Error al guardar nivel.', 'error');
+      }
     });
   }
 
   eliminarNivel(id: string) {
     if (confirm('¿Dar de baja este nivel económico?')) {
       this.http.delete(`${this.apiUrl}/${id}`).subscribe({
-        next: () => this.cargarDatos()
+        next: () => {
+          this.toastService.show('Nivel económico desactivado.', 'info');
+          this.cargarDatos();
+        },
+        error: (err) => {
+          this.toastService.show(err?.error?.message || 'Error al dar de baja el nivel.', 'error');
+        }
       });
     }
   }

@@ -9,19 +9,19 @@ import { PerfilCoordinador } from '../../core/models/perfil-coordinador.model';
   imports: [CommonModule],
   template: `
     @if (perfil()) {
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 shadow-sm my-4">
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-sm my-4 text-slate-200">
         <div class="flex items-center gap-3 mb-2">
-          <i class="fas fa-user-tie text-blue-600 text-xl"></i>
-          <h3 class="text-md font-bold text-blue-900 margin-0">{{ perfil()?.tituloProfesional }}</h3>
+          <i class="fas fa-user-tie text-emerald-400 text-xl"></i>
+          <h3 class="text-md font-bold text-emerald-300 m-0">{{ perfil()?.tituloProfesional || perfil()?.['titulo_profesional'] }}</h3>
         </div>
-        <div class="text-sm text-gray-700 space-y-1 pl-8">
-          <p class="m-0"><strong>📍 Oficina:</strong> {{ perfil()?.ubicacionOficina }}</p>
-          <p class="m-0"><strong>🕒 Horarios:</strong> {{ perfil()?.horarioAtencion }}</p>
-          <p class="m-0"><strong>📞 Contacto:</strong> {{ perfil()?.telefonoContacto }}</p>
+        <div class="text-sm text-slate-300 space-y-1 pl-8">
+          <p class="m-0"><strong>📍 Oficina:</strong> {{ perfil()?.ubicacionOficina || perfil()?.['ubicacion_oficina'] }}</p>
+          <p class="m-0"><strong>🕒 Horarios:</strong> {{ perfil()?.horarioAtencion || perfil()?.['horario_atencion'] }}</p>
+          <p class="m-0"><strong>📞 Contacto:</strong> {{ perfil()?.telefonoContacto || perfil()?.['telefono_contacto'] }}</p>
         </div>
-        @if (perfil()?.mensajeAyuda) {
-          <div class="mt-3 p-3 bg-white rounded-lg border border-blue-100 text-xs text-blue-800 italic">
-            "{{ perfil()?.mensajeAyuda }}"
+        @if (perfil()?.mensajeAyuda || perfil()?.['mensaje_ayuda_estudiantes']) {
+          <div class="mt-3 p-3 bg-slate-900/90 rounded-lg border border-slate-700 text-xs text-emerald-200 italic">
+            "{{ perfil()?.mensajeAyuda || perfil()?.['mensaje_ayuda_estudiantes'] }}"
           </div>
         }
       </div>
@@ -29,16 +29,16 @@ import { PerfilCoordinador } from '../../core/models/perfil-coordinador.model';
   `
 })
 export class TarjetaCoordinador implements OnInit {
-  @Input({ required: true }) coordinadorUsuarioId!: number;
+  @Input({ required: true }) coordinadorUsuarioId!: string;
   private readonly perfilService = inject(PerfilCoordinadorService);
 
-  perfil = signal<PerfilCoordinador | null>(null);
+  perfil = signal<PerfilCoordinador | any | null>(null);
 
   ngOnInit(): void {
     if (this.coordinadorUsuarioId) {
-      this.perfilService.getPerfilByUsuario(this.coordinadorUsuarioId.toString()).subscribe({
-        next: (data: PerfilCoordinador) => this.perfil.set(data),
-        error: (err: unknown) => console.error('Error al cargar información del coordinador:', err)
+      this.perfilService.getPerfilByUsuario(this.coordinadorUsuarioId).subscribe({
+        next: (data) => this.perfil.set(data),
+        error: (err) => console.error('Error al cargar información del coordinador:', err)
       });
     }
   }

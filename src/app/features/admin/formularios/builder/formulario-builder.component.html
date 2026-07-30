@@ -1,0 +1,468 @@
+@if (!isLoading() && formulario()) {
+  <div class="builder-container animate-fade-in">
+
+    <!-- CABECERA PRINCIPAL -->
+    <header class="builder-header">
+      <div class="header-left">
+        <a routerLink="/admin/formularios" class="btn-back">
+          <i class="fas fa-arrow-left"></i> Volver a Lista
+        </a>
+        <div>
+          <div class="title-row">
+            <h2>{{ formulario()?.titulo }}</h2>
+            <span class="badge" [ngClass]="formulario()?.publicado ? 'badge-success' : 'badge-warning'">
+              <i class="fas" [ngClass]="formulario()?.publicado ? 'fa-check-circle' : 'fa-clock'"></i>
+              {{ formulario()?.publicado ? 'PUBLICADO' : 'BORRADOR (V' + formulario()?.version + ')' }}
+            </span>
+          </div>
+          <p class="subtitle">{{ formulario()?.descripcion || 'Sin descripción asignada' }}</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn btn-outline" (click)="showRangosPanel.update(v => !v)">
+          <i class="fas fa-calculator"></i> Variables & Rangos
+        </button>
+        <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()">
+          <i class="fas fa-folder-plus"></i> Nueva Sección
+        </button>
+        @if (!formulario()?.publicado) {
+          <button type="button" class="btn btn-purple" (click)="publicarFormulario()">
+            <i class="fas fa-paper-plane"></i> Publicar Ficha
+          </button>
+        }
+      </div>
+    </header>
+
+    <!-- PANEL DESPLEGABLE: CONFIGURACIÓN DE RANGOS Y VARIABLES CALCULADAS -->
+    @if (showRangosPanel()) {
+      <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-4 mb-6 shadow-sm animate-fade-in">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+            <i class="fas fa-sliders-h"></i> Rangos para Variables Calculadas (ej. BALANCE)
+          </h4>
+          <button type="button" class="text-xs text-amber-800 hover:underline" (click)="showRangosPanel.set(false)">Cerrar</button>
+        </div>
+
+        <form [formGroup]="rangoForm" (ngSubmit)="guardarRangoVariable()" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 items-end">
+          <div>
+            <label class="text-xs font-semibold text-gray-700 block mb-1">Variable *</label>
+            <input type="text" formControlName="variable_calculo" class="form-control text-xs" placeholder="BALANCE">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-700 block mb-1">Nombre / Categoría *</label>
+            <input type="text" formControlName="nombre" class="form-control text-xs" placeholder="Ej: Nivel Bajo / Vulnerable">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-700 block mb-1">Mínimo *</label>
+            <input type="number" formControlName="valor_min" class="form-control text-xs" placeholder="0">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo (Opcional)</label>
+            <input type="number" formControlName="valor_max" class="form-control text-xs" placeholder="Sin límite">
+          </div>
+          <div>
+            <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid">
+              <i class="fas fa-plus"></i> Guardar Rango
+            </button>
+          </div>
+        </form>
+
+        <!-- TABLA DE RANGOS -->
+        <div class="bg-white rounded-lg border overflow-hidden">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 font-bold text-slate-700">
+              <tr>
+                <th class="p-2">Variable</th>
+                <th class="p-2">Nombre Rango</th>
+                <th class="p-2">Min.</th>
+                <th class="p-2">Max.</th>
+                <th class="p-2 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rango of rangosVariable(); track rango.id) {
+                <tr class="border-t hover:bg-slate-50">
+                  <td class="p-2 font-mono font-bold text-purple-800">{{ rango.variable_calculo }}</td>
+                  <td class="p-2 font-semibold">{{ rango.nombre }}</td>
+                  <td class="p-2">${{ rango.valor_min }}</td>
+                  <td class="p-2">{{ rango.valor_max ? '$' + rango.valor_max : 'En adelante' }}</td>
+                  <td class="p-2 text-center">
+                    <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarRangoVariable(rango.id)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="p-3 text-center text-gray-400">No se han registrado rangos de evaluación.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- LISTADO DE SECCIONES -->
+    <main class="sections-list">
+      @for (seccion of secciones(); track seccion.id || $index; let i = $index) {
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title items-center gap-2">
+              <span class="section-number">Bloque {{ i + 1 }}</span>
+              <h3>{{ seccion.nombre }}</h3>
+              
+              @if (seccion.tipo_seccion === 'FINANCIERA') {
+                <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <i class="fas fa-coins"></i> FINANCIERA ({{ seccion.subcategoria_financiera === 'AMBOS' ? 'INGRESOS Y EGRESOS' : seccion.subcategoria_financiera }})
+                </span>
+              } @else {
+                <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                  <i class="fas fa-align-left"></i> GENERAL
+                </span>
+              }
+            </div>
+            <button type="button" class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)" title="Eliminar Sección">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+
+          <div class="questions-container" (dragover)="onDragOver($event)">
+            @for (pregunta of seccion.preguntas; track pregunta.id || $index; let j = $index) {
+              <!-- TARJETA DE PREGUNTA EXISTENTE -->
+              <div 
+                class="question-item flex-col gap-3 cursor-move" 
+                draggable="true" 
+                (dragstart)="onDragStart(i, j)" 
+                (drop)="onDrop(i, j)"
+              >
+                <div class="flex justify-between w-full items-start">
+                  <div class="question-main flex items-center gap-3">
+                    <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
+                    <span class="question-num">{{ j + 1 }}.</span>
+                    <div class="question-content">
+                      <strong>{{ pregunta.enunciado }}</strong>
+                      <div class="question-badges">
+                        <span class="tag tag-tipo">{{ getNombreTipoCampo(pregunta.tipo_campo_id) }}</span>
+                        @if (pregunta.categoria_financiera && pregunta.categoria_financiera !== 'NINGUNO') {
+                          <span class="tag" [ngClass]="pregunta.categoria_financiera === 'INGRESO' ? 'tag-ingreso' : 'tag-egreso'">
+                            {{ pregunta.categoria_financiera }}
+                          </span>
+                        }
+                        @if (pregunta.requiere_evidencia) {
+                          <span class="tag tag-evid"><i class="fas fa-paperclip"></i> Evidencia Requerida</span>
+                        }
+                        @if (pregunta.es_obligatorio) {
+                          <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]"></i> Obligatoria</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- BOTONERA DE ACCIONES DE PREGUNTA -->
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- OPCIONES SELECCIÓN (LISTADO Y AGREGADO RÁPIDO) -->
+                @if (esTipoSeleccion(pregunta.tipo_campo_id)) {
+                  <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2">
+                    <h5 class="font-bold text-sm text-blue-900"><i class="fas fa-list-ul"></i> Opciones Configuradas</h5>
+                    <ul class="text-xs space-y-1">
+                      @for (opcion of pregunta.opciones; track opcion.id || $index) {
+                        <li class="bg-white p-2 rounded border flex justify-between items-center">
+                          <span>
+                            • {{ opcion.texto_opcion }}
+                            @if (opcion.es_correcta) { <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold ml-1 text-[10px]">✔️ CORRECTA</span> }
+                            @if (opcion.permite_texto_libre) { <em class="text-gray-500 ml-1">(Especificar texto libre)</em> }
+                            @if (opcion.valor_ponderado) { <strong class="text-purple-700 ml-2">[{{ opcion.valor_ponderado }} pts]</strong> }
+                          </span>
+                          <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </li>
+                      } @empty {
+                        <p class="text-xs text-gray-400">Sin opciones agregadas.</p>
+                      }
+                    </ul>
+                    <div class="flex gap-2 pt-1">
+                      <input 
+                        type="text" 
+                        [value]="nuevaOpcionTexto()" 
+                        (input)="nuevaOpcionTexto.set($any($event.target).value)" 
+                        (keyup.enter)="agregarOpcion(pregunta.id)" 
+                        placeholder="Añadir opción rápida y presionar Enter..." 
+                        class="form-control text-xs"
+                      >
+                      <button type="button" (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
+                    </div>
+                  </div>
+                }
+
+                <!-- CONFIGURACIÓN MATRIZ EXISTENTE CON SUBCOMPONENTE DELEGADO -->
+                @if (esTipoMatriz(pregunta.tipo_campo_id)) {
+                  <app-matriz-builder
+                    [preguntaId]="pregunta.id"
+                    [filasExistentes]="pregunta.filasMatriz || []"
+                    [columnasExistentes]="pregunta.columnasMatriz || []"
+                    (agregarFila)="agregarFilaMatriz($event)"
+                    (eliminarFila)="eliminarFilaExistente($event, pregunta.id)"
+                    (agregarColumna)="agregarColumnaMatriz($event)"
+                    (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"
+                  ></app-matriz-builder>
+                }
+              </div>
+            }
+
+            <!-- FORMULARIO PARA CREAR O EDITAR PREGUNTA -->
+            @if (activeSeccionIdForQuestion() === seccion.id) {
+              <div class="new-question-box border-2 border-purple-500 rounded-xl p-4 bg-white shadow-lg my-4">
+                <h4 class="text-purple-900 font-bold mb-3 flex items-center gap-2">
+                  <i class="fas" [ngClass]="editingPreguntaId() ? 'fa-edit' : 'fa-plus-circle'"></i> 
+                  {{ editingPreguntaId() ? 'Editar Pregunta' : 'Configurar Nueva Pregunta' }}
+                </h4>
+
+                <form [formGroup]="preguntaForm" (ngSubmit)="guardarPregunta(seccion.id)">
+                  <div class="form-group mb-3">
+                    <label class="font-semibold text-xs">Enunciado o Pregunta *</label>
+                    <input type="text" formControlName="enunciado" class="form-control" placeholder="Ej: Evalué los siguientes servicios de la universidad...">
+                  </div>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div class="form-group">
+                      <label class="font-semibold text-xs">Tipo de Respuesta *</label>
+                      @if (esSeccionFinancieraActiva()) {
+                        <input type="text" value="NUMÉRICO (Fijo por sección financiera)" class="form-control bg-gray-100 font-semibold text-amber-800" readonly>
+                      } @else {
+                        <select formControlName="tipo_campo_id" class="form-control">
+                          <option value="">-- Seleccionar --</option>
+                          @for (tipo of tiposCampo(); track tipo.id) {
+                            <option [value]="tipo.id">{{ tipo.nombre }}</option>
+                          }
+                        </select>
+                      }
+                    </div>
+                    <div class="form-group">
+                      <label class="font-semibold text-xs">Categoría Financiera *</label>
+                      <select formControlName="categoria_financiera" class="form-control">
+                        <option value="NINGUNO">NINGUNO (Pregunta General)</option>
+                        <option value="INGRESO">INGRESO (Sumar al total de ingresos)</option>
+                        <option value="EGRESO">EGRESO (Sumar al total de gastos)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- OPCIONES DINÁMICAS Y DROPDOWN DE PRESETS -->
+                  @if (esTipoSeleccion(preguntaForm.get('tipo_campo_id')?.value)) {
+                    <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 mb-4 space-y-3">
+                      <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-blue-900 uppercase tracking-wide">
+                          <i class="fas fa-list-ul mr-1"></i> Opciones de Respuesta
+                        </span>
+                        
+                        <div class="flex gap-2 relative">
+                          <div class="relative inline-block text-left">
+                            <button type="button" class="btn btn-sm btn-outline text-xs" (click)="toggleMenuPresets()">
+                              <i class="fas fa-magic"></i> Añadir Plantilla / Rangos <i class="fas fa-chevron-down ml-1"></i>
+                            </button>
+                            
+                            @if (showMenuPresets()) {
+                              <div class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
+                                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('EDAD')">
+                                  <span>🕒 Rangos de Edad</span>
+                                </button>
+                                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('SI_NO')">
+                                  <span>👍 Afirmativo / Negativo (Sí/No)</span>
+                                </button>
+                                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('INGRESOS')">
+                                  <span>💵 Rangos de Ingresos</span>
+                                </button>
+                                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('VIVIENDA')">
+                                  <span>🏠 Tipo de Vivienda</span>
+                                </button>
+                              </div>
+                            }
+                          </div>
+
+                          <button type="button" class="btn btn-sm btn-purple text-xs" (click)="agregarOpcionTemp()">
+                            <i class="fas fa-plus"></i> Añadir Opción
+                          </button>
+                        </div>
+                      </div>
+
+                      <div formArrayName="opcionesTemp" class="space-y-3">
+                        @for (opcGroup of opcionesTempArray.controls; track $index; let optIdx = $index) {
+                          <div [formGroupName]="optIdx" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:border-purple-300 transition-colors">
+                            
+                            <!-- Fila 1: Texto de Opción y Puntos -->
+                            <div class="flex flex-wrap md:flex-nowrap gap-3 items-start w-full">
+                              <!-- Campo Texto -->
+                              <div class="flex-grow min-w-[200px] w-full">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Texto de Respuesta *</label>
+                                <input type="text" formControlName="texto_opcion" placeholder="Ej: 18 a 25 años" class="form-control text-xs w-full">
+                              </div>
+                              
+                              <!-- Campo Puntos (Opcional) -->
+                              <div class="w-24 shrink-0">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Puntos</label>
+                                <input type="number" formControlName="valor_ponderado" placeholder="0" class="form-control text-xs w-full" title="Opcional">
+                              </div>
+
+                              <!-- Eliminar Opción -->
+                              <div class="shrink-0 mt-4">
+                                <button type="button" class="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-colors border border-transparent hover:border-red-600" (click)="eliminarOpcionTemp(optIdx)" title="Eliminar opción">
+                                  <i class="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+
+                            <!-- Fila 2: Checkboxes de Configuración -->
+                            <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                              <!-- Es Correcta -->
+                              <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-100/50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                                <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> ¿Es la respuesta correcta?
+                              </label>
+
+                              <!-- Permite Otros -->
+                              <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                                <input type="checkbox" formControlName="permite_texto_libre" class="accent-purple-600 w-3.5 h-3.5"> Permite 'Otros'
+                              </label>
+
+                              <!-- Despliega Subpregunta -->
+                              <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                <input type="checkbox" formControlName="dispara_dependencia" class="accent-emerald-600 w-3.5 h-3.5"> Despliega subpregunta
+                              </label>
+                            </div>
+
+                            <!-- Subpregunta Condicional -->
+                            @if (opcGroup.get('dispara_dependencia')?.value) {
+                              <div class="ml-2 md:ml-4 pl-4 border-l-4 border-emerald-500 bg-emerald-50/30 p-3 rounded-r-xl space-y-3 animate-fade-in">
+                                <span class="text-[11px] font-extrabold text-emerald-800 uppercase block">
+                                  <i class="fas fa-level-down-alt"></i> Subpregunta que aparecerá al elegir esta opción:
+                                </span>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <input type="text" formControlName="subpregunta_enunciado" placeholder="Enunciado de subpregunta..." class="form-control text-xs">
+                                  <select formControlName="subpregunta_tipo_id" class="form-control text-xs">
+                                    <option value="">-- Tipo de Respuesta --</option>
+                                    @for (tipo of tiposCampo(); track tipo.id) {
+                                      <option [value]="tipo.id">{{ tipo.nombre }}</option>
+                                    }
+                                  </select>
+                                </div>
+                                <div class="flex gap-4 pt-1">
+                                  <label class="text-xs flex items-center gap-1 cursor-pointer font-medium text-slate-700">
+                                    <input type="checkbox" formControlName="subpregunta_requiere_evidencia" class="accent-amber-600 w-3.5 h-3.5"> ¿Requiere evidencia?
+                                  </label>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <!-- Calculadora de Puntos Totales Automática -->
+                        @if (opcionesTempArray.controls.length > 0) {
+                          <div class="flex justify-end pt-3">
+                            <div class="bg-purple-100 text-purple-800 text-xs font-bold px-4 py-2 rounded-xl border border-purple-200 shadow-sm flex items-center gap-2">
+                              <i class="fas fa-calculator text-purple-600"></i> Puntos de Respuestas Correctas: <span class="text-lg">{{ calcularTotalPuntos() }}</span> pts
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <!-- CONSTRUCTOR INTERACTIVO DE MATRIZ -->
+                  @if (esTipoMatriz(preguntaForm.get('tipo_campo_id')?.value)) {
+                    <div class="my-4 animate-fade-in">
+                      <app-matriz-builder [parentForm]="preguntaForm"></app-matriz-builder>
+                    </div>
+                  }
+
+                  <div class="flex-options mb-3 flex gap-4">
+                    <label class="checkbox-label text-xs font-medium cursor-pointer">
+                      <input type="checkbox" formControlName="es_obligatorio"> Obligatorio
+                    </label>
+                    <label class="checkbox-label text-xs font-medium cursor-pointer">
+                      <input type="checkbox" formControlName="requiere_evidencia"> Requiere Subir Documento / Evidencia
+                    </label>
+                  </div>
+
+                  <div class="form-actions flex justify-end gap-2">
+                    <button type="button" class="btn btn-outline" (click)="cancelarPregunta()">Cancelar</button>
+                    <button type="submit" class="btn btn-purple" [disabled]="preguntaForm.invalid || isSavingQuestion()">
+                      @if (isSavingQuestion()) { 
+                        <i class="fas fa-spinner fa-spin"></i> Guardando... 
+                      } @else { 
+                        {{ editingPreguntaId() ? 'Actualizar Pregunta' : 'Guardar Pregunta' }}
+                      }
+                    </button>
+                  </div>
+                </form>
+              </div>
+            } @else {
+              <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
+                <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </main>
+
+    <!-- MODAL NUEVA SECCIÓN -->
+    @if (showSeccionModal()) {
+      <div class="modal-backdrop" (click)="showSeccionModal.set(false)">
+        <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
+          <h3>Nueva Sección</h3>
+          <form [formGroup]="seccionForm" (ngSubmit)="guardarSeccion()">
+            <div class="form-group mb-3">
+              <label class="font-semibold text-xs">Nombre de Sección *</label>
+              <input type="text" formControlName="nombre" class="form-control" placeholder="Ej: Información Financiera Familiar">
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="font-semibold text-xs">Descripción</label>
+              <input type="text" formControlName="descripcion" class="form-control" placeholder="Breve explicación...">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div class="form-group">
+                <label class="font-semibold text-xs">Tipo de Sección *</label>
+                <select formControlName="tipo_seccion" class="form-control">
+                  <option value="INFORMACION_GENERAL">Información General</option>
+                  <option value="FINANCIERA">Sección Financiera (Balances / Montos)</option>
+                </select>
+              </div>
+
+              @if (seccionForm.get('tipo_seccion')?.value === 'FINANCIERA') {
+                <div class="form-group animate-fade-in">
+                  <label class="font-semibold text-xs">Subcategoría Financiera *</label>
+                  <select formControlName="subcategoria_financiera" class="form-control">
+                    <option value="INGRESOS">Exclusivamente Ingresos</option>
+                    <option value="GASTOS">Exclusivamente Egresos / Gastos</option>
+                    <option value="AMBOS">Ambos (Ingresos y Gastos)</option>
+                  </select>
+                </div>
+              }
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-outline" (click)="showSeccionModal.set(false)" [disabled]="isSavingSeccion()">Cancelar</button>
+              <button type="submit" class="btn btn-purple" [disabled]="seccionForm.invalid || isSavingSeccion()">
+                @if (isSavingSeccion()) { <i class="fas fa-spinner fa-spin"></i> Guardando... } @else { Guardar Sección }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+  </div>
+}
