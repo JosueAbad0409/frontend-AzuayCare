@@ -4,9 +4,10 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Usuario } from '../../../core/models/usuario.model';
 import { Carrera } from '../../../core/models/carrera.model';
 import { CoordinadorCarreraAsignacion } from '../../../core/models/coordinador-carrera.model';
-import { UsuarioService } from '../../../core/services/usuario/usuario.service';
-import { CarreraService } from '../../../core/services/carrera/carrera.service';
-import { CoordinadorCarreraService } from '../../../core/services/coordinador-carrera/coordinador-carrera.service';
+import { UsuarioService } from '../../../core/services/usuario.service';
+import { CarreraService } from '../../../core/services/carrera.service';
+import { CoordinadorCarreraService } from '../../../core/services/coordinador-carrera.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -19,6 +20,7 @@ export class UsuariosComponent implements OnInit {
   private readonly usuarioService = inject(UsuarioService);
   private readonly carreraService = inject(CarreraService);
   private readonly coordinadorCarreraService = inject(CoordinadorCarreraService);
+  private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
   usuarios = signal<Usuario[]>([]);
@@ -37,9 +39,9 @@ export class UsuariosComponent implements OnInit {
     fecha_fin: ['']
   });
 
-  // Filtrado solo de coordinadores de carrera seleccionables
+  // Filtrado exclusivo de coordinadores de carrera elegibles
   coordinadoresCarreraList = computed(() => {
-    return this.usuarios().filter(u => u.rol?.nombre === 'COORDINADOR_CARRERA' || u.rol_id);
+    return this.usuarios().filter(u => u.rol?.nombre === 'COORDINADOR_CARRERA');
   });
 
   usuariosFiltrados = computed(() => {
@@ -60,7 +62,8 @@ export class UsuariosComponent implements OnInit {
     this.isLoading.set(true);
 
     this.carreraService.getCarreras().subscribe({
-      next: (carrs) => this.carreras.set(carrs)
+      next: (carrs) => this.carreras.set(carrs),
+      error: (err) => console.error('Error al cargar carreras:', err)
     });
 
     this.coordinadorCarreraService.getAsignaciones().subscribe({
@@ -73,7 +76,10 @@ export class UsuariosComponent implements OnInit {
         this.usuarios.set(data);
         this.isLoading.set(false);
       },
-      error: () => this.isLoading.set(false)
+      error: (err) => {
+        console.error('Error al cargar usuarios:', err);
+        this.isLoading.set(false);
+      }
     });
   }
 
@@ -84,7 +90,10 @@ export class UsuariosComponent implements OnInit {
 
   abrirModalAsignar() {
     this.asignacionForm.reset({
-      fecha_inicio: new Date().toISOString().split('T')[0]
+      usuario_id: '',
+      carrera_id: '',
+      fecha_inicio: new Date().toISOString().split('T')[0],
+      fecha_fin: ''
     });
     this.showModalAsignar.set(true);
   }
@@ -97,11 +106,13 @@ export class UsuariosComponent implements OnInit {
 
     this.coordinadorCarreraService.asignarCoordinador(this.asignacionForm.value).subscribe({
       next: () => {
-        alert('Coordinador asignado a la carrera con éxito.');
+        this.toastService.show('Coordinador asignado a la carrera con éxito.', 'success');
         this.showModalAsignar.set(false);
         this.cargarTodo();
       },
-      error: (err) => alert(err?.error?.message || 'Error al asignar coordinador.')
+      error: (err) => {
+        this.toastService.show(err?.error?.message || 'Error al asignar coordinador.', 'error');
+      }
     });
   }
 
@@ -109,9 +120,18 @@ export class UsuariosComponent implements OnInit {
     if (confirm('¿Estás seguro de remover esta asignación de coordinación?')) {
       this.coordinadorCarreraService.desasignarCoordinador(usuarioId, carreraId).subscribe({
         next: () => {
+          this.toastService.show('Asignación de coordinación removida con éxito.', 'info');
+          // Actualización reactiva inmediata
+          this.asignaciones.update(lista => 
+            lista.filter(a => !(a.usuario_id === usuarioId && (a.carrera_id === carreraId || (a.carrera as any)?.id === carreraId)))
+          );
+          
+          // Refresco del estado general
           this.cargarTodo();
         },
-        error: (err) => alert(err?.error?.message || 'Error al eliminar la asignación.')
+        error: (err) => {
+          this.toastService.show(err?.error?.message || 'Error al eliminar la asignación.', 'error');
+        }
       });
     }
   }

@@ -10,7 +10,7 @@
               radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 40%),
               linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg, 24px);
   padding: 3rem;
   color: white;
   display: flex;
@@ -21,14 +21,6 @@
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
   position: relative;
   overflow: hidden;
-}
-
-.hero-banner::after {
-  content: "";
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  pointer-events: none;
 }
 
 .hero-tag {
@@ -67,18 +59,6 @@
   gap: 1rem;
 }
 
-.btn-outline-light {
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
-}
-
-.btn-outline-light:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: white;
-}
-
 /* KPI GRID */
 .kpi-grid {
   display: grid;
@@ -88,22 +68,19 @@
 
 .kpi-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 16px);
   padding: 1.75rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-color, #e2e8f0);
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 4px 6px -1px rgba(0, 0, 0, 0.05));
+  transition: all 0.3s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--shadow-md);
-  border-color: #cbd5e1;
+  box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
 }
 
 .kpi-icon {
@@ -116,38 +93,72 @@
   font-size: 1.65rem;
 }
 
-.icon-green { background: #dcfce7; color: #10b981; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2); }
-.icon-purple { background: #f3e8ff; color: #8b5cf6; box-shadow: 0 8px 20px rgba(139, 92, 246, 0.2); }
-.icon-blue { background: #dbeafe; color: #3b82f6; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2); }
+.icon-green { background: #dcfce7; color: #10b981; }
+.icon-purple { background: #f3e8ff; color: #8b5cf6; }
+.icon-blue { background: #dbeafe; color: #3b82f6; }
 
 .kpi-title {
   font-size: 0.775rem;
   font-weight: 800;
-  color: var(--text-muted);
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .kpi-value {
   margin: 0.2rem 0;
   font-size: 1.85rem;
   font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.02em;
+  color: #0f172a;
 }
 
 .kpi-sub {
   font-size: 0.775rem;
   color: #94a3b8;
-  font-weight: 500;
 }
 
-/* ACCESOS RÁPIDOS */
+/* ==========================================
+   SECCIÓN DE GRÁFICOS Y ANALÍTICA
+   ========================================== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1.75rem;
+}
+
+.chart-card {
+  background: #ffffff;
+  border-radius: var(--radius-md, 16px);
+  border: 1px solid #e2e8f0;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-header h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* ==========================================
+   ACCESOS RÁPIDOS & TARJETA DESTACADA
+   ========================================== */
 .quick-access-section h3 {
   margin-bottom: 1.5rem;
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: #0f172a;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -161,12 +172,12 @@
 
 .quick-card {
   background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md, 16px);
   padding: 2rem;
   text-decoration: none;
-  color: var(--text-main);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #0f172a;
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -182,11 +193,31 @@
   font-size: 2.25rem;
   color: #8b5cf6;
   margin-bottom: 1.25rem;
-  transition: transform 0.3s ease;
 }
 
-.quick-card:hover .card-icon {
-  transform: scale(1.15) rotate(-5deg);
+/* TARJETA CRÍTICA DESTACADA (REVISIÓN DE FICHAS) */
+.featured-card {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+  border: 2px solid #8b5cf6;
+  box-shadow: 0 10px 25px rgba(139, 92, 246, 0.15);
+}
+
+.badge-featured {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #8b5cf6;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+}
+
+.featured-icon {
+  color: #7c3aed;
 }
 
 .quick-card h4 {
@@ -198,6 +229,6 @@
 .quick-card p {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--text-muted);
+  color: #64748b;
   line-height: 1.5;
 }

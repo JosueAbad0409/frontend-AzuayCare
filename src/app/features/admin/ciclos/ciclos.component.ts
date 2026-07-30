@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CiclosService } from '../../../core/services/ciclos.service';
-import { CarreraService } from '../../../core/services/carrera/carrera.service';
+import { CarreraService } from '../../../core/services/carrera.service';
 import { Ciclo } from '../../../core/models/ciclo.model';
 import { Carrera } from '../../../core/models/carrera.model';
 
@@ -24,6 +24,7 @@ export class CiclosComponent implements OnInit {
   modalOpen = signal<boolean>(false);
   editingCicloId = signal<string | null>(null);
 
+  // Homologado a carreraId para coincidir con el HTML y la interfaz Ciclo
   cicloForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3)]],
     carreraId: ['', [Validators.required]],
@@ -62,7 +63,7 @@ export class CiclosComponent implements OnInit {
       this.editingCicloId.set(ciclo.id);
       this.cicloForm.patchValue({
         nombre: ciclo.nombre,
-        carreraId: ciclo.carreraId,
+        carreraId: ciclo.carreraId || (ciclo as any).carrera_id,
         activo: ciclo.activo
       });
     } else {

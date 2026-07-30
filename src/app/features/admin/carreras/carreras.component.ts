@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } 
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Carrera } from '../../../core/models/carrera.model';
-import { CarreraService } from '../../../core/services/carrera/carrera.service';
+import { CarreraService } from '../../../core/services/carrera.service';
 
 @Component({
   selector: 'app-carreras',
@@ -12,7 +12,7 @@ import { CarreraService } from '../../../core/services/carrera/carrera.service';
   styleUrls: ['./carreras.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class Carreras implements OnInit {
+export class CarrerasComponent implements OnInit {
   private readonly carreraService = inject(CarreraService);
   private readonly fb = inject(FormBuilder);
   

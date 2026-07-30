@@ -16,14 +16,30 @@
       </button>
     </div>
 
-    <!-- MENÚ DE NAVEGACIÓN -->
+    <!-- MENÚ DE NAVEGACIÓN REESTRUCTURADO -->
     <nav class="sidebar-nav">
+      
+      <!-- SECCIÓN: PRINCIPAL -->
+      @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Principal</h6> }
       <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item" title="Dashboard">
         <i class="fas fa-chart-pie nav-icon"></i>
         @if (!isSidebarCollapsed()) { <span class="nav-text">Dashboard</span> }
       </a>
 
+      <a routerLink="/admin/revision-fichas" routerLinkActive="active" class="nav-item" title="Revisión de Fichas">
+        <i class="fas fa-clipboard-check nav-icon"></i>
+        @if (!isSidebarCollapsed()) { <span class="nav-text">Revisión de Fichas</span> }
+      </a>
+
+      <!-- SECCIÓN: SOCIOECONÓMICO & ACADÉMICO -->
       @if (authService.user()?.rol === 'COORDINADOR_BIENESTAR') {
+        @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Socioeconómico</h6> }
+        
+        <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
+          <i class="fas fa-file-signature nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
+        </a>
+
         <a routerLink="/admin/carreras" routerLinkActive="active" class="nav-item" title="Carreras">
           <i class="fas fa-graduation-cap nav-icon"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Carreras</span> }
@@ -39,23 +55,14 @@
           @if (!isSidebarCollapsed()) { <span class="nav-text">Periodos</span> }
         </a>
 
-        <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
-          <i class="fas fa-file-signature nav-icon"></i>
-          @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
+        <a routerLink="/admin/reportes" routerLinkActive="active" class="nav-item" title="Reportes Analíticos">
+          <i class="fas fa-chart-line nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Reportes</span> }
         </a>
 
-        <a routerLink="/admin/niveles" routerLinkActive="active" class="nav-item" title="Niveles Económicos">
-          <i class="fas fa-layer-group nav-icon"></i>
-          @if (!isSidebarCollapsed()) { <span class="nav-text">Niveles Económicos</span> }
-        </a>
-      }
-
-      <a routerLink="/admin/revision-fichas" routerLinkActive="active" class="nav-item" title="Revisión de Fichas">
-        <i class="fas fa-clipboard-check nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Revisión de Fichas</span> }
-      </a>
-
-      @if (authService.user()?.rol === 'COORDINADOR_BIENESTAR') {
+        <!-- SECCIÓN: CONFIGURACIÓN -->
+        @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Configuración</h6> }
+        
         <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item" title="Usuarios y Roles">
           <i class="fas fa-users-cog nav-icon"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Usuarios y Roles</span> }
@@ -67,27 +74,13 @@
         </a>
       }
 
+      <!-- SECCIÓN: PERSONAL -->
+      @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Personal</h6> }
       <a routerLink="/admin/perfil-coordinador" routerLinkActive="active" class="nav-item" title="Mi Perfil de Atención">
         <i class="fas fa-id-card nav-icon"></i>
         @if (!isSidebarCollapsed()) { <span class="nav-text">Perfil Atención</span> }
       </a>
     </nav>
-    
-    <!-- USUARIO PERFIL FOOTER -->
-    <div class="sidebar-footer">
-      @if (!isSidebarCollapsed()) {
-        <div class="user-profile">
-          <div class="avatar"><i class="fas fa-user-circle"></i></div>
-          <div class="user-info">
-            <span class="user-name">{{ authService.user()?.nombre || 'Coordinador' }}</span>
-            <span class="user-role">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
-          </div>
-        </div>
-      }
-      <button class="btn-logout-icon" (click)="logout()" title="Cerrar Sesión">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
   </aside>
 
   <!-- CONTENIDO DINÁMICO -->
@@ -97,11 +90,29 @@
         <span class="live-dot"></span>
         <span class="status-text">Sistema Socioeconómico Activo</span>
       </div>
+      
+      <!-- PERFIL SUPERIOR -->
       <div class="header-user">
-        <span class="role-chip">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
-        <button class="btn-logout" (click)="logout()">
-          <i class="fas fa-sign-out-alt"></i> Salir
-        </button>
+        <div class="user-dropdown-container">
+          <div class="user-dropdown-trigger">
+            <div class="user-avatar-small"><i class="fas fa-user-circle"></i></div>
+            <div class="user-details-small">
+              <span class="user-name-small">{{ authService.user()?.nombre || 'Coordinador' }}</span>
+              <span class="role-chip">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
+            </div>
+            <i class="fas fa-chevron-down text-muted" style="margin-left: 0.5rem; font-size: 0.75rem;"></i>
+          </div>
+          
+          <div class="dropdown-menu">
+            <a routerLink="/admin/perfil-coordinador" class="dropdown-item">
+              <i class="fas fa-user-edit"></i> Mi Perfil
+            </a>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item text-red" (click)="logout()">
+              <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 

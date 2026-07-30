@@ -10,4 +10,5 @@ export interface EnviarRespuestaDto {
 
 export interface GuardarBloqueRespuestasDto {
   respuestas: EnviarRespuestaDto[];
+  es_envio_final?: boolean;
 }

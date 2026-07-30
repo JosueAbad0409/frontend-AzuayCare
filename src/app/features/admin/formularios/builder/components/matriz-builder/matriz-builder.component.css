@@ -1,0 +1,117 @@
+/* ==========================================
+   CONSTRUCTOR DE MATRIZ MODERNO (SAAS / NOTION STYLE)
+   ========================================== */
+
+.matriz-builder-container {
+  font-family: inherit;
+  border-radius: 1rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Botones y Micro-interacciones --- */
+.btn-preset {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-preset:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.12);
+}
+
+.btn-preset:active {
+  transform: translateY(0);
+}
+
+/* Inputs de edición rápida estilo Notion */
+.input-chip-edit {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.input-chip-edit:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.input-chip-edit:focus {
+  background: #ffffff;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+/* Transiciones en radio buttons simulados */
+table input[type="radio"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  accent-color: #8b5cf6;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+table input[type="radio"]:hover {
+  transform: scale(1.25);
+}
+
+/* Custom Scrollbars para paneles extensos */
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* --- Animaciones de Entrada --- */
+table tbody tr {
+  animation: slideInRow 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInRow {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chip-item-anim {
+  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

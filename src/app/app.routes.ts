@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-// 1. Corregida la importación (con minúscula)
 import { authGuard } from './core/guards/auth.guard'; 
 import { roleGuard } from './core/guards/role.guard';
 
@@ -14,17 +13,16 @@ export const routes: Routes = [
   { 
     path: 'admin',
     loadComponent: () => import('./features/admin/layout/admin-layout.component').then(m => m.AdminLayoutComponent),
-    // 2. Corregido el uso del guard aquí:
     canActivate: [authGuard, roleGuard(['COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'])], 
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { 
         path: 'dashboard', 
-        loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.Dashboard)
+        loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       { 
         path: 'carreras', 
-        loadComponent: () => import('./features/admin/carreras/carreras.component').then(m => m.Carreras)
+        loadComponent: () => import('./features/admin/carreras/carreras.component').then(m => m.CarrerasComponent)
       },
       { 
         path: 'ciclos', 
@@ -40,11 +38,11 @@ export const routes: Routes = [
       },
       { 
         path: 'formularios/builder/:id', 
-        loadComponent: () => import('./features/admin/formulario/builder/formulario-builder.component').then(m => m.FormularioBuilderComponent)
+        loadComponent: () => import('./features/admin/formularios/builder/formulario-builder.component').then(m => m.FormularioBuilderComponent)
       },
       { 
-        path: 'niveles', 
-        loadComponent: () => import('./features/admin/niveles/niveles.component').then(m => m.NivelesComponent)
+        path: 'reportes', 
+        loadComponent: () => import('./features/admin/reportes/reportes.component').then(m => m.ReportesComponent)
       },
       { 
         path: 'revision-fichas', 
@@ -57,7 +55,7 @@ export const routes: Routes = [
       {
         path: 'auditoria',
         loadComponent: () => import('./features/admin/auditoria/auditoria.component').then(m => m.AuditoriaComponent),
-        canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])] // Solo visible para bienestar
+        canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
         path: 'perfil-coordinador',
@@ -66,11 +64,30 @@ export const routes: Routes = [
     ]
   },
 
-  { 
-    path: 'estudiante/ficha', 
-    loadComponent: () => import('./features/estudiante/estudiante-ficha.component').then(m => m.EstudianteFichaComponent),
-    // 3. Corregido el uso del guard aquí también:
-    canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])]
+  /* Módulo Estudiante con Layout y Menú Colapsable */
+  {
+    path: 'estudiante',
+    loadComponent: () => import('./features/estudiante/layout/estudiante-layout.component').then(m => m.EstudianteLayoutComponent),
+    canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])],
+    children: [
+      { path: '', redirectTo: 'inicio', pathMatch: 'full' },
+      {
+        path: 'inicio',
+        loadComponent: () => import('./features/estudiante/inicio/estudiante-inicio.component').then(m => m.EstudianteInicioComponent)
+      },
+      { 
+        path: 'ficha', 
+        loadComponent: () => import('./features/estudiante/estudiante-ficha.component').then(m => m.EstudianteFichaComponent)
+      },
+      {
+        path: 'documentos',
+        loadComponent: () => import('./features/estudiante/documentos/estudiante-documentos.component').then(m => m.EstudianteDocumentosComponent)
+      },
+      {
+        path: 'perfil',
+        loadComponent: () => import('./features/estudiante/estudiante-ficha.component').then(m => m.EstudianteFichaComponent)
+      }
+    ]
   },
 
   { path: '**', redirectTo: 'login' }

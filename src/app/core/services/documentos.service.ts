@@ -9,11 +9,16 @@ export class DocumentosService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/documentos-respaldo`;
 
+  /**
+   * Sube un archivo adjunto utilizando multipart/form-data.
+   * La clave 'file' coincide con el FileInterceptor('file') en NestJS.
+   */
   subirDocumento(respuestaId: string, file: File): Observable<DocumentoRespaldo> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('respuesta_id', respuestaId);
-    return this.http.post<DocumentoRespaldo>(this.apiUrl, formData);
+
+    return this.http.post<DocumentoRespaldo>(`${this.apiUrl}/upload`, formData);
   }
 
   getDocumentosByFicha(fichaId: string): Observable<DocumentoRespaldo[]> {
@@ -22,5 +27,9 @@ export class DocumentosService {
 
   marcarVerificado(documentoId: string, verificado: boolean): Observable<DocumentoRespaldo> {
     return this.http.patch<DocumentoRespaldo>(`${this.apiUrl}/${documentoId}/verificar`, { verificado });
+  }
+
+  deleteDocumento(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

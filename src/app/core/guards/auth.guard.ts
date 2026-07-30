@@ -16,11 +16,10 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   if (expectedRoles && expectedRoles.length > 0) {
     if (!userRole || !expectedRoles.includes(userRole)) {
-      // Redirección defensiva con verificación segura de nulos
       if (userRole && ['ADMIN', 'COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'].includes(userRole)) {
         router.navigate(['/admin/dashboard']);
       } else {
-        router.navigate(['/estudiante/ficha']);
+        router.navigate(['/estudiante/inicio']);
       }
       return false;
     }

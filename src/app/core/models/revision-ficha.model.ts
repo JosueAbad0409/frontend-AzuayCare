@@ -7,7 +7,12 @@ export interface FichaRevision {
   total_egresos: number;
   balance_final: number;
   nivel_economico_id: string | null;
-  estado_ficha: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'RECHAZADO';
+  estado_ficha: 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADO';
+  rango_resultado_id?: string | null;
+  rangoResultado?: {
+    id: string;
+    nombre: string;
+  } | null;
   created_at: string;
   updated_at: string;
   usuario?: {
