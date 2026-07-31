@@ -23,16 +23,28 @@
         <button type="button" class="btn btn-outline" (click)="showRangosPanel.update(v => !v)">
           <i class="fas fa-calculator"></i> Variables & Rangos
         </button>
-        <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()">
-          <i class="fas fa-folder-plus"></i> Nueva Sección
-        </button>
-        @if (!formulario()?.publicado) {
-          <button type="button" class="btn btn-purple" (click)="publicarFormulario()">
-            <i class="fas fa-paper-plane"></i> Publicar Ficha
+        
+        <!-- ACCIONES DE EDICIÓN GLOBALES -->
+        @if (!esSoloLectura()) {
+          <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()">
+            <i class="fas fa-folder-plus"></i> Nueva Sección
           </button>
+          @if (!formulario()?.publicado) {
+            <button type="button" class="btn btn-purple" (click)="publicarFormulario()">
+              <i class="fas fa-paper-plane"></i> Publicar Ficha
+            </button>
+          }
         }
       </div>
     </header>
+
+    <!-- BANNER DE VERSIÓN BLOQUEADA -->
+    @if (esSoloLectura()) {
+      <div class="alert-readonly animate-fade-in">
+        <i class="fas fa-lock"></i>
+        Esta es una versión anterior bloqueada. Solo puedes visualizar las preguntas y su configuración; no se permite ninguna edición.
+      </div>
+    }
 
     <!-- PANEL DESPLEGABLE: CONFIGURACIÓN DE RANGOS Y VARIABLES CALCULADAS -->
     @if (showRangosPanel()) {
@@ -44,29 +56,31 @@
           <button type="button" class="text-xs text-amber-800 hover:underline" (click)="showRangosPanel.set(false)">Cerrar</button>
         </div>
 
-        <form [formGroup]="rangoForm" (ngSubmit)="guardarRangoVariable()" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 items-end">
-          <div>
-            <label class="text-xs font-semibold text-gray-700 block mb-1">Variable *</label>
-            <input type="text" formControlName="variable_calculo" class="form-control text-xs" placeholder="BALANCE">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-gray-700 block mb-1">Nombre / Categoría *</label>
-            <input type="text" formControlName="nombre" class="form-control text-xs" placeholder="Ej: Nivel Bajo / Vulnerable">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-gray-700 block mb-1">Mínimo *</label>
-            <input type="number" formControlName="valor_min" class="form-control text-xs" placeholder="0">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo (Opcional)</label>
-            <input type="number" formControlName="valor_max" class="form-control text-xs" placeholder="Sin límite">
-          </div>
-          <div>
-            <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid">
-              <i class="fas fa-plus"></i> Guardar Rango
-            </button>
-          </div>
-        </form>
+        @if (!esSoloLectura()) {
+          <form [formGroup]="rangoForm" (ngSubmit)="guardarRangoVariable()" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 items-end">
+            <div>
+              <label class="text-xs font-semibold text-gray-700 block mb-1">Variable *</label>
+              <input type="text" formControlName="variable_calculo" class="form-control text-xs" placeholder="BALANCE">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-700 block mb-1">Nombre / Categoría *</label>
+              <input type="text" formControlName="nombre" class="form-control text-xs" placeholder="Ej: Nivel Bajo / Vulnerable">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-700 block mb-1">Mínimo *</label>
+              <input type="number" formControlName="valor_min" class="form-control text-xs" placeholder="0">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo (Opcional)</label>
+              <input type="number" formControlName="valor_max" class="form-control text-xs" placeholder="Sin límite">
+            </div>
+            <div>
+              <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid">
+                <i class="fas fa-plus"></i> Guardar Rango
+              </button>
+            </div>
+          </form>
+        }
 
         <!-- TABLA DE RANGOS -->
         <div class="bg-white rounded-lg border overflow-hidden">
@@ -77,7 +91,9 @@
                 <th class="p-2">Nombre Rango</th>
                 <th class="p-2">Min.</th>
                 <th class="p-2">Max.</th>
-                <th class="p-2 text-center">Acciones</th>
+                @if (!esSoloLectura()) {
+                  <th class="p-2 text-center">Acciones</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -87,15 +103,17 @@
                   <td class="p-2 font-semibold">{{ rango.nombre }}</td>
                   <td class="p-2">${{ rango.valor_min }}</td>
                   <td class="p-2">{{ rango.valor_max ? '$' + rango.valor_max : 'En adelante' }}</td>
-                  <td class="p-2 text-center">
-                    <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarRangoVariable(rango.id)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </td>
+                  @if (!esSoloLectura()) {
+                    <td class="p-2 text-center">
+                      <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarRangoVariable(rango.id)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  }
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="p-3 text-center text-gray-400">No se han registrado rangos de evaluación.</td>
+                  <td [attr.colspan]="esSoloLectura() ? 4 : 5" class="p-3 text-center text-gray-400">No se han registrado rangos de evaluación.</td>
                 </tr>
               }
             </tbody>
@@ -123,23 +141,29 @@
                 </span>
               }
             </div>
-            <button type="button" class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)" title="Eliminar Sección">
-              <i class="fas fa-trash-alt"></i>
-            </button>
+            
+            @if (!esSoloLectura()) {
+              <button type="button" class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)" title="Eliminar Sección">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            }
           </div>
 
           <div class="questions-container" (dragover)="onDragOver($event)">
             @for (pregunta of seccion.preguntas; track pregunta.id || $index; let j = $index) {
               <!-- TARJETA DE PREGUNTA EXISTENTE -->
               <div 
-                class="question-item flex-col gap-3 cursor-move" 
-                draggable="true" 
+                class="question-item flex-col gap-3"
+                [class.cursor-move]="!esSoloLectura()"
+                [draggable]="!esSoloLectura()" 
                 (dragstart)="onDragStart(i, j)" 
                 (drop)="onDrop(i, j)"
               >
                 <div class="flex justify-between w-full items-start">
                   <div class="question-main flex items-center gap-3">
-                    <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
+                    @if (!esSoloLectura()) {
+                      <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
+                    }
                     <span class="question-num">{{ j + 1 }}.</span>
                     <div class="question-content">
                       <strong>{{ pregunta.enunciado }}</strong>
@@ -161,17 +185,19 @@
                   </div>
 
                   <!-- BOTONERA DE ACCIONES DE PREGUNTA -->
-                  <div class="flex items-center gap-1">
-                    <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
-                      <i class="fas fa-times"></i>
-                    </button>
-                  </div>
+                  @if (!esSoloLectura()) {
+                    <div class="flex items-center gap-1">
+                      <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                  }
                 </div>
 
-                <!-- OPCIONES SELECCIÓN (LISTADO Y AGREGADO RÁPIDO) -->
+                <!-- OPCIONES SELECCIÓN -->
                 @if (esTipoSeleccion(pregunta.tipo_campo_id)) {
                   <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2">
                     <h5 class="font-bold text-sm text-blue-900"><i class="fas fa-list-ul"></i> Opciones Configuradas</h5>
@@ -184,29 +210,34 @@
                             @if (opcion.permite_texto_libre) { <em class="text-gray-500 ml-1">(Especificar texto libre)</em> }
                             @if (opcion.valor_ponderado) { <strong class="text-purple-700 ml-2">[{{ opcion.valor_ponderado }} pts]</strong> }
                           </span>
-                          <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)">
-                            <i class="fas fa-trash"></i>
-                          </button>
+                          @if (!esSoloLectura()) {
+                            <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          }
                         </li>
                       } @empty {
                         <p class="text-xs text-gray-400">Sin opciones agregadas.</p>
                       }
                     </ul>
-                    <div class="flex gap-2 pt-1">
-                      <input 
-                        type="text" 
-                        [value]="nuevaOpcionTexto()" 
-                        (input)="nuevaOpcionTexto.set($any($event.target).value)" 
-                        (keyup.enter)="agregarOpcion(pregunta.id)" 
-                        placeholder="Añadir opción rápida y presionar Enter..." 
-                        class="form-control text-xs"
-                      >
-                      <button type="button" (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
-                    </div>
+                    
+                    @if (!esSoloLectura()) {
+                      <div class="flex gap-2 pt-1">
+                        <input 
+                          type="text" 
+                          [value]="nuevaOpcionTexto()" 
+                          (input)="nuevaOpcionTexto.set($any($event.target).value)" 
+                          (keyup.enter)="agregarOpcion(pregunta.id)" 
+                          placeholder="Añadir opción rápida y presionar Enter..." 
+                          class="form-control text-xs"
+                        >
+                        <button type="button" (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm"><i class="fas fa-plus"></i></button>
+                      </div>
+                    }
                   </div>
                 }
 
-                <!-- CONFIGURACIÓN MATRIZ EXISTENTE CON SUBCOMPONENTE DELEGADO -->
+                <!-- CONFIGURACIÓN MATRIZ EXISTENTE SIN BINDING ERRÓNEO -->
                 @if (esTipoMatriz(pregunta.tipo_campo_id)) {
                   <app-matriz-builder
                     [preguntaId]="pregunta.id"
@@ -222,7 +253,7 @@
             }
 
             <!-- FORMULARIO PARA CREAR O EDITAR PREGUNTA -->
-            @if (activeSeccionIdForQuestion() === seccion.id) {
+            @if (activeSeccionIdForQuestion() === seccion.id && !esSoloLectura()) {
               <div class="new-question-box border-2 border-purple-500 rounded-xl p-4 bg-white shadow-lg my-4">
                 <h4 class="text-purple-900 font-bold mb-3 flex items-center gap-2">
                   <i class="fas" [ngClass]="editingPreguntaId() ? 'fa-edit' : 'fa-plus-circle'"></i> 
@@ -301,21 +332,17 @@
                         @for (opcGroup of opcionesTempArray.controls; track $index; let optIdx = $index) {
                           <div [formGroupName]="optIdx" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:border-purple-300 transition-colors">
                             
-                            <!-- Fila 1: Texto de Opción y Puntos -->
                             <div class="flex flex-wrap md:flex-nowrap gap-3 items-start w-full">
-                              <!-- Campo Texto -->
                               <div class="flex-grow min-w-[200px] w-full">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Texto de Respuesta *</label>
                                 <input type="text" formControlName="texto_opcion" placeholder="Ej: 18 a 25 años" class="form-control text-xs w-full">
                               </div>
                               
-                              <!-- Campo Puntos (Opcional) -->
                               <div class="w-24 shrink-0">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Puntos</label>
                                 <input type="number" formControlName="valor_ponderado" placeholder="0" class="form-control text-xs w-full" title="Opcional">
                               </div>
 
-                              <!-- Eliminar Opción -->
                               <div class="shrink-0 mt-4">
                                 <button type="button" class="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-colors border border-transparent hover:border-red-600" (click)="eliminarOpcionTemp(optIdx)" title="Eliminar opción">
                                   <i class="fas fa-trash"></i>
@@ -323,25 +350,20 @@
                               </div>
                             </div>
 
-                            <!-- Fila 2: Checkboxes de Configuración -->
                             <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                              <!-- Es Correcta -->
                               <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-100/50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
                                 <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> ¿Es la respuesta correcta?
                               </label>
 
-                              <!-- Permite Otros -->
                               <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
                                 <input type="checkbox" formControlName="permite_texto_libre" class="accent-purple-600 w-3.5 h-3.5"> Permite 'Otros'
                               </label>
 
-                              <!-- Despliega Subpregunta -->
                               <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors">
                                 <input type="checkbox" formControlName="dispara_dependencia" class="accent-emerald-600 w-3.5 h-3.5"> Despliega subpregunta
                               </label>
                             </div>
 
-                            <!-- Subpregunta Condicional -->
                             @if (opcGroup.get('dispara_dependencia')?.value) {
                               <div class="ml-2 md:ml-4 pl-4 border-l-4 border-emerald-500 bg-emerald-50/30 p-3 rounded-r-xl space-y-3 animate-fade-in">
                                 <span class="text-[11px] font-extrabold text-emerald-800 uppercase block">
@@ -366,7 +388,6 @@
                           </div>
                         }
 
-                        <!-- Calculadora de Puntos Totales Automática -->
                         @if (opcionesTempArray.controls.length > 0) {
                           <div class="flex justify-end pt-3">
                             <div class="bg-purple-100 text-purple-800 text-xs font-bold px-4 py-2 rounded-xl border border-purple-200 shadow-sm flex items-center gap-2">
@@ -378,7 +399,6 @@
                     </div>
                   }
 
-                  <!-- CONSTRUCTOR INTERACTIVO DE MATRIZ -->
                   @if (esTipoMatriz(preguntaForm.get('tipo_campo_id')?.value)) {
                     <div class="my-4 animate-fade-in">
                       <app-matriz-builder [parentForm]="preguntaForm"></app-matriz-builder>
@@ -406,7 +426,7 @@
                   </div>
                 </form>
               </div>
-            } @else {
+            } @else if (!esSoloLectura()) {
               <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
                 <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
               </button>

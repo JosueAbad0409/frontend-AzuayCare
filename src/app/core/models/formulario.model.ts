@@ -1,5 +1,6 @@
 // C:\Proyecto AzuayCare\frontend-AzuayCare\src\app\core\models\formulario.model.ts
 
+import { TipoFormulario } from './tipo-formulario.model'; // NUEVO IMPORT
 import { 
   FilaMatriz, 
   ColumnaMatriz, 
@@ -35,10 +36,13 @@ export interface Formulario {
   id: string;
   titulo: string;
   descripcion?: string | null;
-  tipo: string;
+  tipo_formulario_id: string;        // reemplaza a "tipo: string"
+  tipoFormulario?: TipoFormulario;   // objeto relacionado que llega del backend en findOne/findAll
   periodo_id: string;
   version: number;
   publicado: boolean;
+  bloqueado: boolean;                // NUEVO: indica versión de solo lectura
+  fecha_bloqueo?: string | null;     // NUEVO
   fecha_publicacion?: string | null;
   created_at: string;
   secciones?: Seccion[];
@@ -49,7 +53,7 @@ export interface CreateFormularioDto {
   periodo_id: string;
   titulo: string;
   descripcion?: string;
-  tipo?: string;
+  tipo_formulario_id: string; // reemplaza a "tipo?: string", ahora obligatorio
 }
 
 // --- INTERFAZ SECCIÓN ---

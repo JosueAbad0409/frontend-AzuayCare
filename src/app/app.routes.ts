@@ -36,6 +36,10 @@ export const routes: Routes = [
         path: 'formularios', 
         loadComponent: () => import('./features/admin/formularios/formularios.component').then(m => m.FormulariosComponent)
       },
+      {
+        path: 'tipos-formulario',
+        loadComponent: () => import('./features/admin/tipos-formulario/tipos-formulario.component').then(m => m.TiposFormularioComponent)
+      },
       { 
         path: 'formularios/builder/:id', 
         loadComponent: () => import('./features/admin/formularios/builder/formulario-builder.component').then(m => m.FormularioBuilderComponent)

@@ -1,5 +1,5 @@
 // src/app/features/admin/formularios/builder/formulario-builder.component.ts
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -40,6 +40,9 @@ export class FormularioBuilderComponent implements OnInit {
   dependencias = signal<PreguntaDependencia[]>([]);
   rangosVariable = signal<RangoVariableCalculada[]>([]);
   isLoading = signal<boolean>(true);
+
+  // NUEVO: true si el formulario cargado es una versión bloqueada (solo lectura)
+  esSoloLectura = computed(() => this.formulario()?.bloqueado === true);
 
   // Estados para UI / UX
   isSavingSeccion = signal<boolean>(false);
@@ -121,6 +124,10 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   abrirModalNuevaSeccion(): void {
+    if (this.esSoloLectura()) {
+      this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
+      return;
+    }
     this.seccionForm.reset({
       nombre: '',
       descripcion: '',
@@ -176,6 +183,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   guardarRangoVariable(): void {
+    if (this.esSoloLectura()) return;
     if (this.rangoForm.invalid || !this.formulario()) return;
 
     const payload = {
@@ -201,6 +209,8 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarRangoVariable(id: string): void {
+    if (this.esSoloLectura()) return;
+
     this.rangosVariableService.deleteRango(id).subscribe({
       next: () => {
         this.toastService.show('Rango eliminado.', 'info');
@@ -252,8 +262,8 @@ export class FormularioBuilderComponent implements OnInit {
     this.opcionesTempArray.push(this.fb.group({
       texto_opcion: [texto, Validators.required],
       permite_texto_libre: [false],
-      valor_ponderado: [valorPonderado], // Null por defecto (Opcional)
-      es_correcta: [false], // <--- NUEVO CONTROL
+      valor_ponderado: [valorPonderado],
+      es_correcta: [false],
       dispara_dependencia: [false],
       subpregunta_enunciado: [''],
       subpregunta_tipo_id: [tipoTexto ? tipoTexto.id : ''],
@@ -323,7 +333,9 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   agregarOpcion(preguntaId: string): void {
+    if (this.esSoloLectura()) return;
     if (!this.nuevaOpcionTexto().trim()) return;
+
     this.formularioService.createOpcion({
       pregunta_id: preguntaId,
       texto_opcion: this.nuevaOpcionTexto().trim()
@@ -343,6 +355,8 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarOpcionExistente(opcionId: string, preguntaId: string): void {
+    if (this.esSoloLectura()) return;
+
     this.formularioService.deleteOpcion(opcionId).subscribe({
       next: () => {
         this.toastService.show('Opción eliminada.', 'info');
@@ -373,30 +387,39 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   agregarFilaMatriz(event: { preguntaId: string; texto: string }): void {
+    if (this.esSoloLectura()) return;
+
     this.matricesService.createFila({ pregunta_id: event.preguntaId, texto_fila: event.texto }).subscribe({
       next: () => this.cargarMatrizDetalles(event.preguntaId)
     });
   }
 
   eliminarFilaExistente(filaId: string, preguntaId: string): void {
+    if (this.esSoloLectura()) return;
+
     this.matricesService.deleteFila(filaId).subscribe({
       next: () => this.cargarMatrizDetalles(preguntaId)
     });
   }
 
   agregarColumnaMatriz(event: { preguntaId: string; texto: string }): void {
+    if (this.esSoloLectura()) return;
+
     this.matricesService.createColumna({ pregunta_id: event.preguntaId, texto_columna: event.texto }).subscribe({
       next: () => this.cargarMatrizDetalles(event.preguntaId)
     });
   }
 
   eliminarColumnaExistente(columnaId: string, preguntaId: string): void {
+    if (this.esSoloLectura()) return;
+
     this.matricesService.deleteColumna(columnaId).subscribe({
       next: () => this.cargarMatrizDetalles(preguntaId)
     });
   }
 
   guardarSeccion(): void {
+    if (this.esSoloLectura()) return;
     if (this.seccionForm.invalid || !this.formulario()) return;
     this.isSavingSeccion.set(true);
 
@@ -432,6 +455,8 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarSeccion(seccionId: string, index: number): void {
+    if (this.esSoloLectura()) return;
+
     if (confirm('¿Estás seguro de eliminar esta sección y todas sus preguntas?')) {
       if (seccionId) {
         this.formularioService.deleteSeccion(seccionId).subscribe({
@@ -448,6 +473,11 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   abrirFormPregunta(seccionId: string): void {
+    if (this.esSoloLectura()) {
+      this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
+      return;
+    }
+
     this.activeSeccionIdForQuestion.set(seccionId);
     this.editingPreguntaId.set(null);
     
@@ -495,6 +525,11 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   abrirEditarPregunta(pregunta: Pregunta, seccionId: string): void {
+    if (this.esSoloLectura()) {
+      this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
+      return;
+    }
+
     this.activeSeccionIdForQuestion.set(seccionId);
     this.editingPreguntaId.set(pregunta.id);
 
@@ -529,6 +564,8 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   guardarPregunta(seccionId: string): void {
+    if (this.esSoloLectura()) return;
+
     if (this.preguntaForm.invalid) {
       this.toastService.show('Por favor completa todos los campos requeridos de la pregunta.', 'warning');
       return;
@@ -605,8 +642,8 @@ export class FormularioBuilderComponent implements OnInit {
                   texto_opcion: opc.texto_opcion.trim(),
                   orden: i + 1,
                   permite_texto_libre: Boolean(opc.permite_texto_libre),
-                  valor_ponderado: opc.valor_ponderado ? Number(opc.valor_ponderado) : 0, // Maneja el opcional
-                  es_correcta: Boolean(opc.es_correcta) // <--- SE ENVÍA AL BACKEND
+                  valor_ponderado: opc.valor_ponderado ? Number(opc.valor_ponderado) : 0,
+                  es_correcta: Boolean(opc.es_correcta)
                 })
               );
 
@@ -689,6 +726,8 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarPregunta(preguntaId: string, seccionId: string): void {
+    if (this.esSoloLectura()) return;
+
     if (confirm('¿Eliminar esta pregunta?')) {
       this.formularioService.deletePregunta(preguntaId).subscribe({
         next: () => {
@@ -701,6 +740,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   publicarFormulario(): void {
+    if (this.esSoloLectura()) return;
     if (!this.formulario()) return;
 
     if (confirm('¿Estás seguro de publicar esta ficha? Una vez publicada estará disponible para los estudiantes.')) {
@@ -731,15 +771,19 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   onDragStart(seccionIndex: number, preguntaIndex: number): void {
+    if (this.esSoloLectura()) return;
     this.draggedSeccionIndex = seccionIndex;
     this.draggedPreguntaIndex = preguntaIndex;
   }
 
   onDragOver(event: DragEvent): void {
+    if (this.esSoloLectura()) return;
     event.preventDefault();
   }
 
   onDrop(targetSeccionIndex: number, targetPreguntaIndex: number): void {
+    if (this.esSoloLectura()) return;
+
     if (
       this.draggedSeccionIndex === null || 
       this.draggedPreguntaIndex === null || 
@@ -782,7 +826,6 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // Helper para la UI: Suma los puntos de las opciones marcadas como "Correctas"
   calcularTotalPuntos(): number {
     let total = 0;
     for (const ctrl of this.opcionesTempArray.controls) {

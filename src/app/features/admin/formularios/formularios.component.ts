@@ -8,9 +8,11 @@ import { forkJoin } from 'rxjs';
 
 import { FormularioService } from '../../../core/services/formulario.service';
 import { PeriodoService } from '../../../core/services/periodo.service';
+import { TipoFormularioService } from '../../../core/services/tipo-formulario.service'; // NUEVO IMPORT
 import { ToastService } from '../../../core/services/toast.service';
 import { Formulario } from '../../../core/models/formulario.model';
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
+import { TipoFormulario } from '../../../core/models/tipo-formulario.model'; // NUEVO IMPORT
 
 @Component({
   selector: 'app-formularios',
@@ -23,6 +25,7 @@ import { PeriodoMatricula } from '../../../core/models/periodo.model';
 export class FormulariosComponent implements OnInit {
   private readonly formularioService = inject(FormularioService);
   private readonly periodoService = inject(PeriodoService);
+  private readonly tipoFormularioService = inject(TipoFormularioService); // NUEVA INYECCIÓN
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
@@ -30,10 +33,11 @@ export class FormulariosComponent implements OnInit {
   // Signals de estado general
   formularios = signal<Formulario[]>([]);
   periodos = signal<PeriodoMatricula[]>([]);
+  tiposFormulario = signal<TipoFormulario[]>([]); // NUEVA SIGNAL
   isLoading = signal<boolean>(true);
   isSaving = signal<boolean>(false);
   isCloning = signal<boolean>(false);
-  isTogglingState = signal<boolean>(false); // Nuevo para bloquear múltiples clicks al publicar/despublicar
+  isTogglingState = signal<boolean>(false); // Para bloquear múltiples clics al publicar/despublicar
 
   // Signals de modales
   showModal = signal<boolean>(false);
@@ -46,7 +50,7 @@ export class FormulariosComponent implements OnInit {
     titulo: ['', [Validators.required, Validators.maxLength(255)]],
     descripcion: [''],
     periodo_id: ['', Validators.required],
-    tipo: ['SOCIOECONOMICO', Validators.required]
+    tipo_formulario_id: ['', Validators.required] // DESPUÉS
   });
 
   cloneFormGroup: FormGroup = this.fb.group({
@@ -67,11 +71,13 @@ export class FormulariosComponent implements OnInit {
 
     forkJoin({
       periodos: this.periodoService.getPeriodos(),
-      formularios: this.formularioService.getFormularios()
+      formularios: this.formularioService.getFormularios(),
+      tiposFormulario: this.tipoFormularioService.getTiposFormulario() // NUEVO
     }).subscribe({
-      next: ({ periodos, formularios }) => {
+      next: ({ periodos, formularios, tiposFormulario }) => {
         this.periodos.set(periodos || []);
         this.formularios.set(formularios || []);
+        this.tiposFormulario.set(tiposFormulario || []); // NUEVO
         this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -90,15 +96,20 @@ export class FormulariosComponent implements OnInit {
     this.formGroup.reset({
       titulo: '',
       descripcion: '',
-      tipo: 'SOCIOECONOMICO',
+      tipo_formulario_id: '',
       periodo_id: periodoActivo ? periodoActivo.id : ''
     });
     this.formGroup.get('periodo_id')?.enable();
+    this.formGroup.get('tipo_formulario_id')?.enable(); // Se puede elegir libremente al crear
     this.showModal.set(true);
   }
 
   abrirModalEditar(form: Formulario, e: Event): void {
     e.stopPropagation();
+    if (form.bloqueado) {
+      this.toastService.show('Este formulario es una versión anterior bloqueada y solo puede visualizarse.', 'info');
+      return;
+    }
     this.isEditMode.set(true);
     this.selectedFormularioId.set(form.id);
 
@@ -106,16 +117,21 @@ export class FormulariosComponent implements OnInit {
       titulo: form.titulo,
       descripcion: form.descripcion || '',
       periodo_id: form.periodo_id,
-      tipo: form.tipo || 'SOCIOECONOMICO'
+      tipo_formulario_id: form.tipo_formulario_id
     });
 
-    // Deshabilitar periodo_id para prevenir desalineaciones en edición
-    //this.formGroup.get('periodo_id')?.disable();
+    this.formGroup.get('tipo_formulario_id')?.disable(); // Bloqueado en edición, coincide con la regla del backend
     this.showModal.set(true);
   }
 
   abrirModalClonar(formId: string, e: Event): void {
     e.stopPropagation();
+    const form = this.formularios().find(f => f.id === formId);
+    if (form?.bloqueado) {
+      this.toastService.show('No se puede clonar una versión anterior bloqueada.', 'error');
+      return;
+    }
+
     this.selectedFormularioId.set(formId);
 
     const periodoActivo = this.periodos().find(p => p.activo);
@@ -146,7 +162,7 @@ export class FormulariosComponent implements OnInit {
       this.formularioService.updateFormulario(this.selectedFormularioId()!, {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
-        tipo: formData.tipo,
+        tipo_formulario_id: formData.tipo_formulario_id,
         periodo_id: formData.periodo_id
       }).subscribe({
         next: () => {
@@ -203,9 +219,13 @@ export class FormulariosComponent implements OnInit {
     });
   }
 
-  // Método Nuevo: Toggling de Publicación
+  // Método Toggling de Publicación
   togglePublicacion(form: Formulario, e: Event): void {
     e.stopPropagation();
+    if (form.bloqueado) {
+      this.toastService.show('No se puede cambiar el estado de una versión bloqueada.', 'error');
+      return;
+    }
     if (this.isTogglingState()) return;
 
     const accion = form.publicado ? 'despublicar' : 'publicar';
@@ -236,6 +256,12 @@ export class FormulariosComponent implements OnInit {
 
   eliminarFormulario(id: string, e: Event): void {
     e.stopPropagation();
+    const form = this.formularios().find(f => f.id === id);
+    if (form?.bloqueado) {
+      this.toastService.show('No se puede eliminar una versión bloqueada.', 'error');
+      return;
+    }
+
     if (confirm('¿Estás seguro de eliminar esta ficha en borrador? Esta acción no se puede deshacer.')) {
       this.formularioService.deleteFormulario(id).subscribe({
         next: () => {
@@ -251,6 +277,13 @@ export class FormulariosComponent implements OnInit {
         }
       });
     }
+  }
+
+  // Método auxiliar para obtener el nombre del tipo de formulario
+  getNombreTipoFormulario(form: Formulario): string {
+    return form.tipoFormulario?.nombre
+      || this.tiposFormulario().find(t => t.id === form.tipo_formulario_id)?.nombre
+      || 'Sin tipo';
   }
 
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {

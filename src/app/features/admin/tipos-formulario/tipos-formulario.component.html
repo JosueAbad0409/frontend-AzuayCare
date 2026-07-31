@@ -1,0 +1,111 @@
+<div class="carreras-card animate-fade-in">
+  <div class="header-section">
+    <div>
+      <h3 class="title">Tipos de Formulario</h3>
+      <p class="subtitle">Administra las categorías de fichas disponibles (Socioeconómica, Salud, Mental, etc.). Cada tipo puede tener un solo formulario activo por periodo.</p>
+    </div>
+
+    <button class="btn btn-purple" (click)="openModal()">
+      <i class="fas fa-plus"></i> Nuevo Tipo de Formulario
+    </button>
+  </div>
+
+  <div class="search-bar-wrapper">
+    <div class="search-input-box">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" class="search-control" placeholder="Buscar tipo de formulario..." (input)="onSearchChange($event)">
+    </div>
+    <span class="count-badge">{{ tiposFiltrados().length }} tipo(s)</span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
+      <p>Cargando tipos de formulario...</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tipo of tiposFiltrados(); track tipo.id) {
+            <tr>
+              <td>
+                <span class="tipo-chip" [style.background]="(tipo.color || '#8b5cf6') + '1A'" [style.color]="tipo.color || '#8b5cf6'">
+                  <i class="fas" [ngClass]="tipo.icono || 'fa-file-alt'"></i>
+                  <strong>{{ tipo.nombre }}</strong>
+                </span>
+              </td>
+              <td><small class="text-muted">{{ tipo.descripcion || 'Sin descripción' }}</small></td>
+              <td style="text-align: right;">
+                <button class="btn-icon text-blue" (click)="openModal(tipo)" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon text-red" (click)="eliminarTipo(tipo.id)" title="Desactivar">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="empty-state">
+                <i class="fas fa-shapes empty-icon"></i>
+                <p>No hay tipos de formulario registrados. Crea el primero (ej. "Ficha Socioeconómica").</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ editingTipoId() ? 'Editar Tipo de Formulario' : 'Nuevo Tipo de Formulario' }}</h3>
+        </div>
+        <form [formGroup]="tipoForm" (ngSubmit)="guardarTipo()">
+          <div class="modal-body">
+            <div class="form-group mb-3">
+              <label>Nombre *</label>
+              <input type="text" formControlName="nombre" class="form-control" placeholder="Ej. Ficha Socioeconómica">
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Descripción</label>
+              <textarea formControlName="descripcion" class="form-control" rows="2" placeholder="Objetivo de este tipo de ficha..."></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Ícono (clase FontAwesome)</label>
+              <input type="text" formControlName="icono" class="form-control" placeholder="fa-wallet">
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Color</label>
+              <input type="color" formControlName="color" class="form-control color-input">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="isSaving()">Cancelar</button>
+            <button type="submit" class="btn btn-purple" [disabled]="tipoForm.invalid || isSaving()">
+              @if (isSaving()) {
+                <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+              } @else {
+                {{ editingTipoId() ? 'Actualizar' : 'Crear' }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
