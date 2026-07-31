@@ -21,6 +21,7 @@
         <thead>
           <tr>
             <th>Título de la Ficha</th>
+            <th>Tipo</th>
             <th>Versión</th>
             <th>Estado</th>
             <th style="text-align: right;">Acciones</th>
@@ -34,40 +35,43 @@
                 <br>
                 <small class="text-muted">{{ form.descripcion || 'Sin descripción' }}</small>
               </td>
+              <td><span class="badge badge-purple">{{ getNombreTipoFormulario(form) }}</span></td>
               <td><span class="badge badge-blue">v{{ form.version }}</span></td>
               <td>
-                <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
-                  {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
-                </span>
+                @if (form.bloqueado) {
+                  <span class="badge badge-gray"><i class="fas fa-lock"></i> BLOQUEADO (versión anterior)</span>
+                } @else {
+                  <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
+                    {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
+                  </span>
+                }
               </td>
               <td style="text-align: right;" (click)="$event.stopPropagation()">
-                
-                <!-- Botón de Publicar / Despublicar (Nuevo) -->
-                <button class="btn-icon" 
-                        [ngClass]="form.publicado ? 'text-orange' : 'text-green'" 
-                        (click)="togglePublicacion(form, $event)" 
-                        [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
-                        [disabled]="isTogglingState()">
-                  <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
-                </button>
+                @if (!form.bloqueado) {
+                  <button class="btn-icon" [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
+                          (click)="togglePublicacion(form, $event)"
+                          [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
+                          [disabled]="isTogglingState()">
+                    <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
+                  </button>
+                }
 
-                <!-- Diseñar Preguntas (Builder) -->
-                <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue" title="Diseñar Preguntas">
-                  <i class="fas fa-tools"></i>
+                <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue"
+                   [title]="form.bloqueado ? 'Ver preguntas (solo lectura)' : 'Diseñar Preguntas'">
+                  <i class="fas" [ngClass]="form.bloqueado ? 'fa-eye' : 'fa-tools'"></i>
                 </a>
 
-                <!-- Editar Metadata del Formulario -->
-                <button class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
-                  <i class="fas fa-edit"></i>
-                </button>
+                @if (!form.bloqueado) {
+                  <button class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
+                    <i class="fas fa-edit"></i>
+                  </button>
 
-                <!-- Clonar / Crear Siguiente Versión -->
-                <button class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
-                  <i class="fas fa-clone"></i>
-                </button>
+                  <button class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
+                    <i class="fas fa-clone"></i>
+                  </button>
+                }
 
-                <!-- Eliminar (Solo activo si es Borrador) -->
-                @if (!form.publicado) {
+                @if (!form.publicado && !form.bloqueado) {
                   <button class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar Borrador">
                     <i class="fas fa-trash-alt"></i>
                   </button>
@@ -76,7 +80,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="4" class="empty-state">
+              <td colspan="5" class="empty-state">
                 <i class="fas fa-file-alt empty-icon"></i>
                 <p>No hay formularios creados en la base de datos. Haz clic en 'Crear Nueva Ficha'.</p>
               </td>
@@ -110,11 +114,18 @@
 
           <div class="form-group mb-3">
             <label>Tipo de Formulario *</label>
-            <select formControlName="tipo" class="form-control">
-              <option value="SOCIOECONOMICO">Socioeconómico (Evalúa Ingresos/Egresos)</option>
-              <option value="GENERAL">General / Encuesta Común</option>
-              <option value="PSICOLOGICO">Psicológico / Bienestar</option>
+            <select formControlName="tipo_formulario_id" class="form-control">
+              <option value="">-- Selecciona un Tipo de Formulario --</option>
+              @for (t of tiposFormulario(); track t.id) {
+                <option [value]="t.id">{{ t.nombre }}</option>
+              }
             </select>
+            @if (tiposFormulario().length === 0) {
+              <small class="text-muted">
+                No hay tipos de formulario registrados.
+                <a routerLink="/admin/tipos-formulario">Crea uno primero</a>.
+              </small>
+            }
           </div>
 
           <div class="form-group mb-3">
