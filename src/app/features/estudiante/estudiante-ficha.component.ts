@@ -29,6 +29,14 @@ function minSelectedCheckboxesValidator(min = 1) {
   };
 }
 
+function requireAtLeastOneMatrixRowValidator() {
+  return (group: AbstractControl): ValidationErrors | null => {
+    // Verifica si alguna fila (que ahora es un array) tiene al menos un elemento seleccionado
+    const hasValue = Object.values(group.value).some((val: any) => Array.isArray(val) && val.length > 0);
+    return hasValue ? null : { required: true };
+  };
+}
+
 @Component({
   selector: 'app-estudiante-ficha',
   standalone: true,
@@ -125,6 +133,7 @@ export class EstudianteFichaComponent implements OnInit {
         this.isSavingLocal.set(true);
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
+        const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
         localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(val));
         setTimeout(() => this.isSavingLocal.set(false), 800);
       });
@@ -166,6 +175,7 @@ export class EstudianteFichaComponent implements OnInit {
   irAPaso(index: number): void {
     if (index <= this.seccionActualIndex() || this.validarSeccionActual()) {
       this.seccionActualIndex.set(index);
+      this.guardarPasoEnLocal();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       this.toastService.show('Por favor, completa los campos obligatorios antes de avanzar.', 'warning');
@@ -176,6 +186,7 @@ export class EstudianteFichaComponent implements OnInit {
     if (this.validarSeccionActual()) {
       if (this.seccionActualIndex() <= this.secciones().length - 1) {
         this.seccionActualIndex.update(i => i + 1);
+        this.guardarPasoEnLocal();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } else {
@@ -186,6 +197,7 @@ export class EstudianteFichaComponent implements OnInit {
   anterior(): void {
     if (this.seccionActualIndex() > 0) {
       this.seccionActualIndex.update(i => i - 1);
+      this.guardarPasoEnLocal();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
@@ -215,6 +227,12 @@ export class EstudianteFichaComponent implements OnInit {
       }
     }
     return esValido;
+  }
+  private guardarPasoEnLocal(): void {
+    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    const currentData = JSON.parse(localStorage.getItem(this.AUTOSAVE_KEY) || '{}');
+    currentData.seccionIndex = this.seccionActualIndex();
+    localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(currentData));
   }
 
   // --- NUEVA LÓGICA DE CARGA SIMPLIFICADA ---
@@ -391,9 +409,15 @@ export class EstudianteFichaComponent implements OnInit {
                 this.cargarRespuestasGuardadas(fichaActual.id, fichaActual.estado_ficha);
                 
                 // Si la ficha ya fue enviada, mandamos al estudiante directo a la última pantalla
-                if (fichaActual.estado_ficha !== 'BORRADOR') {
-                  this.seccionActualIndex.set(this.secciones().length);
-                }
+              if (fichaActual.estado_ficha !== 'BORRADOR') {
+                this.seccionActualIndex.set(this.secciones().length);
+              } else if (this.autosaveData?.seccionIndex !== undefined) {
+                // RESTAURAR EL PASO EXACTO EN EL QUE SE QUEDÓ
+                const savedStep = this.autosaveData.seccionIndex;
+                const maxStep = this.secciones().length;
+                // Verificamos que no se pase del límite por si el formulario cambió
+                this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
+              }
               }
 
               this.isLoading.set(false);
@@ -427,6 +451,7 @@ export class EstudianteFichaComponent implements OnInit {
 
   construirControlesPreguntas(p: Pregunta): void {
     const isMultiple = p.tipoCampo?.nombre === 'SELECCION_MULTIPLE';
+    const isMatriz = p.tipoCampo?.nombre === 'MATRIZ'; // Añadimos esta variable
 
     if (isMultiple) {
       if (!this.respuestasGroup.contains(p.id)) {
@@ -435,21 +460,21 @@ export class EstudianteFichaComponent implements OnInit {
           : [];
 
         const formArray = this.fb.array(
-          savedArr.map(id => this.fb.control(id)),
+          savedArr.map((id: string) => this.fb.control(id)),
           p.es_obligatorio ? minSelectedCheckboxesValidator(1) : []
         );
         this.respuestasGroup.addControl(p.id, formArray);
       }
+    } else if (isMatriz) {
+      // IMPORTANTE: Las matrices tienen su propio grupo (matricesGroup), 
+      // NO deben entrar en respuestasGroup para evitar el campo "fantasma".
+      this.cargarEstructuraMatriz(p);
     } else {
       const validators = p.es_obligatorio ? [Validators.required] : [];
       if (!this.respuestasGroup.contains(p.id)) {
         const savedVal = this.autosaveData?.respuestas?.[p.id] ?? '';
         this.respuestasGroup.addControl(p.id, this.fb.control(savedVal, validators));
       }
-    }
-
-    if (p.tipoCampo?.nombre === 'MATRIZ') {
-      this.cargarEstructuraMatriz(p);
     }
     
     this.valormap.set(this.respuestasGroup.getRawValue());
@@ -480,6 +505,39 @@ export class EstudianteFichaComponent implements OnInit {
     return formArray.controls.some(ctrl => ctrl.value === opcionId);
   }
 
+  // --- INICIO NUEVAS FUNCIONES PARA LA MATRIZ MULTIPLE ---
+  onToggleMatrizMultiple(preguntaId: string, filaId: string, columnaId: string, event: Event): void {
+    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+
+    const checked = (event.target as HTMLInputElement).checked;
+    const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
+    if (!matrizGroup) return;
+
+    const filaArray = matrizGroup.get(filaId) as FormArray;
+    if (!filaArray) return;
+
+    if (checked) {
+      filaArray.push(this.fb.control(columnaId));
+    } else {
+      const idx = filaArray.controls.findIndex(ctrl => ctrl.value === columnaId);
+      if (idx !== -1) filaArray.removeAt(idx);
+    }
+
+    filaArray.markAsTouched();
+    this.valormap.set(this.respuestasGroup.getRawValue());
+  }
+
+  esColumnaMatrizSeleccionada(preguntaId: string, filaId: string, columnaId: string): boolean {
+    const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
+    if (!matrizGroup) return false;
+    
+    const filaArray = matrizGroup.get(filaId) as FormArray;
+    if (!filaArray) return false;
+    
+    return filaArray.controls.some(ctrl => ctrl.value === columnaId);
+  }
+  // --- FIN NUEVAS FUNCIONES PARA LA MATRIZ MULTIPLE ---
+
   esPreguntaDependiente(preguntaId: string): boolean {
     return this.dependencias().some(d => d.pregunta_dependiente_id === preguntaId);
   }
@@ -496,14 +554,29 @@ export class EstudianteFichaComponent implements OnInit {
           ...s,
           preguntas: s.preguntas?.map(p => p.id === pregunta.id ? { ...p, filasMatriz: filas, columnasMatriz: columnas } : p)
         })));
-
         if (!this.matricesGroup.contains(pregunta.id)) {
-          const matrizFormGroup = this.fb.group({});
+          const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
+          const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
+
           filas.forEach((fila: any) => {
-            const validator = pregunta.es_obligatorio ? [Validators.required] : [];
-            const savedColVal = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id] ?? '';
-            matrizFormGroup.addControl(fila.id, this.fb.control(savedColVal, validator));
+            // Recuperamos el autoguardado como un array, o creamos un array vacío
+            let savedColArr: string[] = [];
+            const savedData = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id];
+            
+            if (Array.isArray(savedData)) {
+              savedColArr = savedData;
+            } else if (savedData) {
+              savedColArr = [savedData];
+            }
+
+            // Transformamos la fila en un FormArray (lista dinámica)
+            const formArray = this.fb.array(
+              savedColArr.map(id => this.fb.control(id))
+            );
+            
+            matrizFormGroup.addControl(fila.id, formArray);
           });
+          
           this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
           
           if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
@@ -555,6 +628,37 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   obtenerTextoRespuesta(pregunta: Pregunta): string {
+    // 1. Lógica especial para las MATRICES
+    if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
+      const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
+      if (!matrizValores) return 'Sin responder';
+
+      const resumenFilas: string[] = [];
+      
+      Object.keys(matrizValores).forEach(filaId => {
+        const columnasSeleccionadas = matrizValores[filaId];
+        
+        if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+          // Extraemos el texto real de la fila
+          const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
+          const textoFila = fila ? fila.texto_fila : 'Fila';
+
+          // Extraemos los textos de las columnas seleccionadas
+          const textosColumnas = columnasSeleccionadas.map((colId: string) => {
+            const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
+            return col ? col.texto_columna : colId;
+          });
+
+          // Lo juntamos: "Padre: Cabeza de hogar, Aporta económicamente"
+          resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
+        }
+      });
+
+      // Unimos cada fila con un salto de línea
+      return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
+    }
+
+    // 2. Lógica normal para el resto de los campos (Texto, Numérico, Selects)
     const val = this.respuestasGroup.getRawValue()[pregunta.id];
     if (val === null || val === undefined || val === '') return 'Sin responder';
 
@@ -715,13 +819,16 @@ export class EstudianteFichaComponent implements OnInit {
         const filasObj = matricesValores[preguntaId];
         if (filasObj && typeof filasObj === 'object') {
           Object.keys(filasObj).forEach(filaId => {
-            const columnaId = filasObj[filaId];
-            if (columnaId) {
-              payloadMatriz.push({
-                ficha_id: ficha.id,
-                pregunta_id: preguntaId,
-                fila_id: filaId,
-                columna_id: columnaId
+            const columnasSeleccionadas = filasObj[filaId]; // Ahora esto es un Array
+            
+            if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+              columnasSeleccionadas.forEach(columnaId => {
+                payloadMatriz.push({
+                  ficha_id: ficha.id,
+                  pregunta_id: preguntaId,
+                  fila_id: filaId,
+                  columna_id: columnaId
+                });
               });
             }
           });
