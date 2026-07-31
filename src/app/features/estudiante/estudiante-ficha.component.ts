@@ -385,9 +385,15 @@ export class EstudianteFichaComponent implements OnInit {
               this.sanitizarAutosave(idsPreguntasExistentes);
               preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
               
-              if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
-                this.respuestasGroup.disable({ emitEvent: false });
-                this.matricesGroup.disable({ emitEvent: false });
+              // 🔥 SIEMPRE pedimos las respuestas (para jalar la herencia del backend si es un borrador nuevo)
+              const fichaActual = this.fichaActiva();
+              if (fichaActual) {
+                this.cargarRespuestasGuardadas(fichaActual.id, fichaActual.estado_ficha);
+                
+                // Si la ficha ya fue enviada, mandamos al estudiante directo a la última pantalla
+                if (fichaActual.estado_ficha !== 'BORRADOR') {
+                  this.seccionActualIndex.set(this.secciones().length);
+                }
               }
 
               this.isLoading.set(false);
@@ -569,8 +575,92 @@ export class EstudianteFichaComponent implements OnInit {
     return String(val);
   }
 
+  cargarRespuestasGuardadas(fichaId: string, estadoFicha: string): void {
+    console.log(`🕵️‍♂️ [DEBUG] Solicitando respuestas para la ficha ID: ${fichaId} | Estado: ${estadoFicha}`);
+
+    this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaId}`)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (respuestasBD) => {
+          console.log(`📥 [DEBUG] Respuestas crudas recibidas de la Base de Datos:`, respuestasBD);
+          
+          if (!respuestasBD || respuestasBD.length === 0) {
+            console.warn('⚠️ [DEBUG] El backend no devolvió respuestas. O el motor de herencia falló en NestJS, o es una ficha totalmente nueva.');
+          }
+
+          const valoresParaElFormulario: any = {};
+
+          respuestasBD.forEach(resp => {
+            const controlArray = this.respuestasGroup.get(resp.pregunta_id);
+            
+            if (controlArray instanceof FormArray) {
+              controlArray.clear({ emitEvent: false }); 
+              if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+                resp.opcionesSeleccionadas.forEach((opc: any) => {
+                  controlArray.push(this.fb.control(opc.opcion_id), { emitEvent: false });
+                });
+              }
+            } 
+            else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+              valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
+            } 
+            else if (resp.documentos && resp.documentos.length > 0) {
+              valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
+            } 
+            else {
+              valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
+            }
+          });
+
+          console.log(`🧩 [DEBUG] Objeto construido listo para inyectar en el formulario:`, valoresParaElFormulario);
+
+          // Rellenamos el formulario visualmente
+          this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
+          
+          console.log(`✅ [DEBUG] Estado del formulario DESPUÉS de la inyección:`, this.respuestasGroup.getRawValue());
+
+          this.valormap.set(this.respuestasGroup.getRawValue());
+
+          if (estadoFicha !== 'BORRADOR') {
+            this.respuestasGroup.disable({ emitEvent: false });
+            this.matricesGroup.disable({ emitEvent: false });
+          } else {
+            this.respuestasGroup.enable({ emitEvent: false });
+            this.matricesGroup.enable({ emitEvent: false });
+          }
+        },
+        error: (err) => {
+          console.error('❌ [DEBUG] Error al cargar respuestas', err);
+          this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
+        }
+      });
+  }
+
   descargarPdfResumen(fichaId: string): void {
-    window.open(`${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`, '_blank');
+    // 1. Usamos HttpClient con responseType: 'blob' para descargar archivos seguros
+    this.http.get(`${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`, {
+      responseType: 'blob' 
+    }).subscribe({
+      next: (blob) => {
+        // 2. Creamos una URL temporal en la memoria del navegador
+        const url = window.URL.createObjectURL(blob);
+        
+        // 3. Creamos un enlace invisible y forzamos el clic para descargar
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Ficha_Socioeconomica.pdf`; // Nombre del archivo descargado
+        document.body.appendChild(a);
+        a.click();
+        
+        // 4. Limpiamos la memoria
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error al descargar el PDF', err);
+        this.toastService.show('Hubo un problema al generar tu comprobante PDF.', 'error');
+      }
+    });
   }
 
   guardarYEnviar(esFinal: boolean = true): void {

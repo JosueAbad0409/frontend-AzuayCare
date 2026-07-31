@@ -110,7 +110,7 @@ export class FormulariosComponent implements OnInit {
     });
 
     // Deshabilitar periodo_id para prevenir desalineaciones en edición
-    this.formGroup.get('periodo_id')?.disable();
+    //this.formGroup.get('periodo_id')?.disable();
     this.showModal.set(true);
   }
 
@@ -146,7 +146,8 @@ export class FormulariosComponent implements OnInit {
       this.formularioService.updateFormulario(this.selectedFormularioId()!, {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
-        tipo: formData.tipo
+        tipo: formData.tipo,
+        periodo_id: formData.periodo_id
       }).subscribe({
         next: () => {
           this.toastService.show('Formulario actualizado con éxito.', 'success');
