@@ -109,6 +109,15 @@
           </div>
 
           <div class="form-group mb-3">
+            <label>Tipo de Formulario *</label>
+            <select formControlName="tipo" class="form-control">
+              <option value="SOCIOECONOMICO">Socioeconómico (Evalúa Ingresos/Egresos)</option>
+              <option value="GENERAL">General / Encuesta Común</option>
+              <option value="PSICOLOGICO">Psicológico / Bienestar</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
             <label>Descripción / Objetivo</label>
             <textarea formControlName="descripcion" class="form-control" rows="2" placeholder="Instrucciones generales para el estudiante..."></textarea>
           </div>
