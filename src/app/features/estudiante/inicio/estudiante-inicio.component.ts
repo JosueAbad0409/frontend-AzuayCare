@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { FichaService } from '../../../core/services/ficha.service';
 import { FichaRevision } from '../../../core/models/revision-ficha.model';
 
+
 @Component({
   selector: 'app-estudiante-inicio',
   standalone: true,
