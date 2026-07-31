@@ -1,4 +1,3 @@
-// C:\Proyecto AzuayCare\frontend-AzuayCare\src\app\features\admin\formularios\formularios.component.ts
 import { Component, OnInit, inject, signal, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';

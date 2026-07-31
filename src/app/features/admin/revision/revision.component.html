@@ -8,6 +8,7 @@
 
   @if (!isLoading()) {
     <div class="search-bar-wrapper">
+      <!-- Buscador de texto -->
       <div class="search-input-box">
         <i class="fas fa-search search-icon"></i>
         <input 
@@ -18,6 +19,7 @@
           class="search-control"
         />
       </div>
+
       <span class="count-badge">{{ fichasFiltradas().length }} Ficha(s) Encontrada(s)</span>
     </div>
   }
@@ -36,7 +38,15 @@
             <th>Cédula</th>
             <th>Periodo</th>
             <th>Balance Final</th>
-            <th>Estado</th>
+            <!-- FILTRO INTEGRADO EN LA CABECERA -->
+            <th>
+              <select [value]="estadoFiltro()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
+                <option value="TODOS">ESTADO (TODOS)</option>
+                <option value="ENVIADA">ENVIADAS</option>
+                <option value="VALIDADO">VALIDADAS</option>
+                <option value="RECHAZADO">RECHAZADAS</option>
+              </select>
+            </th>
             <th style="text-align: right;">Acciones</th>
           </tr>
         </thead>
@@ -55,8 +65,7 @@
                 <span class="badge" [ngClass]="{
                   'badge-success': f.estado_ficha === 'VALIDADO',
                   'badge-blue': f.estado_ficha === 'ENVIADA',
-                  'badge-danger': f.estado_ficha === 'RECHAZADO',
-                  'badge-warning': f.estado_ficha === 'BORRADOR'
+                  'badge-danger': f.estado_ficha === 'RECHAZADO'
                 }">
                   {{ f.estado_ficha }}
                 </span>
@@ -69,9 +78,9 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="empty-state">
-                <i class="fas fa-folder-open empty-icon"></i>
-                <p>No hay fichas registradas para revisar.</p>
+              <td colspan="6" class="empty-state" style="text-align: center; padding: 3rem;">
+                <i class="fas fa-folder-open empty-icon" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 1rem; display: block;"></i>
+                <p style="color: #64748b; font-weight: 600;">No hay fichas presentadas o que coincidan con los criterios de búsqueda.</p>
               </td>
             </tr>
           }
@@ -86,8 +95,8 @@
       <div class="modal-box animate-pop" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3>Evaluación y Auditoría de Ficha</h3>
-          <button class="btn-icon text-red" (click)="cerrarModal()"><i class="fas fa-times"></i></button>
+          <h3 style="margin: 0; font-weight: 800; color: #0f172a;">Evaluación y Auditoría de Ficha</h3>
+          <button class="btn-icon text-red" (click)="cerrarModal()" style="margin: 0;"><i class="fas fa-times"></i></button>
         </div>
 
         <!-- PESTAÑAS / TABS -->
@@ -106,16 +115,16 @@
             [class.active]="tabActiva() === 'HISTORIAL'" 
             (click)="setTab('HISTORIAL')"
           >
-            <i class="fas fa-history"></i> Línea de Tiempo / Historial
+            <i class="fas fa-history"></i> Línea de Tiempo
           </button>
         </div>
 
         <!-- CONTENIDO PESTAÑA 1: DETALLE Y RESPUESTAS -->
         @if (tabActiva() === 'DETALLE') {
           <div class="estudiante-info-box mb-3" style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
-            <p><strong>Estudiante:</strong> {{ fichaSeleccionada()?.usuario?.primer_nombre }} {{ fichaSeleccionada()?.usuario?.primer_apellido }}</p>
-            <p><strong>Cédula:</strong> {{ fichaSeleccionada()?.usuario?.cedula || 'N/A' }}</p>
-            <div style="display: flex; gap: 2rem; margin-top: 0.75rem;">
+            <p style="margin: 0 0 0.5rem 0;"><strong>Estudiante:</strong> {{ fichaSeleccionada()?.usuario?.primer_nombre }} {{ fichaSeleccionada()?.usuario?.primer_apellido }}</p>
+            <p style="margin: 0;"><strong>Cédula:</strong> {{ fichaSeleccionada()?.usuario?.cedula || 'N/A' }}</p>
+            <div style="display: flex; gap: 2rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
               <span>Ingresos: <strong>${{ fichaSeleccionada()?.total_ingresos | number:'1.2-2' }}</strong></span>
               <span>Egresos: <strong>${{ fichaSeleccionada()?.total_egresos | number:'1.2-2' }}</strong></span>
               <span>Balance: <strong style="color: #10b981;">${{ fichaSeleccionada()?.balance_final | number:'1.2-2' }}</strong></span>
@@ -123,22 +132,22 @@
           </div>
 
           <h4 style="font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem;">Respuestas Registradas:</h4>
-          <div class="space-y-2 mb-4" style="max-height: 250px; overflow-y: auto;">
+          <div class="space-y-2 mb-4" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
             @for (resp of respuestasFicha(); track resp.id) {
               <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 0.75rem 1rem; border-radius: 8px;">
                 <p style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin: 0;">{{ resp.pregunta?.enunciado }}</p>
-                <p style="font-size: 0.9rem; color: #3b82f6; font-weight: 600; margin: 0.25rem 0 0 0;">
+                <p style="font-size: 0.9rem; color: #8b5cf6; font-weight: 700; margin: 0.25rem 0 0 0;">
                   {{ resp.valor_texto || resp.valor_numerico || 'Opción Seleccionada' }}
                 </p>
               </div>
             } @empty {
-              <p style="font-size: 0.85rem; color: #64748b;">No hay respuestas cargadas para esta ficha.</p>
+              <p style="font-size: 0.85rem; color: #64748b; font-style: italic;">No hay respuestas cargadas para esta ficha.</p>
             }
           </div>
 
           <!-- ACCIONES DE CAMBIO DE ESTADO -->
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-            <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;">Comentario de Revisión / Justificación:</label>
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
+            <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Comentario de Revisión / Justificación:</label>
             <textarea 
               [value]="comentarioCambio()" 
               (input)="comentarioCambio.set($any($event.target).value)"
@@ -172,8 +181,8 @@
                   }"></div>
                   <div class="timeline-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <strong style="font-size: 0.9rem;">Transición a {{ h.estado_nuevo }}</strong>
-                      <span style="font-size: 0.75rem; color: #64748b;">{{ h.created_at | date:'medium' }}</span>
+                      <strong style="font-size: 0.9rem; color: #0f172a;">Transición a {{ h.estado_nuevo }}</strong>
+                      <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">{{ h.created_at | date:'medium' }}</span>
                     </div>
                     <p style="font-size: 0.825rem; color: #475569; margin: 0.35rem 0 0 0;">
                       {{ h.comentario || 'Sin comentario registrado' }}

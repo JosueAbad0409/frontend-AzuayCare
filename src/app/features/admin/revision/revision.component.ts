@@ -22,6 +22,9 @@ export class RevisionComponent implements OnInit {
   isLoading = signal<boolean>(true);
   searchTerm = signal<string>('');
   
+  // Signal para el filtro dinámico de estado
+  estadoFiltro = signal<string>('TODOS');
+  
   fichaSeleccionada = signal<FichaRevision | null>(null);
   respuestasFicha = signal<any[]>([]);
   historialFicha = signal<HistorialEstadoFicha[]>([]);
@@ -30,14 +33,27 @@ export class RevisionComponent implements OnInit {
   comentarioCambio = signal<string>('');
   guardandoEstado = signal<boolean>(false);
 
+  // Computado que combina el filtro por texto y el filtro dinámico de estado (excluyendo BORRADOR)
   fichasFiltradas = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
-    if (!term) return this.fichas();
+    const estado = this.estadoFiltro();
+
     return this.fichas().filter(f => {
+      // Excluir siempre las fichas en borrador
+      if (f.estado_ficha === 'BORRADOR') {
+        return false;
+      }
+
+      // Filtrado dinámico por estado
+      const coincideEstado = estado === 'TODOS' || f.estado_ficha === estado;
+
+      // Filtrado por texto (búsqueda)
       const nombre = `${f.usuario?.primer_nombre || ''} ${f.usuario?.primer_apellido || ''}`.toLowerCase();
       const cedula = (f.usuario?.cedula || '').toLowerCase();
       const email = (f.usuario?.email_institucional || '').toLowerCase();
-      return nombre.includes(term) || cedula.includes(term) || email.includes(term);
+      const coincideBusqueda = !term || nombre.includes(term) || cedula.includes(term) || email.includes(term);
+
+      return coincideEstado && coincideBusqueda;
     });
   });
 
@@ -48,6 +64,11 @@ export class RevisionComponent implements OnInit {
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchTerm.set(value);
+  }
+
+  onEstadoChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.estadoFiltro.set(value);
   }
 
   cargarFichas(): void {
