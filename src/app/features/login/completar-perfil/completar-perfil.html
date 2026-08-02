@@ -1,0 +1,67 @@
+<div class="perfil-card">
+    <div class="brand-badge">
+        <i class="fas fa-user-graduate"></i> COMPLETA TU REGISTRO
+    </div>
+
+    <h1 class="title">¡Bienvenido/a!</h1>
+    <p class="subtitle">
+        Antes de continuar, confirma tus datos académicos. Solo lo pedimos una vez.
+    </p>
+
+    <!-- Datos que ya vienen de Google, solo lectura -->
+    <div class="datos-google">
+        <div class="avatar-inicial">{{ nombreCompleto().charAt(0) }}</div>
+        <div class="datos-google-texto">
+            <span class="nombre">{{ nombreCompleto() }}</span>
+            <span class="correo">{{ correo() }}</span>
+        </div>
+    </div>
+
+    @if (error()) {
+    <div class="error-alert">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error() }}</span>
+    </div>
+    }
+
+    <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="form">
+        <div class="form-group">
+            <label for="cedula">Cédula</label>
+            <input id="cedula" type="text" inputmode="numeric" maxlength="10" formControlName="cedula"
+                placeholder="10 dígitos, sin guiones" class="form-control" />
+            @if (perfilForm.get('cedula')?.invalid && perfilForm.get('cedula')?.touched) {
+            <span class="hint-error">La cédula debe tener exactamente 10 dígitos numéricos.</span>
+            }
+        </div>
+
+        <div class="form-group">
+            <label for="carrera">Carrera</label>
+            <select id="carrera" formControlName="carrera_id" class="form-control">
+                <option value="" disabled>Selecciona tu carrera</option>
+                @for (carrera of carreras(); track carrera.id) {
+                <option [value]="carrera.id">{{ carrera.nombre }}</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="ciclo">Ciclo</label>
+            <select id="ciclo" formControlName="ciclo_id" class="form-control">
+                <option value="" disabled>
+                    {{ perfilForm.get('carrera_id')?.value ? 'Selecciona tu ciclo' : 'Primero elige una carrera' }}
+                </option>
+                @for (ciclo of ciclosDisponibles(); track ciclo.id) {
+                <option [value]="ciclo.id">{{ ciclo.nombre }}</option>
+                }
+            </select>
+        </div>
+
+        <button type="submit" class="btn-guardar" [disabled]="loading() || cargandoCatalogos()">
+            @if (loading()) {
+            <span>Guardando...</span>
+            } @else {
+            <span>Guardar y continuar</span>
+            }
+        </button>
+    </form>
+</div>

@@ -1,109 +1,103 @@
-<div class="max-w-6xl mx-auto space-y-8 animate-fade-in p-4 sm:p-6">
-  
-  <!-- HERO BANNER BIENVENIDA -->
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 sm:p-12 text-white shadow-2xl border border-slate-800">
-    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
-    <div class="absolute right-40 -top-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
-    
-    <div class="relative z-10 max-w-2xl space-y-4">
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-widest">
-          Instituto Superior Tecnológico Azuay
+<div class="max-w-5xl mx-auto space-y-6 animate-fade-in mt-4 p-4 sm:p-6">
+
+  <!-- Banner Principal (Diseño Oscuro/Menta) -->
+  <div class="bg-gradient-to-br from-[#3b4351] to-[#2d3642] rounded-[2rem] p-8 md:p-10 shadow-xl relative overflow-hidden text-white border border-slate-700/50">
+    <!-- Resplandor verde de fondo -->
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-[#34d399]/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+    <div class="relative z-10">
+      <div class="flex flex-wrap gap-3 mb-6">
+        <!-- Etiquetas Institucionales -->
+        <span class="bg-[#064e3b]/80 border border-[#047857]/50 text-[#34d399] px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold tracking-widest flex items-center gap-2">
+          <i class="fas fa-university"></i> INSTITUTO SUPERIOR TECNOLÓGICO AZUAY
         </span>
-        <span class="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest border"
-              [ngClass]="esEstudianteInstitucional() ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'">
-          <i class="fas" [ngClass]="esEstudianteInstitucional() ? 'fa-graduation-cap' : 'fa-user-clock'"></i>
-          {{ esEstudianteInstitucional() ? 'Estudiante Institucional' : 'Usuario Invitado' }}
+        <span class="bg-[#451a03]/80 border border-[#b45309]/50 text-[#fbbf24] px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold tracking-widest flex items-center gap-2">
+          <i class="fas fa-user"></i> {{ esEstudianteInstitucional() ? 'ESTUDIANTE INSTITUCIONAL' : 'USUARIO INVITADO' }}
         </span>
       </div>
 
-      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-        ¡Hola, {{ usuarioNombre() }}!
+      <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-white">
+        Hola, <span class="text-[#34d399] drop-shadow-md uppercase">{{ usuarioNombre() || 'ESTUDIANTE' }}</span>
       </h1>
-      <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
-        Completa tu ficha socioeconómica institucional. Este registro permite evaluar requerimientos de apoyo, becas y acompañamiento durante tu periodo académico.
+
+      <p class="text-slate-300 text-sm md:text-base max-w-2xl mb-8 leading-relaxed font-medium">
+        Bienvenido al portal de Bienestar Estudiantil. Completa tu ficha socioeconómica para evaluar tus requerimientos de apoyo, acceder a becas y acompañamiento integral.
       </p>
+
+      <button routerLink="/estudiante/ficha" class="bg-white hover:bg-slate-100 text-[#1e293b] px-7 py-3 rounded-full font-black flex items-center gap-2.5 transition-all shadow-lg w-full md:w-auto justify-center">
+        <i class="fas fa-play-circle"></i> Ir a mi Ficha
+      </button>
     </div>
   </div>
 
-  <!-- TARJETA DEL COORDINADOR -->
-  @if (coordinadorId()) {
-    <app-tarjeta-coordinador [coordinadorUsuarioId]="coordinadorId()"></app-tarjeta-coordinador>
-  }
+  <!-- Tarjetas Inferiores -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-  <!-- HISTORIAL DE OBSERVACIONES SI LA FICHA FUE DEVUELTA -->
-  @if (fichaActiva()?.estado_ficha === 'BORRADOR' && historialRevisiones().length > 0) {
-    <div class="bg-amber-950/80 border border-amber-600/50 rounded-2xl p-6 text-amber-100 shadow-xl space-y-3">
-      <h3 class="text-base font-bold flex items-center gap-2 text-amber-400">
-        <i class="fas fa-exclamation-triangle"></i> Observaciones enviadas por el Coordinador
+    <!-- Tarjeta: Estado Ficha -->
+    <div class="md:col-span-2 bg-[#8c919d] rounded-[2rem] p-6 md:p-8 shadow-md flex flex-col relative overflow-hidden group">
+      
+      <h3 class="text-white font-extrabold mb-2 flex items-center gap-2 text-lg">
+        <i class="fas fa-chart-line text-[#34d399]"></i> Estado Actual de tu Ficha
       </h3>
-      <div class="space-y-2">
-        @for (hist of historialRevisiones(); track hist.id) {
-          @if (hist.comentario) {
-            <div class="bg-amber-900/50 p-3 rounded-xl border border-amber-700/50 text-xs space-y-1">
-              <span class="text-amber-300 font-bold block">{{ hist.created_at | date:'medium' }}:</span>
-              <p class="text-amber-100 italic">"{{ hist.comentario }}"</p>
-            </div>
-          }
+      
+      <!-- Caja Interior Punteada -->
+      <div class="bg-[#5c6574] border-2 border-dashed border-[#717a8a] rounded-2xl p-8 flex flex-col items-center justify-center text-center mt-4 transition-all hover:bg-[#636c7c]">
+        
+        @if (fichaActiva()?.estado_ficha && fichaActiva()?.estado_ficha !== 'BORRADOR') {
+          <!-- Estado Lleno/Enviado -->
+           <div class="w-14 h-14 bg-[#2b323f] text-[#34d399] rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">
+              <i class="fas fa-check-circle"></i>
+          </div>
+          <h4 class="text-white font-black text-lg tracking-wide uppercase">{{ fichaEstadoTexto() }}</h4>
+          <p class="text-slate-300 text-sm mt-2 mb-6 font-medium max-w-sm">
+              {{ fichaEstadoDescripcion() }}
+          </p>
+          <button routerLink="/estudiante/ficha" class="bg-[#34d399]/20 hover:bg-[#34d399]/30 text-[#34d399] px-6 py-2.5 rounded-full font-bold text-sm transition-colors flex items-center gap-2">
+              Ver mi Ficha <i class="fas fa-arrow-right"></i>
+          </button>
+        } @else if (fichaActiva()?.estado_ficha === 'BORRADOR') {
+          <!-- Estado Borrador -->
+           <div class="w-14 h-14 bg-[#2b323f] text-[#fbbf24] rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">
+              <i class="fas fa-edit"></i>
+          </div>
+          <h4 class="text-white font-black text-lg tracking-wide uppercase">{{ fichaEstadoTexto() }}</h4>
+          <p class="text-slate-300 text-sm mt-2 mb-6 font-medium max-w-sm">
+              Tienes un progreso guardado. Termina de llenarla y envíala.
+          </p>
+          <button routerLink="/estudiante/ficha" class="bg-[#34d399]/20 hover:bg-[#34d399]/30 text-[#34d399] px-6 py-2.5 rounded-full font-bold text-sm transition-colors flex items-center gap-2">
+              Continuar Ficha <i class="fas fa-arrow-right"></i>
+          </button>
+        } @else {
+          <!-- Estado Vacío -->
+          <div class="w-14 h-14 bg-[#2b323f] text-slate-400 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">
+              <i class="fas fa-file-alt"></i>
+          </div>
+          <p class="text-white font-bold mb-6 text-sm md:text-base">No has iniciado tu ficha aún.</p>
+          <button routerLink="/estudiante/ficha" class="bg-[#34d399]/20 hover:bg-[#34d399]/30 text-[#34d399] px-6 py-2.5 rounded-full font-bold text-sm transition-colors flex items-center gap-2">
+              Comenzar ahora <i class="fas fa-arrow-right"></i>
+          </button>
         }
       </div>
-      <p class="text-xs text-amber-300 font-semibold pt-1">
-        Por favor, dirígete a la ficha y corrige los campos mencionados antes de volver a enviar.
-      </p>
     </div>
-  }
 
-  <!-- ESTADO DE LA FICHA & ACCESOS RÁPIDOS -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Tarjeta: Documentos -->
+    <div class="bg-[#8c919d] rounded-[2rem] p-6 md:p-8 shadow-md flex flex-col justify-between hover:bg-[#969ba7] transition-colors group">
+      
+      <div>
+        <div class="w-14 h-14 bg-[#757d8a] text-[#818cf8] rounded-full flex items-center justify-center text-2xl mb-6 shadow-inner group-hover:scale-105 transition-transform">
+          <i class="fas fa-folder-open"></i>
+        </div>
+        <h3 class="text-white font-extrabold mb-3 text-xl tracking-tight">Mis Documentos</h3>
+        <p class="text-slate-200/80 text-xs md:text-sm leading-relaxed font-medium">Sube tu cédula, planillas de servicios básicos y comprobantes de ingresos de forma segura.</p>
+      </div>
+      
+      <button routerLink="/estudiante/documentos" class="mt-8 text-[#818cf8] hover:text-[#a5b4fc] text-sm font-bold flex items-center justify-between transition-colors w-full">
+        Gestionar Archivos 
+        <div class="w-8 h-8 rounded-full bg-[#757d8a] flex items-center justify-center text-white group-hover:bg-[#818cf8] transition-colors shadow-inner">
+          <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+      </button>
+    </div>
     
-    <!-- TARJETA ESTADO DE FICHA -->
-    <div class="md:col-span-2 bg-slate-900/90 backdrop-blur-xl rounded-2xl p-6 border border-slate-800 shadow-xl text-slate-100 flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fas fa-id-card text-emerald-400"></i> Estado de tu Ficha
-          </h3>
-          <span class="px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-wider" [ngClass]="fichaEstadoClass()">
-            <i class="fas fa-circle text-[8px] mr-1.5"></i> {{ fichaEstadoTexto() }}
-          </span>
-        </div>
-
-        <p class="text-sm text-slate-300 mb-6">
-          {{ fichaEstadoDescripcion() }}
-        </p>
-      </div>
-
-      <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
-        <a routerLink="/estudiante/ficha" class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95 flex items-center gap-2">
-          <i class="fas fa-pen-to-square"></i> {{ fichaActiva() ? 'Continuar Llenando Ficha' : 'Ir a la Ficha' }}
-        </a>
-        <a routerLink="/estudiante/documentos" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm transition-all flex items-center gap-2">
-          <i class="fas fa-folder-open text-emerald-400"></i> Mis Documentos
-        </a>
-      </div>
-    </div>
-
-    <!-- TARJETA BIENESTAR ESTUDIANTIL -->
-    <div class="bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-2xl p-6 border border-indigo-900/50 shadow-xl flex flex-col justify-between">
-      <div>
-        <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-xl mb-4 border border-indigo-500/30 text-indigo-300">
-          <i class="fas fa-headset"></i>
-        </div>
-        <h4 class="font-bold text-base text-white mb-2">Soporte y Orientación</h4>
-        <p class="text-xs text-slate-300 leading-relaxed mb-4">
-          ¿Tienes inconvenientes con tu correo o preguntas sobre las secciones financieras?
-        </p>
-      </div>
-
-      <div class="space-y-2 border-t border-slate-800 pt-4 text-xs text-slate-300">
-        <div class="flex items-center gap-2">
-          <i class="fas fa-envelope text-indigo-400"></i> bienestar&#64;tecazuay.edu.ec
-        </div>
-        <div class="flex items-center gap-2">
-          <i class="fas fa-clock text-indigo-400"></i> 08:00 - 16:30 hrs
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>

@@ -8,6 +8,7 @@ export interface Usuario {
   cedula?: string;
   rol_id: string;
   carrera_id?: string | null;
+  ciclo_id?: string | null;
   rol?: {
     id: string;
     nombre: string;
@@ -21,4 +22,12 @@ export interface CreateUsuarioDto {
   primer_apellido: string;
   rol_id: string;
   carrera_id?: string;
+}
+
+// Datos que el propio estudiante llena en el pequeño formulario
+// que aparece tras su primer inicio de sesión con Google.
+export interface CompletarPerfilDto {
+  cedula: string;
+  carrera_id: string;
+  ciclo_id: string;
 }
