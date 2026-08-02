@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DocumentosService } from '../../../core/services/documentos.service';
@@ -10,6 +10,7 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
   selector: 'app-estudiante-documentos',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="max-w-5xl mx-auto space-y-6 animate-fade-in relative z-10">
       

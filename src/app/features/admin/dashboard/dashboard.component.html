@@ -7,7 +7,7 @@
       <p>Gestión integral de vulnerabilidad socioeconómica, formularios dinámicos y reportes institucionalizados.</p>
     </div>
     <div class="hero-actions">
-      <button class="btn btn-purple" (click)="descargarReporteExcel()">
+      <button class="btn btn-purple" (click)="descargarReporteExcel()" [disabled]="isLoading()">
         <i class="fas fa-file-excel"></i> Exportar Reporte Excel
       </button>
       <a routerLink="/admin/carreras" class="btn btn-outline-light">
@@ -16,64 +16,87 @@
     </div>
   </header>
 
-  <!-- TARJETAS DE MÉTRICAS (KPIs) -->
+  <!-- TARJETAS DE MÉTRICAS (KPIs) CON SKELETON -->
   <section class="kpi-grid">
+    <!-- KPI 1: Carreras -->
     <div class="kpi-card">
       <div class="kpi-icon icon-green"><i class="fas fa-graduation-cap"></i></div>
       <div class="kpi-details">
         <span class="kpi-title">Carreras Activas</span>
-        <h3 class="kpi-value">{{ totalCarreras() }}</h3>
+        @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+        } @else {
+          <h3 class="kpi-value">{{ totalCarreras() }}</h3>
+        }
         <span class="kpi-sub">Especialidades tecnológicas</span>
       </div>
     </div>
 
+    <!-- KPI 2: Formularios -->
     <div class="kpi-card">
       <div class="kpi-icon icon-purple"><i class="fas fa-file-alt"></i></div>
       <div class="kpi-details">
         <span class="kpi-title">Formularios / Fichas</span>
-        <h3 class="kpi-value">{{ totalFormularios() }}</h3>
+        @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+        } @else {
+          <h3 class="kpi-value">{{ totalFormularios() }}</h3>
+        }
         <span class="kpi-sub">Fichas socioeconómicas creadas</span>
       </div>
     </div>
 
+    <!-- KPI 3: Fichas Evaluadas -->
     <div class="kpi-card">
       <div class="kpi-icon icon-blue"><i class="fas fa-users"></i></div>
       <div class="kpi-details">
         <span class="kpi-title">Fichas Evaluadas</span>
-        <h3 class="kpi-value">{{ totalFichasEvaluadas() }}</h3>
+        @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+        } @else {
+          <h3 class="kpi-value">{{ totalFichasEvaluadas() }}</h3>
+        }
         <span class="kpi-sub">Procesadas en el periodo actual</span>
       </div>
     </div>
   </section>
 
-  <!-- SECCIÓN DE GRÁFICOS ESTADÍSTICOS Y ANALÍTICA DE VULNERABILIDAD -->
+  <!-- SECCIÓN DE GRÁFICOS ESTADÍSTICOS Y ANALÍTICA -->
   <section class="charts-grid">
+    <!-- Gráfico 1: Pastel (Doughnut) -->
     <div class="chart-card shadow-sm">
       <div class="chart-header">
         <h4><i class="fas fa-chart-pie text-purple-600"></i> Distribución de Vulnerabilidad Socioeconómica</h4>
         <p class="text-xs text-slate-500">Clasificación por nivel de ingresos/egresos estudiantiles</p>
       </div>
       <div class="chart-container">
-        <canvas #pieChartCanvas></canvas>
+        @if (isLoading()) {
+          <div class="skeleton-loader chart-skeleton"></div>
+        }
+        <canvas #pieChartCanvas [class.hidden]="isLoading()"></canvas>
       </div>
     </div>
 
+    <!-- Gráfico 2: Barras -->
     <div class="chart-card shadow-sm">
       <div class="chart-header">
         <h4><i class="fas fa-chart-bar text-emerald-600"></i> Estado de Fichas por Carrera</h4>
         <p class="text-xs text-slate-500">Comparativa de fichas enviadas vs. aprobadas por especialidad</p>
       </div>
       <div class="chart-container">
-        <canvas #barChartCanvas></canvas>
+        @if (isLoading()) {
+          <div class="skeleton-loader chart-skeleton"></div>
+        }
+        <canvas #barChartCanvas [class.hidden]="isLoading()"></canvas>
       </div>
     </div>
   </section>
 
-  <!-- SECCIÓN DE ACCESO RÁPIDO (REESTRUCTURADA CON REVISIÓN DE FICHAS DESTACADA) -->
+  <!-- SECCIÓN DE ACCESO RÁPIDO -->
   <section class="quick-access-section">
     <h3><i class="fas fa-rocket"></i> Acceso Rápido a Módulos</h3>
     <div class="quick-grid">
-      <!-- 🌟 BOTÓN CRÍTICO PRIMARIO DESTACADO POR ENCIMA DE TODO -->
+      <!-- MÓDULO CRÍTICO -->
       <a routerLink="/admin/revision-fichas" class="quick-card featured-card">
         <div class="badge-featured">Módulo Crítico</div>
         <i class="fas fa-clipboard-check card-icon featured-icon"></i>

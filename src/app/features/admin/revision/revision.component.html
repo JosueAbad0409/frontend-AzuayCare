@@ -1,4 +1,5 @@
 <div class="carreras-card animate-fade-in">
+  <!-- CABECERA -->
   <div class="header-section">
     <div>
       <h3 class="title">Revisión y Validación de Fichas</h3>
@@ -6,9 +7,9 @@
     </div>
   </div>
 
+  <!-- BARRA DE BÚSQUEDA Y CONTADOR -->
   @if (!isLoading()) {
     <div class="search-bar-wrapper">
-      <!-- Buscador de texto -->
       <div class="search-input-box">
         <i class="fas fa-search search-icon"></i>
         <input 
@@ -20,16 +21,18 @@
         />
       </div>
 
-      <span class="count-badge">{{ fichasFiltradas().length }} Ficha(s) Encontrada(s)</span>
+      <span class="count-badge">Total: {{ totalRegistros() }} Ficha(s)</span>
     </div>
   }
 
+  <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
     <div class="loading-state">
       <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
       <p>Cargando fichas de estudiantes...</p>
     </div>
   } @else {
+    <!-- TABLA PRINCIPAL DE FICHAS -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
@@ -38,8 +41,8 @@
             <th>Cédula</th>
             <th>Periodo</th>
             <th>Balance Final</th>
-            <!-- FILTRO INTEGRADO EN LA CABECERA -->
             <th>
+              <!-- FILTRO DESPLEGABLE POR ESTADO -->
               <select [value]="estadoFiltro()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
                 <option value="TODOS">ESTADO (TODOS)</option>
                 <option value="ENVIADA">ENVIADAS</option>
@@ -51,7 +54,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (f of fichasFiltradas(); track f.id) {
+          @for (f of fichas(); track f.id) {
             <tr>
               <td>
                 <strong>{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
@@ -64,8 +67,8 @@
               <td>
                 <span class="badge" [ngClass]="{
                   'badge-success': f.estado_ficha === 'VALIDADO',
-                  'badge-blue': f.estado_ficha === 'ENVIADA',
-                  'badge-danger': f.estado_ficha === 'RECHAZADO'
+                  'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
+                  'badge-danger': f.estado_ficha === 'RECHAZADO' || f.estado_ficha === 'RECHAZADA'
                 }">
                   {{ f.estado_ficha }}
                 </span>
@@ -87,9 +90,34 @@
         </tbody>
       </table>
     </div>
+
+    <!-- CONTROLES DE PAGINACIÓN DE SERVIDOR -->
+    @if (totalRegistros() > 0) {
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding: 0 0.5rem;">
+        <span style="font-size: 0.85rem; color: #64748b;">
+          Página <strong>{{ paginaActual() }}</strong> de <strong>{{ totalPaginas() }}</strong>
+        </span>
+        <div style="display: flex; gap: 0.5rem;">
+          <button 
+            class="btn btn-outline" 
+            (click)="cambiarPagina(paginaActual() - 1)" 
+            [disabled]="paginaActual() === 1"
+          >
+            <i class="fas fa-chevron-left"></i> Anterior
+          </button>
+          <button 
+            class="btn btn-outline" 
+            (click)="cambiarPagina(paginaActual() + 1)" 
+            [disabled]="paginaActual() >= totalPaginas()"
+          >
+            Siguiente <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    }
   }
 
-  <!-- MODAL DE REVISIÓN Y LÍNEA DE TIEMPO -->
+  <!-- MODAL DE AUDITORÍA Y LÍNEA DE TIEMPO -->
   @if (fichaSeleccionada()) {
     <div class="modal-backdrop">
       <div class="modal-box animate-pop" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
@@ -99,7 +127,7 @@
           <button class="btn-icon text-red" (click)="cerrarModal()" style="margin: 0;"><i class="fas fa-times"></i></button>
         </div>
 
-        <!-- PESTAÑAS / TABS -->
+        <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
         <div class="tabs-nav mb-4">
           <button 
             type="button" 
@@ -119,11 +147,14 @@
           </button>
         </div>
 
-        <!-- CONTENIDO PESTAÑA 1: DETALLE Y RESPUESTAS -->
+        <!-- PESTAÑA 1: DETALLE DE FICHA Y RESPUESTAS -->
         @if (tabActiva() === 'DETALLE') {
           <div class="estudiante-info-box mb-3" style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
-            <p style="margin: 0 0 0.5rem 0;"><strong>Estudiante:</strong> {{ fichaSeleccionada()?.usuario?.primer_nombre }} {{ fichaSeleccionada()?.usuario?.primer_apellido }}</p>
+            <p style="margin: 0 0 0.5rem 0;">
+              <strong>Estudiante:</strong> {{ fichaSeleccionada()?.usuario?.primer_nombre }} {{ fichaSeleccionada()?.usuario?.primer_apellido }}
+            </p>
             <p style="margin: 0;"><strong>Cédula:</strong> {{ fichaSeleccionada()?.usuario?.cedula || 'N/A' }}</p>
+            
             <div style="display: flex; gap: 2rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
               <span>Ingresos: <strong>${{ fichaSeleccionada()?.total_ingresos | number:'1.2-2' }}</strong></span>
               <span>Egresos: <strong>${{ fichaSeleccionada()?.total_egresos | number:'1.2-2' }}</strong></span>
@@ -145,7 +176,7 @@
             }
           </div>
 
-          <!-- ACCIONES DE CAMBIO DE ESTADO -->
+          <!-- CAMBIO DE ESTADO (VALIDAR / RECHAZAR) -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
             <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Comentario de Revisión / Justificación:</label>
             <textarea 
@@ -167,7 +198,7 @@
           </div>
         }
 
-        <!-- CONTENIDO PESTAÑA 2: LÍNEA DE TIEMPO / HISTORIAL -->
+        <!-- PESTAÑA 2: LÍNEA DE TIEMPO / HISTORIAL -->
         @if (tabActiva() === 'HISTORIAL') {
           <div class="timeline-container">
             <div class="timeline">
@@ -175,8 +206,8 @@
                 <div class="timeline-item">
                   <div class="timeline-badge" [ngClass]="{
                     'bg-green-500': h.estado_nuevo === 'VALIDADO',
-                    'bg-red-500': h.estado_nuevo === 'RECHAZADO',
-                    'bg-blue-500': h.estado_nuevo === 'ENVIADA',
+                    'bg-red-500': h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA',
+                    'bg-blue-500': h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO',
                     'bg-yellow-500': h.estado_nuevo === 'BORRADOR'
                   }"></div>
                   <div class="timeline-card">

@@ -1,12 +1,14 @@
 import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { ReportesService, EstadisticasPeriodo } from '../../../core/services/reportes.service';
 import { PeriodoService } from '../../../core/services/periodo.service';
 import { CarreraService } from '../../../core/services/carrera.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
 import { Carrera } from '../../../core/models/carrera.model';
+import { DescargaArchivosService } from '../../../core/services/descarga-archivos.service';
 
 @Component({
   selector: 'app-reportes',
@@ -22,6 +24,7 @@ export class ReportesComponent implements OnInit {
   private readonly carreraService = inject(CarreraService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly descargaService = inject(DescargaArchivosService);
 
   periodos = signal<PeriodoMatricula[]>([]);
   carreras = signal<Carrera[]>([]);
@@ -29,6 +32,7 @@ export class ReportesComponent implements OnInit {
   
   isLoading = signal<boolean>(true);
   isLoadingStats = signal<boolean>(false);
+  isDescargandoExcel = this.descargaService.isDescargando;
 
   filterForm: FormGroup = this.fb.group({
     periodo_id: [''],
@@ -39,7 +43,6 @@ export class ReportesComponent implements OnInit {
   ngOnInit(): void {
     this.cargarFiltrosIniciales();
     
-    // Escuchar cambios en el filtro de Periodo para recargar estadísticas
     this.filterForm.get('periodo_id')?.valueChanges.subscribe((periodoId: string) => {
       if (periodoId) {
         this.cargarEstadisticas(periodoId);
@@ -50,23 +53,26 @@ export class ReportesComponent implements OnInit {
   cargarFiltrosIniciales(): void {
     this.isLoading.set(true);
 
-    this.carreraService.getCarreras().subscribe({
-      next: (carrs: Carrera[]) => this.carreras.set(carrs),
-      error: (err: unknown) => console.error('Error al cargar carreras:', err)
-    });
-
-    this.periodoService.getPeriodos().subscribe({
-      next: (pers: PeriodoMatricula[]) => {
-        this.periodos.set(pers);
-        const periodoActivo = pers.find(p => p.activo) || pers[0];
+    // Se agrupan ambas peticiones para resolver posibles condiciones de carrera (Race Conditions)
+    forkJoin({
+      carreras: this.carreraService.getCarreras(),
+      periodos: this.periodoService.getPeriodos()
+    }).subscribe({
+      next: ({ carreras, periodos }) => {
+        this.carreras.set(carreras || []);
+        this.periodos.set(periodos || []);
+        
+        const periodoActivo = periodos.find((p: PeriodoMatricula) => p.activo) || periodos[0];
+        
         if (periodoActivo) {
           this.filterForm.patchValue({ periodo_id: periodoActivo.id }, { emitEvent: true });
         }
+        
         this.isLoading.set(false);
       },
       error: (err: unknown) => {
-        console.error('Error al cargar periodos:', err);
-        this.toastService.show('Error al cargar filtros de periodos.', 'error');
+        console.error('Error al cargar filtros iniciales:', err);
+        this.toastService.show('Error al cargar filtros del sistema.', 'error');
         this.isLoading.set(false);
       }
     });
@@ -94,7 +100,6 @@ export class ReportesComponent implements OnInit {
       this.toastService.show('Por favor seleccione un periodo académico para descargar.', 'warning');
       return;
     }
-    this.toastService.show('Generando descarga del reporte Excel...', 'info');
     this.reportesService.descargarExcelMatriz(periodoId);
   }
 }

@@ -20,6 +20,7 @@ import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
 import { EstudiantePerfilModalComponent } from './components/estudiante-perfil-modal.component';
+import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
 import { forkJoin, of, catchError, debounceTime } from 'rxjs';
 
 function minSelectedCheckboxesValidator(min = 1) {
@@ -58,6 +59,9 @@ export class EstudianteFichaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly descargaService = inject(DescargaArchivosService);
+
+  isDescargandoPdf = this.descargaService.isDescargando;
 
   // --- NUEVAS VARIABLES PARA EL FLUJO DE LISTA ---
   formulariosDisponibles = signal<Formulario[]>([]);
@@ -741,30 +745,13 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   descargarPdfResumen(fichaId: string): void {
-    // 1. Usamos HttpClient con responseType: 'blob' para descargar archivos seguros
-    this.http.get(`${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`, {
-      responseType: 'blob' 
-    }).subscribe({
-      next: (blob) => {
-        // 2. Creamos una URL temporal en la memoria del navegador
-        const url = window.URL.createObjectURL(blob);
-        
-        // 3. Creamos un enlace invisible y forzamos el clic para descargar
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Ficha_Socioeconomica.pdf`; // Nombre del archivo descargado
-        document.body.appendChild(a);
-        a.click();
-        
-        // 4. Limpiamos la memoria
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        console.error('Error al descargar el PDF', err);
-        this.toastService.show('Hubo un problema al generar tu comprobante PDF.', 'error');
-      }
-    });
+    const ficha = this.fichaActiva();
+    const cedula = ficha?.usuario?.cedula || fichaId.slice(0, 8);
+    this.descargaService.descargar(
+      `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`,
+      `Ficha_Socioeconomica_${cedula}.pdf`,
+      'Hubo un problema al generar tu comprobante PDF.'
+    );
   }
 
   guardarYEnviar(esFinal: boolean = true): void {
