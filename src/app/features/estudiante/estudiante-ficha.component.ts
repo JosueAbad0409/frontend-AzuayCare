@@ -74,7 +74,7 @@ export class EstudianteFichaComponent implements OnInit {
   secciones = signal<Seccion[]>([]);
   dependencias = signal<PreguntaDependencia[]>([]);
   periodoActivo = signal<PeriodoMatricula | null>(null);
-  
+
   isLoading = signal<boolean>(true);
   enviando = signal<boolean>(false);
   isSavingLocal = signal<boolean>(false);
@@ -104,6 +104,7 @@ export class EstudianteFichaComponent implements OnInit {
   });
 
   private autosaveData: any = null;
+  private respuestasBDCache: any[] = []; // 👈 NUEVO: respuestas del backend, disponibles antes de construir controles
   private readonly AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
   respuestasForm: FormGroup = this.fb.group({
@@ -127,10 +128,7 @@ export class EstudianteFichaComponent implements OnInit {
     this.cargarDatosEstudiante();
 
     this.respuestasForm.valueChanges
-      .pipe(
-        debounceTime(600),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(val => {
         if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
 
@@ -138,7 +136,7 @@ export class EstudianteFichaComponent implements OnInit {
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
         const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-        localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(val));
+        localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave)); // ✅ ahora sí
         setTimeout(() => this.isSavingLocal.set(false), 800);
       });
   }
@@ -146,8 +144,8 @@ export class EstudianteFichaComponent implements OnInit {
   private recuperarAutosaveValido(): void {
     const saved = localStorage.getItem(this.AUTOSAVE_KEY);
     if (saved) {
-      try { 
-        this.autosaveData = JSON.parse(saved); 
+      try {
+        this.autosaveData = JSON.parse(saved);
       } catch (e) {
         localStorage.removeItem(this.AUTOSAVE_KEY);
         this.autosaveData = null;
@@ -248,29 +246,29 @@ export class EstudianteFichaComponent implements OnInit {
       fichas: this.fichaService.getMisFichas(),
       formularios: this.formularioService.getFormularios()
     })
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: ({ periodos, fichas, formularios }) => {
-        const pActivo = periodos.find(p => p.activo);
-        this.periodoActivo.set(pActivo || null);
-        this.misFichas.set(fichas);
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ periodos, fichas, formularios }) => {
+          const pActivo = periodos.find(p => p.activo);
+          this.periodoActivo.set(pActivo || null);
+          this.misFichas.set(fichas);
 
-        // Filtrar formularios publicados del periodo activo
-        const formsPublicados = formularios.filter(f => {
-          const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
-          return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
-        });
+          // Filtrar formularios publicados del periodo activo
+          const formsPublicados = formularios.filter(f => {
+            const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
+            return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
+          });
 
-        this.formulariosDisponibles.set(formsPublicados);
-        this.vistaActual.set('LISTA');
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error al cargar datos iniciales del estudiante:', err);
-        this.toastService.show('Error de conexión al cargar tus datos.', 'error');
-        this.isLoading.set(false);
-      }
-    });
+          this.formulariosDisponibles.set(formsPublicados);
+          this.vistaActual.set('LISTA');
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error al cargar datos iniciales del estudiante:', err);
+          this.toastService.show('Error de conexión al cargar tus datos.', 'error');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   seleccionarFormulario(formularioId: string): void {
@@ -283,8 +281,8 @@ export class EstudianteFichaComponent implements OnInit {
     this.isLoading.set(true);
     this.vistaActual.set('FORMULARIO');
 
-    const fichaExistente = this.misFichas().find(f => 
-      f.formulario_id === formularioId && 
+    const fichaExistente = this.misFichas().find(f =>
+      f.formulario_id === formularioId &&
       (f.periodo_id === pActivo.id || (f.periodo as any)?.id === pActivo.id)
     );
 
@@ -302,8 +300,18 @@ export class EstudianteFichaComponent implements OnInit {
     this.fichaActiva.set(null);
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
-    this.respuestasForm.reset({}, { emitEvent: false });
+
+    // Reconstruir el form desde cero (no solo resetear valores)
+    // para que construirControlesPreguntas() vuelva a inyectar el autoguardado
+    this.respuestasForm = this.fb.group({
+      respuestas: this.fb.group({}),
+      matrices: this.fb.group({})
+    });
+
+    // Releer localStorage por si hay cambios más recientes
+    this.recuperarAutosaveValido();
   }
+
   // ------------------------------------------
 
   evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
@@ -340,8 +348,8 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   crearNuevaFicha(periodoId: string, formularioId: string): void {
-    this.fichaService.crearFicha({ 
-      periodo_id: periodoId, 
+    this.fichaService.crearFicha({
+      periodo_id: periodoId,
       formulario_id: formularioId,
       total_ingresos: 0,
       total_egresos: 0
@@ -354,90 +362,109 @@ export class EstudianteFichaComponent implements OnInit {
         },
         error: (err) => {
           this.fichaService.getMisFichas().subscribe(fichas => {
-             const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
-             if (found) {
-                this.fichaActiva.set(found);
-                this.cargarEstructuraFormulario(found.formulario_id);
-             } else {
-                console.error('Error al inicializar la ficha:', err);
-                this.toastService.show('Error al crear o buscar tu ficha.', 'error');
-                this.isLoading.set(false);
-             }
+            const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
+            if (found) {
+              this.fichaActiva.set(found);
+              this.cargarEstructuraFormulario(found.formulario_id);
+            } else {
+              console.error('Error al inicializar la ficha:', err);
+              this.toastService.show('Error al crear o buscar tu ficha.', 'error');
+              this.isLoading.set(false);
+            }
           });
         }
       });
   }
 
   cargarEstructuraFormulario(formularioId: string): void {
-    forkJoin({
-      dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
-      formulario: this.formularioService.getFormularioById(formularioId),
-      secciones: this.formularioService.getSeccionesByFormulario(formularioId)
-    })
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: ({ dependencias, formulario, secciones }) => {
-        this.dependencias.set(dependencias);
-        this.formularioActivo.set(formulario);
-        this.secciones.set(secciones);
+  forkJoin({
+    dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
+    formulario: this.formularioService.getFormularioById(formularioId),
+    secciones: this.formularioService.getSeccionesByFormulario(formularioId)
+  })
+  .pipe(takeUntilDestroyed(this.destroyRef))
+  .subscribe({
+    next: ({ dependencias, formulario, secciones }) => {
+      this.dependencias.set(dependencias);
+      this.formularioActivo.set(formulario);
+      this.secciones.set(secciones);
 
-        const preguntasReqs = secciones.map((s: Seccion) => 
-          this.formularioService.getPreguntasBySeccion(s.id)
-        );
+      const preguntasReqs = secciones.map((s: Seccion) =>
+        this.formularioService.getPreguntasBySeccion(s.id)
+      );
 
-        if (preguntasReqs.length === 0) {
-          this.isLoading.set(false);
-          return;
-        }
-
-        forkJoin(preguntasReqs)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: (preguntasPorSeccion: Pregunta[][]) => {
-              const seccionesActualizadas = secciones.map((s: Seccion, index: number) => ({
-                ...s,
-                preguntas: preguntasPorSeccion[index]
-              }));
-              
-              this.secciones.set(seccionesActualizadas);
-              
-              const preguntasTodas = preguntasPorSeccion.flat();
-              const idsPreguntasExistentes = new Set(preguntasTodas.map(p => p.id));
-
-              this.sanitizarAutosave(idsPreguntasExistentes);
-              preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
-              
-              // 🔥 SIEMPRE pedimos las respuestas (para jalar la herencia del backend si es un borrador nuevo)
-              const fichaActual = this.fichaActiva();
-              if (fichaActual) {
-                this.cargarRespuestasGuardadas(fichaActual.id, fichaActual.estado_ficha);
-                
-                // Si la ficha ya fue enviada, mandamos al estudiante directo a la última pantalla
-              if (fichaActual.estado_ficha !== 'BORRADOR') {
-                this.seccionActualIndex.set(this.secciones().length);
-              } else if (this.autosaveData?.seccionIndex !== undefined) {
-                // RESTAURAR EL PASO EXACTO EN EL QUE SE QUEDÓ
-                const savedStep = this.autosaveData.seccionIndex;
-                const maxStep = this.secciones().length;
-                // Verificamos que no se pase del límite por si el formulario cambió
-                this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
-              }
-              }
-
-              this.isLoading.set(false);
-            },
-            error: () => {
-              this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
-              this.isLoading.set(false);
-            }
-          });
-      },
-      error: () => {
-        this.toastService.show('Error de conexión con el formulario.', 'error');
+      if (preguntasReqs.length === 0) {
         this.isLoading.set(false);
+        return;
       }
-    });
-  }
+
+      forkJoin(preguntasReqs)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (preguntasPorSeccion: Pregunta[][]) => {
+            const seccionesActualizadas = secciones.map((s: Seccion, index: number) => ({
+              ...s,
+              preguntas: preguntasPorSeccion[index]
+            }));
+            this.secciones.set(seccionesActualizadas);
+
+            const preguntasTodas = preguntasPorSeccion.flat();
+            const idsPreguntasExistentes = new Set(preguntasTodas.map(p => p.id));
+            this.sanitizarAutosave(idsPreguntasExistentes);
+
+            const fichaActual = this.fichaActiva();
+
+            const construirTodo = () => {
+              preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
+
+              if (fichaActual) {
+                // Ya tenemos this.respuestasBDCache cargado (o vacío si falló/es ficha nueva)
+                this.aplicarRespuestasGuardadas(this.respuestasBDCache, fichaActual.estado_ficha);
+
+                if (fichaActual.estado_ficha !== 'BORRADOR') {
+                  this.seccionActualIndex.set(this.secciones().length);
+                } else if (this.autosaveData?.seccionIndex !== undefined) {
+                  const savedStep = this.autosaveData.seccionIndex;
+                  const maxStep = this.secciones().length;
+                  this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
+                }
+              }
+              this.isLoading.set(false);
+            };
+
+            if (fichaActual) {
+              // 👇 CAMBIO CLAVE: traemos las respuestas del backend ANTES de construir
+              // los controles, para que cargarEstructuraMatriz() pueda usarlas al armar
+              // el FormGroup de cada pregunta MATRIZ (ya no llega tarde).
+              this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                  next: (respuestasBD) => {
+                    this.respuestasBDCache = respuestasBD || [];
+                    construirTodo();
+                  },
+                  error: () => {
+                    this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
+                    this.respuestasBDCache = [];
+                    construirTodo();
+                  }
+                });
+            } else {
+              construirTodo();
+            }
+          },
+          error: () => {
+            this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
+            this.isLoading.set(false);
+          }
+        });
+    },
+    error: () => {
+      this.toastService.show('Error de conexión con el formulario.', 'error');
+      this.isLoading.set(false);
+    }
+  });
+}
 
   private sanitizarAutosave(idsPreguntasExistentes: Set<string>): void {
     if (!this.autosaveData) return;
@@ -459,8 +486,8 @@ export class EstudianteFichaComponent implements OnInit {
 
     if (isMultiple) {
       if (!this.respuestasGroup.contains(p.id)) {
-        const savedArr: string[] = Array.isArray(this.autosaveData?.respuestas?.[p.id]) 
-          ? this.autosaveData.respuestas[p.id] 
+        const savedArr: string[] = Array.isArray(this.autosaveData?.respuestas?.[p.id])
+          ? this.autosaveData.respuestas[p.id]
           : [];
 
         const formArray = this.fb.array(
@@ -480,7 +507,7 @@ export class EstudianteFichaComponent implements OnInit {
         this.respuestasGroup.addControl(p.id, this.fb.control(savedVal, validators));
       }
     }
-    
+
     this.valormap.set(this.respuestasGroup.getRawValue());
   }
 
@@ -534,10 +561,10 @@ export class EstudianteFichaComponent implements OnInit {
   esColumnaMatrizSeleccionada(preguntaId: string, filaId: string, columnaId: string): boolean {
     const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
     if (!matrizGroup) return false;
-    
+
     const filaArray = matrizGroup.get(filaId) as FormArray;
     if (!filaArray) return false;
-    
+
     return filaArray.controls.some(ctrl => ctrl.value === columnaId);
   }
   // --- FIN NUEVAS FUNCIONES PARA LA MATRIZ MULTIPLE ---
@@ -547,56 +574,64 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   cargarEstructuraMatriz(pregunta: Pregunta): void {
-    forkJoin({
-      filas: this.matricesService.getFilas(pregunta.id),
-      columnas: this.matricesService.getColumnas(pregunta.id)
-    })
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: ({ filas, columnas }) => {
-        this.secciones.update(secs => secs.map(s => ({
-          ...s,
-          preguntas: s.preguntas?.map(p => p.id === pregunta.id ? { ...p, filasMatriz: filas, columnasMatriz: columnas } : p)
-        })));
-        if (!this.matricesGroup.contains(pregunta.id)) {
-          const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
-          const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
+  forkJoin({
+    filas: this.matricesService.getFilas(pregunta.id),
+    columnas: this.matricesService.getColumnas(pregunta.id)
+  })
+  .pipe(takeUntilDestroyed(this.destroyRef))
+  .subscribe({
+    next: ({ filas, columnas }) => {
+      this.secciones.update(secs => secs.map(s => ({
+        ...s,
+        preguntas: s.preguntas?.map(p => p.id === pregunta.id ? { ...p, filasMatriz: filas, columnasMatriz: columnas } : p)
+      })));
 
-          filas.forEach((fila: any) => {
-            // Recuperamos el autoguardado como un array, o creamos un array vacío
-            let savedColArr: string[] = [];
-            const savedData = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id];
-            
-            if (Array.isArray(savedData)) {
-              savedColArr = savedData;
-            } else if (savedData) {
-              savedColArr = [savedData];
-            }
+      if (!this.matricesGroup.contains(pregunta.id)) {
+        const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
+        const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
 
-            // Transformamos la fila en un FormArray (lista dinámica)
-            const formArray = this.fb.array(
-              savedColArr.map(id => this.fb.control(id))
-            );
-            
-            matrizFormGroup.addControl(fila.id, formArray);
+        // 👇 NUEVO: buscamos si el backend ya trae respuesta guardada para esta pregunta MATRIZ
+        const respuestaBD = this.respuestasBDCache.find((r: any) => r.pregunta_id === pregunta.id);
+        const matrizPorFilaBD: Record<string, string[]> = {};
+        if (respuestaBD?.respuestasMatriz?.length > 0) {
+          respuestaBD.respuestasMatriz.forEach((rm: any) => {
+            if (!matrizPorFilaBD[rm.fila_id]) matrizPorFilaBD[rm.fila_id] = [];
+            matrizPorFilaBD[rm.fila_id].push(rm.columna_id);
           });
-          
-          this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
-          
-          if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
-            matrizFormGroup.disable({ emitEvent: false });
+        }
+
+        filas.forEach((fila: any) => {
+          let savedColArr: string[] = [];
+
+          // Prioridad: 1) backend (fuente de verdad), 2) autosave local
+          if (matrizPorFilaBD[fila.id]) {
+            savedColArr = matrizPorFilaBD[fila.id];
+          } else {
+            const savedData = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id];
+            if (Array.isArray(savedData)) savedColArr = savedData;
+            else if (savedData) savedColArr = [savedData];
           }
+
+          const formArray = this.fb.array(savedColArr.map(id => this.fb.control(id)));
+          matrizFormGroup.addControl(fila.id, formArray);
+        });
+
+        this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
+
+        if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
+          matrizFormGroup.disable({ emitEvent: false });
         }
       }
-    });
-  }
+    }
+  });
+}
 
   esPreguntaVisible(preguntaId: string): boolean {
     const dep = this.dependencias().find(d => d.pregunta_dependiente_id === preguntaId);
     if (!dep) return true;
 
     const valorDisparadorActual = this.valormap()[dep.pregunta_disparadora_id];
-    
+
     if (dep.opcion_disparadora_id) {
       if (Array.isArray(valorDisparadorActual)) {
         return valorDisparadorActual.includes(dep.opcion_disparadora_id);
@@ -638,10 +673,10 @@ export class EstudianteFichaComponent implements OnInit {
       if (!matrizValores) return 'Sin responder';
 
       const resumenFilas: string[] = [];
-      
+
       Object.keys(matrizValores).forEach(filaId => {
         const columnasSeleccionadas = matrizValores[filaId];
-        
+
         if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
           // Extraemos el texto real de la fila
           const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
@@ -683,66 +718,47 @@ export class EstudianteFichaComponent implements OnInit {
     return String(val);
   }
 
-  cargarRespuestasGuardadas(fichaId: string, estadoFicha: string): void {
-    console.log(`🕵️‍♂️ [DEBUG] Solicitando respuestas para la ficha ID: ${fichaId} | Estado: ${estadoFicha}`);
+  
 
-    this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaId}`)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (respuestasBD) => {
-          console.log(`📥 [DEBUG] Respuestas crudas recibidas de la Base de Datos:`, respuestasBD);
-          
-          if (!respuestasBD || respuestasBD.length === 0) {
-            console.warn('⚠️ [DEBUG] El backend no devolvió respuestas. O el motor de herencia falló en NestJS, o es una ficha totalmente nueva.');
-          }
+  aplicarRespuestasGuardadas(respuestasBD: any[], estadoFicha: string): void {
+  if (!respuestasBD || respuestasBD.length === 0) return;
 
-          const valoresParaElFormulario: any = {};
+  const valoresParaElFormulario: any = {};
 
-          respuestasBD.forEach(resp => {
-            const controlArray = this.respuestasGroup.get(resp.pregunta_id);
-            
-            if (controlArray instanceof FormArray) {
-              controlArray.clear({ emitEvent: false }); 
-              if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
-                resp.opcionesSeleccionadas.forEach((opc: any) => {
-                  controlArray.push(this.fb.control(opc.opcion_id), { emitEvent: false });
-                });
-              }
-            } 
-            else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
-              valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
-            } 
-            else if (resp.documentos && resp.documentos.length > 0) {
-              valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
-            } 
-            else {
-              valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
-            }
-          });
+  respuestasBD.forEach(resp => {
+    // Las de tipo MATRIZ ya se restauraron dentro de cargarEstructuraMatriz()
+    if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
 
-          console.log(`🧩 [DEBUG] Objeto construido listo para inyectar en el formulario:`, valoresParaElFormulario);
+    const controlArray = this.respuestasGroup.get(resp.pregunta_id);
 
-          // Rellenamos el formulario visualmente
-          this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
-          
-          console.log(`✅ [DEBUG] Estado del formulario DESPUÉS de la inyección:`, this.respuestasGroup.getRawValue());
+    if (controlArray instanceof FormArray) {
+      controlArray.clear({ emitEvent: false });
+      if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+        resp.opcionesSeleccionadas.forEach((opc: any) => {
+          controlArray.push(this.fb.control(opc.opcion_id), { emitEvent: false });
+        });
+      }
+    } else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+      valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
+    } else if (resp.documentos && resp.documentos.length > 0) {
+      valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
+    } else {
+      valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
+    }
+  });
 
-          this.valormap.set(this.respuestasGroup.getRawValue());
+  this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
+  this.valormap.set(this.respuestasGroup.getRawValue());
 
-          if (estadoFicha !== 'BORRADOR') {
-            this.respuestasGroup.disable({ emitEvent: false });
-            this.matricesGroup.disable({ emitEvent: false });
-          } else {
-            this.respuestasGroup.enable({ emitEvent: false });
-            this.matricesGroup.enable({ emitEvent: false });
-          }
-        },
-        error: (err) => {
-          console.error('❌ [DEBUG] Error al cargar respuestas', err);
-          this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
-        }
-      });
+  if (estadoFicha !== 'BORRADOR') {
+    this.respuestasGroup.disable({ emitEvent: false });
+    this.matricesGroup.disable({ emitEvent: false });
+  } else {
+    this.respuestasGroup.enable({ emitEvent: false });
+    this.matricesGroup.enable({ emitEvent: false });
   }
+}
+
 
   descargarPdfResumen(fichaId: string): void {
     const ficha = this.fichaActiva();
@@ -754,103 +770,88 @@ export class EstudianteFichaComponent implements OnInit {
     );
   }
 
-  guardarYEnviar(esFinal: boolean = true): void {
-    const ficha = this.fichaActiva();
-    if (!ficha) return;
+guardarYEnviar(esFinal: boolean = true): void {
+  const ficha = this.fichaActiva();
+  if (!ficha) return;
 
-    this.enviando.set(true);
+  this.enviando.set(true);
 
-    const respuestasValores = this.respuestasGroup.getRawValue();
-    const payloadRespuestas: any[] = [];
+  const respuestasValores = this.respuestasGroup.getRawValue();
+  const payloadRespuestas: any[] = [];
 
-    Object.keys(respuestasValores).forEach(preguntaId => {
-      if (this.esPreguntaVisible(preguntaId)) {
-        const val = respuestasValores[preguntaId];
+  Object.keys(respuestasValores).forEach(preguntaId => {
+    if (this.esPreguntaVisible(preguntaId)) {
+      const val = respuestasValores[preguntaId];
+      if (val === null || val === undefined || val === '') return;
 
-        if (val === null || val === undefined || val === '') return;
-
-        if (Array.isArray(val) && val.length > 0) {
-          payloadRespuestas.push({
-            ficha_id: ficha.id,
-            pregunta_id: preguntaId,
-            opciones_seleccionadas: val
-          });
-        } else if (typeof val === 'number') {
-          payloadRespuestas.push({
-            ficha_id: ficha.id,
-            pregunta_id: preguntaId,
-            valor_numerico: val
-          });
-        } else if (typeof val === 'boolean') {
-          payloadRespuestas.push({
-            ficha_id: ficha.id,
-            pregunta_id: preguntaId,
-            valor_texto: val ? 'SI' : 'NO'
-          });
-        } else if (typeof val === 'string' && val.trim() !== '') {
-          const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
-          payloadRespuestas.push({
-            ficha_id: ficha.id,
-            pregunta_id: preguntaId,
-            ...(esUuid ? { opciones_seleccionadas: [val] } : { valor_texto: val })
-          });
-        }
+      if (Array.isArray(val) && val.length > 0) {
+        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val });
+      } else if (typeof val === 'number') {
+        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val });
+      } else if (typeof val === 'boolean') {
+        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: val ? 'SI' : 'NO' });
+      } else if (typeof val === 'string' && val.trim() !== '') {
+        const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
+        payloadRespuestas.push({
+          ficha_id: ficha.id,
+          pregunta_id: preguntaId,
+          ...(esUuid ? { opciones_seleccionadas: [val] } : { valor_texto: val })
+        });
       }
-    });
+    }
+  });
 
-    const matricesValores = this.matricesGroup.getRawValue();
-    const payloadMatriz: any[] = [];
+  // 👇 CAMBIO: las matrices ahora van ANIDADAS dentro de payloadRespuestas,
+  // no como una petición separada a /respuestas-matriz
+  const matricesValores = this.matricesGroup.getRawValue();
 
-    Object.keys(matricesValores).forEach(preguntaId => {
-      if (this.esPreguntaVisible(preguntaId)) {
-        const filasObj = matricesValores[preguntaId];
-        if (filasObj && typeof filasObj === 'object') {
-          Object.keys(filasObj).forEach(filaId => {
-            const columnasSeleccionadas = filasObj[filaId]; // Ahora esto es un Array
-            
-            if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-              columnasSeleccionadas.forEach(columnaId => {
-                payloadMatriz.push({
-                  ficha_id: ficha.id,
-                  pregunta_id: preguntaId,
-                  fila_id: filaId,
-                  columna_id: columnaId
-                });
-              });
-            }
-          });
-        }
+  Object.keys(matricesValores).forEach(preguntaId => {
+    if (this.esPreguntaVisible(preguntaId)) {
+      const filasObj = matricesValores[preguntaId];
+      const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
+
+      if (filasObj && typeof filasObj === 'object') {
+        Object.keys(filasObj).forEach(filaId => {
+          const columnasSeleccionadas = filasObj[filaId];
+          if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+            columnasSeleccionadas.forEach(columnaId => {
+              respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
+            });
+          }
+        });
       }
-    });
 
-    const peticionRespuestas$ = this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal);
-    const peticionMatriz$ = payloadMatriz.length > 0 
-      ? this.matricesService.enviarRespuestasMatriz(payloadMatriz) 
-      : of(null);
+      if (respuestasMatriz.length > 0) {
+        payloadRespuestas.push({
+          ficha_id: ficha.id,
+          pregunta_id: preguntaId,
+          respuestas_matriz: respuestasMatriz
+        });
+      }
+    }
+  });
 
-    forkJoin({
-      respuestas: peticionRespuestas$,
-      matrices: peticionMatriz$
-    }).pipe(
+  // 👇 CAMBIO: una sola petición, ya no forkJoin con matricesService
+  this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
+    .pipe(
       takeUntilDestroyed(this.destroyRef),
       catchError(() => {
         this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
         this.enviando.set(false);
         return of(null);
       })
-    ).subscribe({
-      next: (res) => {
-        if (res !== null) {
-          if (esFinal) {
-            this.finalizarEnvio();
-          } else {
-            this.enviando.set(false);
-            this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
-          }
+    )
+    .subscribe(res => {
+      if (res !== null) {
+        if (esFinal) {
+          this.finalizarEnvio();
+        } else {
+          this.enviando.set(false);
+          this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
         }
       }
     });
-  }
+}
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
@@ -893,5 +894,30 @@ export class EstudianteFichaComponent implements OnInit {
       shadows.push(`${x}vw ${y}vh #FFF`);
     }
     element.style.boxShadow = shadows.join(', ');
+  }
+
+  // Añadir dentro de la clase EstudianteFichaComponent
+
+  getIconoSeccion(nombre: string): string {
+    const n = nombre.toLowerCase();
+    if (n.includes('consentimiento')) return 'far fa-user';
+    if (n.includes('personales') || n.includes('identificativos')) return 'far fa-address-card';
+    if (n.includes('salud') || n.includes('discapacidad')) return 'far fa-heart';
+    if (n.includes('familiar') || n.includes('hijos')) return 'fas fa-users';
+    if (n.includes('econom')) return 'fas fa-coins';
+    return 'far fa-folder'; // Icono por defecto
+  }
+
+  numeroRomano(num: number): string {
+    const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+    return romanos[num - 1] || num.toString();
+  }
+
+  ngOnDestroy(): void {
+    if (this.fichaActiva()?.estado_ficha === 'BORRADOR') {
+      const val = this.respuestasForm.getRawValue();
+      const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
+      localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
+    }
   }
 }

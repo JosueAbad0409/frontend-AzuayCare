@@ -12,52 +12,52 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="max-w-5xl mx-auto space-y-6 animate-fade-in relative z-10">
-      
+    <div class="max-w-5xl mx-auto space-y-6 animate-fade-in p-4 sm:p-6">
+
       <!-- Header -->
-      <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-6 sm:p-8 rounded-[2rem] shadow-xl">
-        <h2 class="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
-          <i class="fas fa-folder-open text-indigo-400"></i> Repositorio de Documentos
+      <div class="bg-white border border-slate-200 p-6 sm:p-8 rounded-[2rem] shadow-sm">
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-800 flex items-center gap-3">
+          <i class="fas fa-folder-open text-indigo-600"></i> Repositorio de Documentos
         </h2>
-        <p class="text-slate-400 mt-2 font-medium">Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos por Bienestar Estudiantil.</p>
+        <p class="text-slate-500 mt-2 font-medium">Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos por Bienestar Estudiantil.</p>
       </div>
 
       <!-- Drag & Drop Zone -->
-      <div class="bg-slate-900/40 backdrop-blur-md border-2 border-dashed border-indigo-500/30 hover:border-indigo-400 transition-all rounded-[2rem] p-10 text-center cursor-pointer group shadow-lg" (click)="fileInput.click()">
+      <div class="bg-indigo-50/50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all rounded-[2rem] p-10 text-center cursor-pointer group shadow-sm" (click)="fileInput.click()">
         <input #fileInput type="file" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg" class="hidden" />
-        <div class="w-20 h-20 mx-auto bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform mb-4 border border-indigo-500/20 shadow-inner">
+        <div class="w-20 h-20 mx-auto bg-white text-indigo-600 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform mb-4 border border-indigo-200 shadow-sm">
           <i class="fas fa-cloud-upload-alt"></i>
         </div>
-        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">Haz clic aquí para seleccionar un archivo</h3>
+        <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">Haz clic aquí para seleccionar un archivo</h3>
         <p class="text-sm text-slate-500 font-medium">Formatos soportados: PDF, JPG, PNG (Máx. 10MB)</p>
       </div>
 
       <!-- Galería de Documentos -->
       <div class="pt-4">
-        <h3 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <i class="fas fa-archive text-slate-500"></i> Archivos Subidos ({{ misDocumentos().length }})
+        <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+          <i class="fas fa-archive text-slate-400"></i> Archivos Subidos ({{ misDocumentos().length }})
         </h3>
-        
+
         @if (misDocumentos().length > 0) {
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @for (doc of misDocumentos(); track doc.id) {
-              <div class="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-md group flex flex-col justify-between h-full">
+              <div class="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all shadow-sm group flex flex-col justify-between h-full">
                 <div class="flex items-start gap-4 mb-4">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-inner"
-                       [ngClass]="doc.tipo_mime?.includes('pdf') ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'">
+                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                       [ngClass]="doc.tipo_mime?.includes('pdf') ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-blue-50 text-blue-600 border border-blue-200'">
                     <i class="fas" [ngClass]="doc.tipo_mime?.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'"></i>
                   </div>
                   <div class="overflow-hidden">
-                    <h4 class="font-bold text-slate-200 text-sm truncate" [title]="doc.nombre_archivo">{{ doc.nombre_archivo }}</h4>
+                    <h4 class="font-bold text-slate-800 text-sm truncate" [title]="doc.nombre_archivo">{{ doc.nombre_archivo }}</h4>
                     <p class="text-xs text-slate-500 mt-0.5 font-medium">{{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}</p>
                   </div>
                 </div>
-                
-                <div class="flex items-center gap-2 mt-auto pt-4 border-t border-slate-800/80">
-                  <button (click)="abrirPreview(doc)" class="flex-1 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white rounded-xl text-xs font-bold transition-colors">
+
+                <div class="flex items-center gap-2 mt-auto pt-4 border-t border-slate-100">
+                  <button (click)="abrirPreview(doc)" class="flex-1 py-2 bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-colors">
                     <i class="fas fa-eye mr-1"></i> Ver
                   </button>
-                  <button (click)="eliminarDocumento(doc.id)" class="w-10 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-colors border border-rose-500/20">
+                  <button (click)="eliminarDocumento(doc.id)" class="w-10 py-2 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-colors border border-red-200">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </div>
@@ -65,9 +65,9 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
             }
           </div>
         } @else {
-          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-10 text-center">
-            <i class="fas fa-folder-open text-4xl text-slate-600 mb-3"></i>
-            <p class="text-slate-400 font-medium text-sm">Tu repositorio está vacío. Sube documentos para respaldar tu ficha.</p>
+          <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+            <i class="fas fa-folder-open text-4xl text-slate-300 mb-3"></i>
+            <p class="text-slate-500 font-medium text-sm">Tu repositorio está vacío. Sube documentos para respaldar tu ficha.</p>
           </div>
         }
       </div>
@@ -76,20 +76,20 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
     <!-- Modal de Previsualización -->
     @if (docPreview()) {
       <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-pop">
-        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md" (click)="cerrarPreview()"></div>
-        
-        <div class="relative w-full max-w-4xl h-[85vh] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
-          <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-            <h3 class="font-bold text-white text-sm flex items-center gap-2 truncate pr-4">
-              <i class="fas" [ngClass]="docPreview()?.tipo_mime?.includes('pdf') ? 'fa-file-pdf text-rose-400' : 'fa-image text-blue-400'"></i>
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="cerrarPreview()"></div>
+
+        <div class="relative w-full max-w-4xl h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
+          <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 truncate pr-4">
+              <i class="fas" [ngClass]="docPreview()?.tipo_mime?.includes('pdf') ? 'fa-file-pdf text-rose-500' : 'fa-image text-blue-500'"></i>
               {{ docPreview()?.nombre_archivo }}
             </h3>
-            <button (click)="cerrarPreview()" class="w-8 h-8 bg-slate-800 text-slate-400 rounded-xl hover:text-white hover:bg-slate-700 transition-colors shrink-0 flex items-center justify-center">
+            <button (click)="cerrarPreview()" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl hover:text-white hover:bg-slate-700 transition-colors shrink-0 flex items-center justify-center">
               <i class="fas fa-times"></i>
             </button>
           </div>
-          
-          <div class="flex-1 bg-slate-950 overflow-hidden flex items-center justify-center relative">
+
+          <div class="flex-1 bg-slate-50 overflow-hidden flex items-center justify-center relative">
             @if (docPreview()?.tipo_mime?.includes('pdf')) {
               <iframe [src]="safePreviewUrl()" class="w-full h-full border-none"></iframe>
             } @else {

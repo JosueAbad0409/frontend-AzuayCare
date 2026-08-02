@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard'; 
 import { roleGuard } from './core/guards/role.guard';
+import { perfilCompletoGuard } from './core/guards/perfil-completo.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' }, 
@@ -8,6 +9,12 @@ export const routes: Routes = [
   { 
     path: 'login', 
     loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent)
+  },
+
+  {
+    path: 'completar-perfil',
+    loadComponent: () => import('./features/login/completar-perfil/completar-perfil').then(m => m.CompletarPerfilComponent),
+    canActivate: [authGuard, roleGuard(['ESTUDIANTE'])]
   },
 
   { 
@@ -72,7 +79,7 @@ export const routes: Routes = [
   {
     path: 'estudiante',
     loadComponent: () => import('./features/estudiante/layout/estudiante-layout.component').then(m => m.EstudianteLayoutComponent),
-    canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])],
+    canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO']), perfilCompletoGuard],
     children: [
       { path: '', redirectTo: 'inicio', pathMatch: 'full' },
       {
