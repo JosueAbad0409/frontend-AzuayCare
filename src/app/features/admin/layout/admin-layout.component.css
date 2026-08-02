@@ -4,12 +4,16 @@
   background-color: var(--bg-main, #f1f5f9);
 }
 
+:root[data-theme='dark'] .app-layout {
+  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+}
+
 /* ==========================================
    SIDEBAR CON MODO COLAPSADO LIMPIO
    ========================================== */
 .sidebar {
   width: 280px;
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
   color: white;
   display: flex;
   flex-direction: column;
@@ -18,9 +22,11 @@
   top: 0;
   height: 100vh;
   z-index: 40;
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 16px 0 45px rgba(15, 23, 42, 0.18);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .app-layout.collapsed .sidebar {
@@ -141,6 +147,7 @@
   transition: all 0.25s ease;
   white-space: nowrap;
   position: relative;
+  border: 1px solid transparent;
 }
 
 .app-layout.collapsed .nav-item {
@@ -198,20 +205,36 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(255,255,255,0) 100%);
+}
+
+:root[data-theme='dark'] .main-wrapper {
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.25) 100%);
+}
+
+.page-content {
+  padding: 1.25rem 1.5rem 2.5rem;
 }
 
 .top-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 1rem 2.25rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 30;
+  box-shadow: 0 10px 20px -10px rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme='dark'] .top-header {
+  background: rgba(15, 23, 42, 0.86);
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 34px -22px rgba(2, 6, 23, 0.8);
 }
 
 .header-status {
@@ -222,6 +245,11 @@
   padding: 0.4rem 1rem;
   border-radius: 9999px;
   border: 1px solid #e2e8f0;
+}
+
+:root[data-theme='dark'] .header-status {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 .live-dot {
@@ -236,6 +264,10 @@
   font-size: 0.8rem;
   font-weight: 700;
   color: #334155;
+}
+
+:root[data-theme='dark'] .status-text {
+  color: #cbd5e1;
 }
 
 /* DROPDOWN DEL PERFIL (SaaS Estándar) */

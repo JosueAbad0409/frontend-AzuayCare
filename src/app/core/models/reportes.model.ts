@@ -16,6 +16,8 @@ export interface FiltroReporteRequest {
   carrera_id?: string;
   ciclo_id?: string;
   estado_ficha?: string;
+  pregunta_id?: string;
+  valor_pregunta?: string | number | null;
   preguntas?: Array<{
     pregunta_id: string;
     opcion_id?: string;
@@ -26,9 +28,12 @@ export interface FiltroReporteRequest {
 }
 
 export interface DatasetFiltradoResponse {
-  total_registros: number;
-  registros: Array<Record<string, unknown>>;
+  total_registros?: number;
+  total?: number;
+  registros?: Array<Record<string, unknown>>;
+  datos?: Array<Record<string, unknown>>;
   columnas?: string[];
+  columnas_dataset?: string[];
 }
 
 export interface AgregadoPorPregunta {

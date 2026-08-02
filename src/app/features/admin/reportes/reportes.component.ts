@@ -176,7 +176,8 @@ export class ReportesComponent implements OnInit {
       agregados: this.reportesService.getAgregadoPorPregunta(filtros)
     }).subscribe({
       next: ({ dataset, agregados }) => {
-        this.datasetFiltrado.set(dataset);
+        const datasetNormalizado = this.normalizarDataset(dataset);
+        this.datasetFiltrado.set(datasetNormalizado);
         this.agregadosPorPregunta.set(agregados || []);
         this.isAplicandoFiltros.set(false);
       },
@@ -216,7 +217,18 @@ export class ReportesComponent implements OnInit {
 
   private construirPayload(): FiltroReporteRequest {
     const formValue = this.filterForm.getRawValue();
-    const preguntas = this.filtrosDisponibles().map((filtro) => {
+    const preguntas: NonNullable<FiltroReporteRequest['preguntas']> = [];
+    let filtroPrincipal: { pregunta_id?: string; valor_pregunta?: string | number | null } | undefined;
+    const payload: FiltroReporteRequest & Record<string, unknown> = {
+      periodo_id: formValue.periodo_id || '',
+      formulario_id: formValue.formulario_id || undefined,
+      carrera_id: formValue.carrera_id || undefined,
+      ciclo_id: formValue.ciclo_id || undefined,
+      estado_ficha: formValue.estado_ficha === 'TODOS' ? undefined : formValue.estado_ficha,
+      preguntas
+    };
+
+    this.filtrosDisponibles().forEach((filtro) => {
       const preguntaFiltro: { pregunta_id: string; opcion_id?: string; valor_min?: number; valor_max?: number; texto?: string } = {
         pregunta_id: filtro.pregunta_id
       };
@@ -234,16 +246,77 @@ export class ReportesComponent implements OnInit {
         if (opcionId) preguntaFiltro.opcion_id = opcionId;
       }
 
-      return preguntaFiltro;
-    }).filter((pregunta) => Object.keys(pregunta).length > 1);
+      if (Object.keys(preguntaFiltro).length > 1) {
+        preguntas.push(preguntaFiltro);
+        if (!filtroPrincipal) {
+          filtroPrincipal = {
+            pregunta_id: filtro.pregunta_id,
+            valor_pregunta: this.obtenerValorPreguntaParaBackend(filtro)
+          };
+        }
+      }
+    });
+
+    if (filtroPrincipal && typeof filtroPrincipal.pregunta_id === 'string' && filtroPrincipal.pregunta_id.length > 0) {
+      payload['pregunta_id'] = filtroPrincipal.pregunta_id;
+      payload['valor_pregunta'] = filtroPrincipal.valor_pregunta ?? null;
+    }
+
+    return payload as FiltroReporteRequest;
+  }
+
+  private obtenerValorPreguntaParaBackend(filtro: FiltroPreguntaDisponible): string | number | undefined {
+    if (filtro.tipo_campo === 'NUMERIC' || filtro.es_numerico) {
+      const { min, max } = this.getFiltroPreguntaRango(filtro.pregunta_id);
+      if (min || max) {
+        return `${min || ''},${max || ''}`;
+      }
+      return undefined;
+    }
+
+    if (filtro.tipo_campo === 'TEXTO' || filtro.tipo_campo === 'TEXTO_LIBRE') {
+      return this.getFiltroPreguntaValor(filtro.pregunta_id) || undefined;
+    }
+
+    const opcionId = this.getFiltroPreguntaValor(filtro.pregunta_id);
+    return opcionId || undefined;
+  }
+
+  private normalizarDataset(dataset: DatasetFiltradoResponse | null): DatasetFiltradoResponse | null {
+    if (!dataset) {
+      return null;
+    }
+
+    const datasetConCompatibilidad = dataset as DatasetFiltradoResponse & {
+      datos?: Array<Record<string, unknown>>;
+      registros?: Array<Record<string, unknown>>;
+      columnas_dataset?: string[];
+      total?: number;
+    };
+
+    const registros = Array.isArray(datasetConCompatibilidad.registros)
+      ? datasetConCompatibilidad.registros
+      : Array.isArray(datasetConCompatibilidad.datos)
+        ? datasetConCompatibilidad.datos
+        : [];
+
+    const columnas = Array.isArray(dataset.columnas)
+      ? dataset.columnas
+      : Array.isArray(datasetConCompatibilidad.columnas_dataset)
+        ? datasetConCompatibilidad.columnas_dataset
+        : [];
+
+    const totalRegistros = typeof dataset.total_registros === 'number'
+      ? dataset.total_registros
+      : typeof datasetConCompatibilidad.total === 'number'
+        ? datasetConCompatibilidad.total
+        : registros.length;
 
     return {
-      periodo_id: formValue.periodo_id || '',
-      formulario_id: formValue.formulario_id || undefined,
-      carrera_id: formValue.carrera_id || undefined,
-      ciclo_id: formValue.ciclo_id || undefined,
-      estado_ficha: formValue.estado_ficha === 'TODOS' ? undefined : formValue.estado_ficha,
-      preguntas
+      ...dataset,
+      registros,
+      columnas,
+      total_registros: totalRegistros
     };
   }
 
