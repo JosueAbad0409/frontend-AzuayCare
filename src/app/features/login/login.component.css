@@ -30,12 +30,12 @@
   width: 90%;
   max-width: 440px;
   padding: 3rem 2.25rem;
-  background: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.82) 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-xl);
   text-align: center;
   animation: modalEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

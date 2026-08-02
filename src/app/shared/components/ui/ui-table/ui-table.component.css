@@ -1,5 +1,5 @@
-.ui-table-shell { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+.ui-table-shell { overflow-x: auto; border: 1px solid rgba(226,232,240,0.9); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); }
 .ui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.ui-table th, .ui-table td { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--border-color); text-align: left; }
-.ui-table th { background: var(--surface-1); color: var(--text-secondary); font-weight: 700; }
-.ui-table tr:hover { background: var(--surface-1); }
+.ui-table th, .ui-table td { padding: 0.85rem 0.95rem; border-bottom: 1px solid var(--border-color); text-align: left; }
+.ui-table th { background: linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(241,245,249,0.98) 100%); color: var(--text-secondary); font-weight: 700; }
+.ui-table tr:hover { background: rgba(248,250,252,0.75); }
