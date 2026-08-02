@@ -1,0 +1,5 @@
+.ui-card { background: var(--surface-0); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.15rem; box-shadow: var(--shadow-sm); }
+.ui-card--elevated { box-shadow: var(--shadow-md); }
+.ui-card__header { margin-bottom: 0.85rem; }
+.ui-card__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-strong); }
+.ui-card__subtitle { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.85rem; }

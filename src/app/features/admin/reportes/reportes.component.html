@@ -1,17 +1,13 @@
-<div class="reportes-container animate-fade-in">
-  
-  <!-- CABECERA PRINCIPAL -->
+<div class="reportes-container animate-fade-in page-shell">
   <header class="page-header">
     <div class="header-info">
       <h2><i class="fas fa-chart-line text-purple-600"></i> Módulo de Reportes Analíticos</h2>
-      <p class="subtitle">Consolidado general de datos socioeconómicos, exportación a Excel y métricas por periodo.</p>
+      <p class="subtitle">Consolidado general de datos socioeconómicos, filtros por carrera/ciclo/formulario y exportación a Excel/PDF.</p>
     </div>
   </header>
 
-  <!-- PANEL DE FILTROS SUPERIORES -->
-  <section class="filters-card">
-    <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-      
+  <app-ui-card title="Filtros de análisis" subtitle="Selecciona periodo, carrera, ciclo, estado y formulario para construir tus reportes." [elevated]="true">
+    <form [formGroup]="filterForm" class="form-grid md:grid-cols-2 xl:grid-cols-4 items-end">
       <div class="form-group">
         <label class="form-label font-semibold text-xs text-slate-700">Periodo Académico *</label>
         <select formControlName="periodo_id" class="form-control">
@@ -25,11 +21,21 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label font-semibold text-xs text-slate-700">Carrera (Filtro Visual)</label>
+        <label class="form-label font-semibold text-xs text-slate-700">Carrera</label>
         <select formControlName="carrera_id" class="form-control">
           <option value="">Todas las Carreras</option>
           @for (carrera of carreras(); track carrera.id) {
             <option [value]="carrera.id">{{ carrera.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label font-semibold text-xs text-slate-700">Ciclo</label>
+        <select formControlName="ciclo_id" class="form-control" [disabled]="!filterForm.get('carrera_id')?.value">
+          <option value="">Todos los Ciclos</option>
+          @for (ciclo of ciclos(); track ciclo.id) {
+            <option [value]="ciclo.id">{{ ciclo.nombre }}</option>
           }
         </select>
       </div>
@@ -45,28 +51,67 @@
         </select>
       </div>
 
+      <div class="form-group md:col-span-2 xl:col-span-4">
+        <label class="form-label font-semibold text-xs text-slate-700">Formulario</label>
+        <select formControlName="formulario_id" class="form-control">
+          <option value="">Seleccione un formulario</option>
+          @for (formulario of formularios(); track formulario.id) {
+            <option [value]="formulario.id">{{ formulario.titulo }}</option>
+          }
+        </select>
+      </div>
     </form>
-  </section>
+  </app-ui-card>
 
-  <!-- TARJETA DE ACCIONES DE DESCARGA DIRECTA EXCEL -->
   <section class="download-section">
-    <div class="action-card bg-emerald-50 border border-emerald-200">
-      <div class="action-icon bg-emerald-500 text-white">
-        <i class="fas fa-file-excel"></i>
-      </div>
-      <div class="action-content">
-        <h3 class="text-emerald-950 font-bold">Matriz Completa de Respuestas (Excel)</h3>
-        <p class="text-xs text-emerald-800">
-          Descarga un archivo Excel consolidado con la información de todos los estudiantes, respuestas a formularios socioeconómicos y balances calculados del periodo seleccionado.
-        </p>
-      </div>
-      <button class="btn btn-emerald" (click)="descargarMatrizExcel()" [disabled]="!filterForm.get('periodo_id')?.value">
-        <i class="fas fa-download"></i> Exportar a Excel
-      </button>
-    </div>
+    <app-ui-button variant="primary" (click)="aplicarFiltros()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+      <i class="fas fa-filter"></i> Aplicar filtros
+    </app-ui-button>
+    <app-ui-button variant="success" (click)="exportarExcelFiltrado()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+      <i class="fas fa-file-excel"></i> Exportar Excel
+    </app-ui-button>
+    <app-ui-button variant="danger" (click)="exportarPdfFiltrado()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+      <i class="fas fa-file-pdf"></i> Exportar PDF
+    </app-ui-button>
+    <app-ui-button variant="secondary" (click)="descargarMatrizExcel()" [disabled]="!filterForm.get('periodo_id')?.value">
+      <i class="fas fa-download"></i> Excel base
+    </app-ui-button>
   </section>
 
-  <!-- SECCIÓN DE MÉTRICAS Y RESUMEN ESTADÍSTICO -->
+  @if (isLoadingFilters()) {
+    <div class="loading-box">
+      <i class="fas fa-spinner fa-spin text-purple-600 text-2xl"></i>
+      <p class="text-xs text-slate-500 mt-2">Cargando filtros del formulario...</p>
+    </div>
+  }
+
+  @if (filtrosDisponibles().length) {
+    <app-ui-card title="Filtros dinámicos por pregunta" subtitle="Ajusta los criterios de cada pregunta para refinar la consulta." [elevated]="false">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        @for (filtro of filtrosDisponibles(); track filtro.pregunta_id) {
+          <div class="form-group">
+            <label class="form-label font-semibold text-xs text-slate-700">{{ filtro.enunciado }}</label>
+            @if (filtro.tipo_campo === 'NUMERIC' || filtro.es_numerico) {
+              <div class="flex gap-2">
+                <input type="number" class="form-control" [value]="getFiltroPreguntaRango(filtro.pregunta_id).min" (input)="setFiltroPreguntaRango(filtro.pregunta_id, $any($event.target).value, getFiltroPreguntaRango(filtro.pregunta_id).max)" placeholder="Mín" />
+                <input type="number" class="form-control" [value]="getFiltroPreguntaRango(filtro.pregunta_id).max" (input)="setFiltroPreguntaRango(filtro.pregunta_id, getFiltroPreguntaRango(filtro.pregunta_id).min, $any($event.target).value)" placeholder="Máx" />
+              </div>
+            } @else if (filtro.tipo_campo === 'TEXTO' || filtro.tipo_campo === 'TEXTO_LIBRE') {
+              <input type="text" class="form-control" [value]="getFiltroPreguntaValor(filtro.pregunta_id)" (input)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)" placeholder="Texto a buscar" />
+            } @else {
+              <select class="form-control" [value]="getFiltroPreguntaValor(filtro.pregunta_id)" (change)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)">
+                <option value="">Todas las opciones</option>
+                @for (opcion of filtro.opciones || []; track opcion.opcion_id || opcion.texto_opcion) {
+                  <option [value]="opcion.opcion_id || opcion.texto_opcion">{{ opcion.texto_opcion }}</option>
+                }
+              </select>
+            }
+          </div>
+        }
+      </div>
+    </app-ui-card>
+  }
+
   <section class="stats-section">
     <h3 class="section-title"><i class="fas fa-chart-pie"></i> Métricas Socioeconómicas del Periodo</h3>
 
@@ -76,8 +121,6 @@
         <p class="text-xs text-slate-500 mt-2">Cargando métricas consolidadas...</p>
       </div>
     } @else if (estadisticas()) {
-
-      <!-- RESUMEN EN TARJETAS (KPIs) -->
       <div class="kpi-grid">
         <div class="kpi-card border-l-4 border-l-blue-500">
           <div class="kpi-info">
@@ -112,7 +155,6 @@
         </div>
       </div>
 
-      <!-- DESGLOSE DE DISTRIBUCIÓN POR RANGOS -->
       @if (estadisticas()?.distribucion_rangos?.length) {
         <div class="ranges-card">
           <h4 class="font-bold text-sm text-slate-800 mb-3"><i class="fas fa-layer-group"></i> Distribución de Estudiantes por Rango / Resultado</h4>
@@ -126,7 +168,6 @@
           </div>
         </div>
       }
-
     } @else {
       <div class="empty-state">
         <i class="fas fa-exclamation-circle text-gray-400 text-3xl"></i>
@@ -135,4 +176,33 @@
     }
   </section>
 
+  @if (datasetFiltrado()) {
+    <app-ui-card title="Resultado del dataset filtrado" [subtitle]="'Registros encontrados: ' + (datasetFiltrado()?.total_registros || 0)" [elevated]="false">
+      @if ((datasetFiltrado()?.registros || []).length) {
+        <app-ui-table [headers]="datasetFiltrado()?.columnas || []" [rows]="datasetFiltrado()?.registros || []"></app-ui-table>
+      } @else {
+        <p class="section-subtitle">No hay registros para la combinación seleccionada.</p>
+      }
+    </app-ui-card>
+  }
+
+  @if (agregadosPorPregunta().length) {
+    <app-ui-card title="Resumen por pregunta" subtitle="Vista consolidada de respuestas y distribución por categoría." [elevated]="false">
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        @for (agregado of agregadosPorPregunta(); track agregado.pregunta_id) {
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="font-semibold text-sm text-slate-800">{{ agregado.enunciado }}</h4>
+            <ul class="mt-2 text-sm text-slate-600">
+              @for (item of agregado.agregados; track item.etiqueta) {
+                <li class="flex justify-between py-1 border-b border-slate-100">
+                  <span>{{ item.etiqueta }}</span>
+                  <span>{{ item.total }} ({{ item.porcentaje }}%)</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    </app-ui-card>
+  }
 </div>

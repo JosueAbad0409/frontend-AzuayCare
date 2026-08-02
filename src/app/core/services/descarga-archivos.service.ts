@@ -10,10 +10,22 @@ export class DescargaArchivosService {
   isDescargando = signal<boolean>(false);
 
   descargar(url: string, nombreArchivo: string, mensajeError = 'No se pudo generar el archivo.'): void {
+    this.descargarConMetodo('GET', url, undefined, nombreArchivo, mensajeError);
+  }
+
+  descargarPost(url: string, body: unknown, nombreArchivo: string, mensajeError = 'No se pudo generar el archivo.'): void {
+    this.descargarConMetodo('POST', url, body, nombreArchivo, mensajeError);
+  }
+
+  private descargarConMetodo(method: 'GET' | 'POST', url: string, body: unknown, nombreArchivo: string, mensajeError: string): void {
     if (this.isDescargando()) return; // evita doble clic / doble descarga
     this.isDescargando.set(true);
 
-    this.http.get(url, { responseType: 'blob' }).subscribe({
+    const request$ = method === 'POST'
+      ? this.http.post(url, body, { responseType: 'blob' })
+      : this.http.get(url, { responseType: 'blob' });
+
+    request$.subscribe({
       next: (blob) => {
         const objectUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
