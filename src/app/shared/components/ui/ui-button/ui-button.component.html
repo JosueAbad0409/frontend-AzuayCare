@@ -1,0 +1,9 @@
+@if (href) {
+  <a [href]="href" class="{{ classes }}" [class.ui-button--disabled]="disabled" [attr.aria-disabled]="disabled ? 'true' : null">
+    <ng-content></ng-content>
+  </a>
+} @else {
+  <button type="button" class="{{ classes }}" [disabled]="disabled">
+    <ng-content></ng-content>
+  </button>
+}

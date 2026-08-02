@@ -188,18 +188,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Genera y descarga el archivo Excel socioeconómico
-   */
-  descargarReporteExcel(): void {
-    const periodo = this.periodoActivo();
-    if (!periodo) {
-      alert('No se encontró un período académico activo.');
-      return;
-    }
-    this.reportesService.descargarExcelMatriz(periodo.id);
-  }
-
-  /**
    * Destruye las instancias existentes de Chart.js
    */
   private destruirGraficos(): void {

@@ -4,6 +4,12 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DescargaArchivosService } from './descarga-archivos.service';
 import { PeriodoMatricula } from '../models/periodo.model';
+import {
+  AgregadoPorPregunta,
+  DatasetFiltradoResponse,
+  FiltroPreguntaDisponible,
+  FiltroReporteRequest
+} from '../models/reportes.model';
 
 export interface DashboardResumenBackend {
   totalCarreras: number;
@@ -43,12 +49,41 @@ export class ReportesService {
     return this.http.get<EstadisticasPeriodo>(`${this.apiUrl}/estadisticas/periodo/${periodoId}`);
   }
 
-  /** Descarga la Matriz Excel Socioeconómica del periodo mediante streaming */
+  getFiltrosDisponibles(formularioId: string): Observable<FiltroPreguntaDisponible[]> {
+    return this.http.get<FiltroPreguntaDisponible[]>(`${this.apiUrl}/filtros-disponibles/${formularioId}`);
+  }
+
+  getDatasetFiltrado(filtros: FiltroReporteRequest): Observable<DatasetFiltradoResponse> {
+    return this.http.post<DatasetFiltradoResponse>(`${this.apiUrl}/dataset-filtrado`, filtros);
+  }
+
+  getAgregadoPorPregunta(filtros: FiltroReporteRequest): Observable<AgregadoPorPregunta[]> {
+    return this.http.post<AgregadoPorPregunta[]>(`${this.apiUrl}/agregado-por-pregunta`, filtros);
+  }
+
   descargarExcelMatriz(periodoId: string): void {
     this.descargaService.descargar(
       `${this.apiUrl}/dataset-plano/${periodoId}/excel`,
       `Matriz_Socioeconomica_${periodoId}.xlsx`,
       'No se pudo generar el reporte Excel.'
+    );
+  }
+
+  descargarExcelFiltrado(filtros: FiltroReporteRequest): void {
+    this.descargaService.descargarPost(
+      `${this.apiUrl}/dataset-filtrado/excel`,
+      filtros,
+      `Matriz_Socioeconomica_Filtrada_${filtros.periodo_id}.xlsx`,
+      'No se pudo generar el reporte Excel filtrado.'
+    );
+  }
+
+  descargarPdfFiltrado(filtros: FiltroReporteRequest): void {
+    this.descargaService.descargarPost(
+      `${this.apiUrl}/dataset-filtrado/pdf`,
+      filtros,
+      `Reporte_Consolidado_${filtros.periodo_id}.pdf`,
+      'No se pudo generar el reporte PDF filtrado.'
     );
   }
 }

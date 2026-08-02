@@ -1,0 +1,5 @@
+.ui-table-shell { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+.ui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ui-table th, .ui-table td { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--border-color); text-align: left; }
+.ui-table th { background: var(--surface-1); color: var(--text-secondary); font-weight: 700; }
+.ui-table tr:hover { background: var(--surface-1); }

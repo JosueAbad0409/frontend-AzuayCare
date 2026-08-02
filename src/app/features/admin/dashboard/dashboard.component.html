@@ -1,5 +1,4 @@
-<div class="dashboard-wrapper">
-  <!-- BANNER DE BIENVENIDA -->
+<div class="dashboard-wrapper page-shell">
   <header class="hero-banner">
     <div class="hero-text">
       <span class="hero-tag">INSTITUTO SUPERIOR TECNOLÓGICO AZUAY</span>
@@ -7,11 +6,8 @@
       <p>Gestión integral de vulnerabilidad socioeconómica, formularios dinámicos y reportes institucionalizados.</p>
     </div>
     <div class="hero-actions">
-      <button class="btn btn-purple" (click)="descargarReporteExcel()" [disabled]="isLoading()">
-        <i class="fas fa-file-excel"></i> Exportar Reporte Excel
-      </button>
-      <a routerLink="/admin/carreras" class="btn btn-outline-light">
-        <i class="fas fa-university"></i> Ver Carreras
+      <a routerLink="/admin/reportes" class="btn btn-outline-light">
+        <i class="fas fa-chart-line"></i> Ir a Reportes
       </a>
     </div>
   </header>
