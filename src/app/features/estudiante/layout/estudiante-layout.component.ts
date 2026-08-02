@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -13,6 +13,7 @@ interface MenuItem {
   selector: 'app-estudiante-layout',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-[#090a0f] text-slate-200 font-sans selection:bg-emerald-500/30 relative flex flex-col md:flex-row">
       <!-- Ambient Glow (Luces de Fondo) -->

@@ -6,6 +6,7 @@ import { EstudiantePerfil } from '../../../core/models/estudiante-perfil.model';
   selector: 'app-estudiante-perfil-modal',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (visible) {
       <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-pop">
@@ -84,8 +85,7 @@ import { EstudiantePerfil } from '../../../core/models/estudiante-perfil.model';
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
     }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  `]
 })
 export class EstudiantePerfilModalComponent {
   @Input({ required: true }) perfil!: EstudiantePerfil | null;

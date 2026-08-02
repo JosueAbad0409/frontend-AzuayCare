@@ -1,3 +1,15 @@
+export type EstadoFicha = 'BORRADOR' | 'ENVIADA' | 'ENVIADO' | 'VALIDADO' | 'RECHAZADO' | 'RECHAZADA';
+
+export interface UsuarioRevision {
+  id: string;
+  primer_nombre: string;
+  primer_apellido: string;
+  segundo_nombre?: string | null;
+  segundo_apellido?: string | null;
+  email_institucional: string;
+  cedula: string | null;
+}
+
 export interface FichaRevision {
   id: string;
   usuario_id: string;
@@ -7,23 +19,11 @@ export interface FichaRevision {
   total_egresos: number;
   balance_final: number;
   nivel_economico_id: string | null;
-  estado_ficha: 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADO';
+  estado_ficha: EstadoFicha;
   rango_resultado_id?: string | null;
-  rangoResultado?: {
-    id: string;
-    nombre: string;
-  } | null;
   created_at: string;
   updated_at: string;
-  usuario?: {
-    id: string;
-    primer_nombre: string;
-    primer_apellido: string;
-    segundo_nombre?: string | null;
-    segundo_apellido?: string | null;
-    email_institucional: string;
-    cedula: string | null;
-  };
+  usuario?: UsuarioRevision;
   periodo?: {
     id: string;
     nombre: string;
@@ -36,4 +36,13 @@ export interface FichaRevision {
     id: string;
     nombre: string;
   } | null;
+  rangoResultado?: {
+    id: string;
+    nombre: string;
+  } | null;
+}
+
+export interface FichasPaginadasResponse {
+  data: FichaRevision[];
+  total: number;
 }

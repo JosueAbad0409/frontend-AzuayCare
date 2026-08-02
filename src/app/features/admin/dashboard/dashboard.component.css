@@ -4,7 +4,44 @@
   gap: 2.25rem;
 }
 
-/* HERO BANNER FUTURISTA */
+/* ==========================================
+   UTILIDADES & ESTADOS DE CARGA (SKELETONS)
+   ========================================== */
+.hidden {
+  display: none !important;
+}
+
+.skeleton-loader {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: 0.5rem;
+}
+
+.kpi-skeleton {
+  height: 2.25rem;
+  width: 60%;
+  margin: 0.2rem 0;
+}
+
+.chart-skeleton {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ==========================================
+   HERO BANNER FUTURISTA
+   ========================================== */
 .hero-banner {
   background: radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
               radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 40%),
@@ -59,7 +96,9 @@
   gap: 1rem;
 }
 
-/* KPI GRID */
+/* ==========================================
+   KPI GRID (TARJETAS DE MÉTRICAS)
+   ========================================== */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
