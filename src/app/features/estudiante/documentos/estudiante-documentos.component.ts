@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@ang
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DocumentosService } from '../../../core/services/documentos.service';
-import { FichaService } from '../../../core/services/ficha.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { DocumentoRespaldo } from '../../../core/models/documento.model';
 
@@ -19,7 +18,7 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
         <h2 class="text-2xl sm:text-3xl font-black text-slate-800 flex items-center gap-3">
           <i class="fas fa-folder-open text-indigo-600"></i> Repositorio de Documentos
         </h2>
-        <p class="text-slate-500 mt-2 font-medium">Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos por Bienestar Estudiantil.</p>
+        <p class="text-slate-500 mt-2 font-medium">Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos.</p>
       </div>
 
       <!-- Drag & Drop Zone -->
@@ -35,7 +34,7 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
       <!-- Galería de Documentos -->
       <div class="pt-4">
         <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-          <i class="fas fa-archive text-slate-400"></i> Archivos Subidos ({{ misDocumentos().length }})
+          <i class="fas fa-archive text-slate-400"></i> Mis Archivos ({{ misDocumentos().length }})
         </h3>
 
         @if (misDocumentos().length > 0) {
@@ -44,11 +43,11 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
               <div class="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all shadow-sm group flex flex-col justify-between h-full">
                 <div class="flex items-start gap-4 mb-4">
                   <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
-                       [ngClass]="doc.tipo_mime?.includes('pdf') ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-blue-50 text-blue-600 border border-blue-200'">
-                    <i class="fas" [ngClass]="doc.tipo_mime?.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'"></i>
+                       [ngClass]="doc.mime_type?.includes('pdf') ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-blue-50 text-blue-600 border border-blue-200'">
+                    <i class="fas" [ngClass]="doc.mime_type?.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'"></i>
                   </div>
                   <div class="overflow-hidden">
-                    <h4 class="font-bold text-slate-800 text-sm truncate" [title]="doc.nombre_archivo">{{ doc.nombre_archivo }}</h4>
+                    <h4 class="font-bold text-slate-800 text-sm truncate" [title]="doc.nombre_original">{{ doc.nombre_original }}</h4>
                     <p class="text-xs text-slate-500 mt-0.5 font-medium">{{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}</p>
                   </div>
                 </div>
@@ -67,7 +66,7 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
         } @else {
           <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
             <i class="fas fa-folder-open text-4xl text-slate-300 mb-3"></i>
-            <p class="text-slate-500 font-medium text-sm">Tu repositorio está vacío. Sube documentos para respaldar tu ficha.</p>
+            <p class="text-slate-500 font-medium text-sm">Tu repositorio está vacío. Sube tus primeros documentos.</p>
           </div>
         }
       </div>
@@ -81,8 +80,8 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
         <div class="relative w-full max-w-4xl h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
           <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
             <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 truncate pr-4">
-              <i class="fas" [ngClass]="docPreview()?.tipo_mime?.includes('pdf') ? 'fa-file-pdf text-rose-500' : 'fa-image text-blue-500'"></i>
-              {{ docPreview()?.nombre_archivo }}
+              <i class="fas" [ngClass]="docPreview()?.mime_type?.includes('pdf') ? 'fa-file-pdf text-rose-500' : 'fa-image text-blue-500'"></i>
+              {{ docPreview()?.nombre_original }}
             </h3>
             <button (click)="cerrarPreview()" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl hover:text-white hover:bg-slate-700 transition-colors shrink-0 flex items-center justify-center">
               <i class="fas fa-times"></i>
@@ -90,10 +89,11 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
           </div>
 
           <div class="flex-1 bg-slate-50 overflow-hidden flex items-center justify-center relative">
-            @if (docPreview()?.tipo_mime?.includes('pdf')) {
+            @if (docPreview()?.mime_type?.includes('pdf')) {
               <iframe [src]="safePreviewUrl()" class="w-full h-full border-none"></iframe>
             } @else {
-              <img [src]="docPreview()?.url_archivo" class="max-w-full max-h-full object-contain p-4" />
+              <!-- AQUÍ SE USA DIRECTAMENTE RUTA_ARCHIVO PORQUE YA ES LA URL PÚBLICA -->
+              <img [src]="docPreview()?.ruta_archivo" class="max-w-full max-h-full object-contain p-4" />
             }
           </div>
         </div>
@@ -107,49 +107,33 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
 })
 export class EstudianteDocumentosComponent implements OnInit {
   private readonly documentosService = inject(DocumentosService);
-  private readonly fichaService = inject(FichaService);
   private readonly toastService = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
 
   misDocumentos = signal<DocumentoRespaldo[]>([]);
-  fichaIdActiva = signal<string | null>(null);
 
   docPreview = signal<DocumentoRespaldo | null>(null);
   safePreviewUrl = signal<SafeResourceUrl | null>(null);
 
   ngOnInit(): void {
-    this.cargarFichaYDocumentos();
+    // Ya no dependemos de cargar una ficha activa, solo traemos los documentos del usuario
+    this.cargarMisDocumentos();
   }
 
-  cargarFichaYDocumentos(): void {
-    this.fichaService.getMisFichas().subscribe({
-      next: (fichas) => {
-        const activa = fichas.find(f => f.estado_ficha === 'BORRADOR' || f.estado_ficha === 'ENVIADA');
-        if (activa) {
-          this.fichaIdActiva.set(activa.id);
-          this.cargarDocumentos(activa.id);
-        }
-      }
-    });
-  }
-
-  cargarDocumentos(fichaId: string): void {
-    this.documentosService.getDocumentosByFicha(fichaId).subscribe({
+  cargarMisDocumentos(): void {
+    this.documentosService.getMisDocumentos().subscribe({
       next: (docs) => this.misDocumentos.set(docs),
-      error: () => this.toastService.show('Error al cargar documentos.', 'error')
+      error: () => this.toastService.show('Error al cargar tus documentos.', 'error')
     });
   }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      if (!this.fichaIdActiva()) {
-        this.toastService.show('Debes tener una ficha activa para subir documentos.', 'warning');
-        return;
-      }
-
       const file = input.files[0];
-      this.documentosService.subirDocumento(this.fichaIdActiva()!, file).subscribe({
+      
+      // Llamamos directamente al endpoint que no requiere ficha
+      this.documentosService.subirDocumentoLibre(file).subscribe({
         next: (nuevoDoc) => {
           this.misDocumentos.update(docs => [...docs, nuevoDoc]);
           this.toastService.show('Archivo subido correctamente.', 'success');
@@ -157,6 +141,8 @@ export class EstudianteDocumentosComponent implements OnInit {
         error: (err: any) => this.toastService.show(err?.error?.message || 'Error al subir el archivo.', 'error')
       });
     }
+    // Reseteamos el input para que permita subir el mismo archivo otra vez si se borra
+    input.value = '';
   }
 
   eliminarDocumento(id: string): void {
@@ -173,8 +159,9 @@ export class EstudianteDocumentosComponent implements OnInit {
 
   abrirPreview(doc: DocumentoRespaldo): void {
     this.docPreview.set(doc);
-    if (doc.tipo_mime?.includes('pdf')) {
-      this.safePreviewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(doc.url_archivo));
+    if (doc.mime_type?.includes('pdf')) {
+      // Como ruta_archivo ya trae el "https://...", lo pasamos directo al sanitizer
+      this.safePreviewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(doc.ruta_archivo));
     }
   }
 
