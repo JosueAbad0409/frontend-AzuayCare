@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } 
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import Swal from 'sweetalert2'; 
 
 interface MenuItem {
   label: string;
@@ -111,7 +112,25 @@ export class EstudianteLayoutComponent {
   }
 
   logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: 'Tendrás que volver a ingresar tus credenciales para continuar.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#e11d48',
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.authService.logout();
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

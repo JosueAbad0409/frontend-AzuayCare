@@ -77,7 +77,7 @@ export class LoginComponent implements OnInit {
         // Primer ingreso: falta cédula, carrera o ciclo.
         await this.router.navigate(['/completar-perfil']);
       } else if (rol === 'ESTUDIANTE' || rol === 'INVITADO') {
-        await this.router.navigate(['/estudiante/ficha']);
+        await this.router.navigate(['/estudiante/inicio']);
       } else {
         await this.router.navigate(['/admin/dashboard']);
       }
