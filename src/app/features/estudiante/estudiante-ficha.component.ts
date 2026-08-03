@@ -22,6 +22,7 @@ import { PeriodoMatricula } from '../../core/models/periodo.model';
 import { EstudiantePerfilModalComponent } from './components/estudiante-perfil-modal.component';
 import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
 import { forkJoin, of, catchError, debounceTime } from 'rxjs';
+import Swal from 'sweetalert2'; 
 
 function minSelectedCheckboxesValidator(min = 1) {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -771,87 +772,110 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
 guardarYEnviar(esFinal: boolean = true): void {
-  const ficha = this.fichaActiva();
-  if (!ficha) return;
+    const ficha = this.fichaActiva();
+    if (!ficha) return;
 
-  this.enviando.set(true);
+    const ejecutar = () => {
+      this.enviando.set(true);
 
-  const respuestasValores = this.respuestasGroup.getRawValue();
-  const payloadRespuestas: any[] = [];
+      const respuestasValores = this.respuestasGroup.getRawValue();
+      const payloadRespuestas: any[] = [];
 
-  Object.keys(respuestasValores).forEach(preguntaId => {
-    if (this.esPreguntaVisible(preguntaId)) {
-      const val = respuestasValores[preguntaId];
-      if (val === null || val === undefined || val === '') return;
+      Object.keys(respuestasValores).forEach(preguntaId => {
+        if (this.esPreguntaVisible(preguntaId)) {
+          const val = respuestasValores[preguntaId];
+          if (val === null || val === undefined || val === '') return;
 
-      if (Array.isArray(val) && val.length > 0) {
-        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val });
-      } else if (typeof val === 'number') {
-        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val });
-      } else if (typeof val === 'boolean') {
-        payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: val ? 'SI' : 'NO' });
-      } else if (typeof val === 'string' && val.trim() !== '') {
-        const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
-        payloadRespuestas.push({
-          ficha_id: ficha.id,
-          pregunta_id: preguntaId,
-          ...(esUuid ? { opciones_seleccionadas: [val] } : { valor_texto: val })
-        });
-      }
-    }
-  });
-
-  // 👇 CAMBIO: las matrices ahora van ANIDADAS dentro de payloadRespuestas,
-  // no como una petición separada a /respuestas-matriz
-  const matricesValores = this.matricesGroup.getRawValue();
-
-  Object.keys(matricesValores).forEach(preguntaId => {
-    if (this.esPreguntaVisible(preguntaId)) {
-      const filasObj = matricesValores[preguntaId];
-      const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
-
-      if (filasObj && typeof filasObj === 'object') {
-        Object.keys(filasObj).forEach(filaId => {
-          const columnasSeleccionadas = filasObj[filaId];
-          if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-            columnasSeleccionadas.forEach(columnaId => {
-              respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
+          if (Array.isArray(val) && val.length > 0) {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val });
+          } else if (typeof val === 'number') {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val });
+          } else if (typeof val === 'boolean') {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: val ? 'SI' : 'NO' });
+          } else if (typeof val === 'string' && val.trim() !== '') {
+            const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
+            payloadRespuestas.push({
+              ficha_id: ficha.id,
+              pregunta_id: preguntaId,
+              ...(esUuid ? { opciones_seleccionadas: [val] } : { valor_texto: val })
             });
           }
-        });
-      }
-
-      if (respuestasMatriz.length > 0) {
-        payloadRespuestas.push({
-          ficha_id: ficha.id,
-          pregunta_id: preguntaId,
-          respuestas_matriz: respuestasMatriz
-        });
-      }
-    }
-  });
-
-  // 👇 CAMBIO: una sola petición, ya no forkJoin con matricesService
-  this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
-    .pipe(
-      takeUntilDestroyed(this.destroyRef),
-      catchError(() => {
-        this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
-        this.enviando.set(false);
-        return of(null);
-      })
-    )
-    .subscribe(res => {
-      if (res !== null) {
-        if (esFinal) {
-          this.finalizarEnvio();
-        } else {
-          this.enviando.set(false);
-          this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
         }
-      }
-    });
-}
+      });
+
+      const matricesValores = this.matricesGroup.getRawValue();
+
+      Object.keys(matricesValores).forEach(preguntaId => {
+        if (this.esPreguntaVisible(preguntaId)) {
+          const filasObj = matricesValores[preguntaId];
+          const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
+
+          if (filasObj && typeof filasObj === 'object') {
+            Object.keys(filasObj).forEach(filaId => {
+              const columnasSeleccionadas = filasObj[filaId];
+              if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+                columnasSeleccionadas.forEach(columnaId => {
+                  respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
+                });
+              }
+            });
+          }
+
+          if (respuestasMatriz.length > 0) {
+            payloadRespuestas.push({
+              ficha_id: ficha.id,
+              pregunta_id: preguntaId,
+              respuestas_matriz: respuestasMatriz
+            });
+          }
+        }
+      });
+
+      this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          catchError(() => {
+            this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
+            this.enviando.set(false);
+            return of(null);
+          })
+        )
+        .subscribe(res => {
+          if (res !== null) {
+            if (esFinal) {
+              this.finalizarEnvio();
+            } else {
+              this.enviando.set(false);
+              this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
+            }
+          }
+        });
+    };
+
+    if (esFinal) {
+      Swal.fire({
+        title: '¿Seguro que quieres terminar la ficha?',
+        text: 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#e11d48',
+        confirmButtonText: 'Sí, terminar ficha',
+        cancelButtonText: 'Revisar de nuevo',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl',
+          cancelButton: 'rounded-xl'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          ejecutar();
+        }
+      });
+    } else {
+      ejecutar();
+    }
+  }
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
@@ -881,8 +905,26 @@ guardarYEnviar(esFinal: boolean = true): void {
   }
 
   logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: 'Tendrás que volver a ingresar tus credenciales para continuar.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#e11d48',
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.authService.logout();
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   private generateStars(element: HTMLElement, count: number): void {

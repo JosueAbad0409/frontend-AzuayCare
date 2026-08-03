@@ -8,6 +8,7 @@ import { CarreraService } from '../../../core/services/carrera.service';
 import { CiclosService } from '../../../core/services/ciclos.service';
 import { Carrera } from '../../../core/models/carrera.model';
 import { Ciclo } from '../../../core/models/ciclo.model';
+import { cedulaEcuatorianaValidator } from '../../../core/validators/cedula.validator';
 
 
 // Pequeño formulario que aparece justo después de que el estudiante
@@ -48,7 +49,7 @@ export class CompletarPerfilComponent implements OnInit {
   correo = computed(() => this.authService.user()?.email ?? '');
 
   perfilForm: FormGroup = this.fb.group({
-    cedula: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+    cedula: ['', [Validators.required, cedulaEcuatorianaValidator()]],
     carrera_id: ['', Validators.required],
     ciclo_id: [{ value: '', disabled: true }, Validators.required],
   });
