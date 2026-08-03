@@ -892,7 +892,7 @@ guardarYEnviar(esFinal: boolean = true): void {
     const fileList: FileList | null = element.files;
     if (fileList && fileList.length > 0) {
       const file = fileList[0];
-      this.documentosService.subirDocumento(preguntaId, file)
+      this.documentosService.subirDocumentoDeRespuesta(preguntaId, file)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (docRes: any) => {
