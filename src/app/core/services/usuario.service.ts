@@ -35,4 +35,13 @@ export class UsuarioService {
   completarPerfil(dto: CompletarPerfilDto): Observable<Usuario> {
     return this.http.patch<Usuario>(`${this.apiUrl}/perfil/completar`, dto);
   }
+
+  update(id: string, data: any) {
+    return this.http.patch(`${environment.apiUrl}/usuarios/${id}`, data);
+  }
+
+  delete(id: string) {
+    return this.http.delete(`${environment.apiUrl}/usuarios/${id}`);
+  }
+  
 }

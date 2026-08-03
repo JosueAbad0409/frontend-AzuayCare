@@ -21,6 +21,17 @@
           class="search-control"
         />
       </div>
+      
+      <!-- 👇 NUEVO FILTRO DE ESTADO 👇 -->
+      <div class="filter-box flex-1 max-w-[200px]">
+        <select class="search-control w-full cursor-pointer font-semibold" (change)="onEstadoChange($event)" [value]="filtroEstado()">
+          <option value="ACTIVOS">🟢 Solo Activos</option>
+          <option value="INACTIVOS">🔴 Eliminados / Inactivos</option>
+          <option value="TODOS">🟣 Ver Todos</option>
+        </select>
+      </div>
+      <!-- 👆 FIN NUEVO FILTRO 👆 -->
+
       <span class="count-badge">{{ usuariosFiltrados().length }} Usuario(s)</span>
     </div>
   }
@@ -41,12 +52,21 @@
             <th>Cédula</th>
             <th>Rol Asignado</th>
             <th>Carrera Asignada</th>
+            <th style="text-align: right;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @for (u of usuariosFiltrados(); track u.id) {
             <tr>
-              <td><strong>{{ u.primer_nombre }} {{ u.primer_apellido }}</strong></td>
+              <td>
+                <strong>{{ u.primer_nombre }} {{ u.primer_apellido }}</strong>
+                <!-- 👇 Etiqueta visual si está inactivo 👇 -->
+                @if (u.fecha_desactivacion) {
+                  <span class="ml-2 px-2 py-0.5 bg-rose-100 text-rose-600 text-[10px] font-bold uppercase rounded-md border border-rose-200">
+                    Inactivo
+                  </span>
+                }
+              </td>
               <td class="text-muted">{{ u.email_institucional }}</td>
               <td>{{ u.cedula || 'N/A' }}</td>
               <td>
@@ -62,6 +82,14 @@
                 <span class="text-xs font-semibold text-gray-700">
                   {{ getCarreraNombreDeAsignacion(u.id) }}
                 </span>
+              </td>
+              <td style="text-align: right;">
+                <button type="button" class="btn-icon text-blue mr-2" (click)="abrirModalEditar(u)" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="btn-icon text-red" (click)="eliminarUsuario(u.id)" title="Desactivar">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
               </td>
             </tr>
           } @empty {
@@ -153,6 +181,65 @@
           <div class="form-actions">
             <button type="button" class="btn btn-outline" (click)="showModalAsignar.set(false)">Cancelar</button>
             <button type="submit" class="btn btn-purple" [disabled]="asignacionForm.invalid">Guardar Asignación</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL EDITAR USUARIO -->
+  @if (showModalEditar()) {
+    <div class="modal-backdrop">
+      <div class="modal-box animate-pop">
+        <h3>Editar Información del Usuario</h3>
+        <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()">
+          
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="form-group">
+              <label>Primer Nombre *</label>
+              <input type="text" formControlName="primer_nombre" class="form-control" placeholder="Ej. Juan">
+              <!-- Validación -->
+              @if (editarForm.get('primer_nombre')?.invalid && editarForm.get('primer_nombre')?.touched) {
+                <span class="text-xs text-red-500 font-semibold mt-1 block">El nombre es obligatorio.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Primer Apellido *</label>
+              <input type="text" formControlName="primer_apellido" class="form-control" placeholder="Ej. Pérez">
+              <!-- Validación -->
+              @if (editarForm.get('primer_apellido')?.invalid && editarForm.get('primer_apellido')?.touched) {
+                <span class="text-xs text-red-500 font-semibold mt-1 block">El apellido es obligatorio.</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label>Correo Institucional *</label>
+            <input type="email" formControlName="email_institucional" class="form-control">
+            <!-- Validación -->
+            @if (editarForm.get('email_institucional')?.invalid && editarForm.get('email_institucional')?.touched) {
+              <span class="text-xs text-red-500 font-semibold mt-1 block">Ingresa un correo electrónico válido.</span>
+            }
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="form-group">
+              <label>Cédula</label>
+              <input type="text" formControlName="cedula" class="form-control" placeholder="10 dígitos">
+            </div>
+
+            <div class="form-group">
+              <label>Rol Asignado</label>
+              <!-- Cambiamos rol_id por rol_nombre -->
+              <input type="text" formControlName="rol_nombre" class="form-control bg-slate-100 font-bold text-slate-500" readonly title="El rol no se puede editar desde aquí">
+            </div>
+          </div>
+
+          <div class="form-actions mt-4">
+            <button type="button" class="btn btn-outline" (click)="showModalEditar.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-purple" [disabled]="editarForm.invalid">Actualizar Usuario</button>
           </div>
 
         </form>
