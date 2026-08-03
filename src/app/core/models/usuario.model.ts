@@ -9,6 +9,7 @@ export interface Usuario {
   rol_id: string;
   carrera_id?: string | null;
   ciclo_id?: string | null;
+  fecha_desactivacion?: string | null;
   rol?: {
     id: string;
     nombre: string;
