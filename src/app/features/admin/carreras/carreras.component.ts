@@ -1,8 +1,12 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { finalize } from 'rxjs';
+
 import { Carrera } from '../../../core/models/carrera.model';
 import { CarreraService } from '../../../core/services/carrera.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-carreras',
@@ -14,61 +18,82 @@ import { CarreraService } from '../../../core/services/carrera.service';
 })
 export class CarrerasComponent implements OnInit {
   private readonly carreraService = inject(CarreraService);
-  private readonly fb = inject(FormBuilder);
+  private readonly toastService = inject(ToastService);
+  private readonly fb = inject(NonNullableFormBuilder);
   
-  carreras = signal<Carrera[]>([]);
-  isLoading = signal<boolean>(true);
-  searchTerm = signal<string>('');
+  // Estado base
+  readonly carreras = signal<Carrera[]>([]);
+  readonly isLoading = signal<boolean>(true);
+  readonly isSaving = signal<boolean>(false);
   
-  showForm = signal<boolean>(false);
-  isEditing = signal<boolean>(false);
-  currentId = signal<string | null>(null);
+  // Filtros
+  readonly searchTerm = signal<string>('');
+  readonly filtroEstado = signal<string>('TODOS');
   
-  carreraForm: FormGroup = this.fb.group({
+  // Modales/Formulario
+  readonly showForm = signal<boolean>(false);
+  readonly isEditing = signal<boolean>(false);
+  readonly currentId = signal<string | null>(null);
+  
+  // Formulario reactivo fuertemente tipado
+  readonly carreraForm = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     correo_institucional: ['', [Validators.required, Validators.email, Validators.maxLength(150)]]
   });
 
-  carrerasFiltradas = computed(() => {
+  // Filtro Reactivo Multicriterio
+  readonly carrerasFiltradas = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
-    if (!term) return this.carreras();
-    return this.carreras().filter(c => 
-      c.nombre.toLowerCase().includes(term) || 
-      c.correo_institucional.toLowerCase().includes(term)
-    );
+    const estado = this.filtroEstado();
+
+    return this.carreras().filter(c => {
+      const coincideTexto = !term || 
+        c.nombre.toLowerCase().includes(term) || 
+        c.correo_institucional.toLowerCase().includes(term);
+
+      let coincideEstado = true;
+      if (estado === 'ACTIVA') coincideEstado = !c.fecha_desactivacion;
+      else if (estado === 'INACTIVA') coincideEstado = !!c.fecha_desactivacion;
+
+      return coincideTexto && coincideEstado;
+    });
   });
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.cargarCarreras();
   }
 
-  onSearchChange(event: Event) {
+  onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchTerm.set(value);
   }
 
-  cargarCarreras() {
-    this.isLoading.set(true);
-    this.carreraService.getCarreras().subscribe({
-      next: (data) => {
-        this.carreras.set(data);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error al cargar carreras:', err);
-        this.isLoading.set(false);
-      }
-    });
+  onEstadoChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filtroEstado.set(value);
   }
 
-  abrirNuevoFormulario() {
+  cargarCarreras(): void {
+    this.isLoading.set(true);
+    this.carreraService.getCarreras()
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (data) => this.carreras.set(data || []),
+        error: (err: HttpErrorResponse) => {
+          console.error('Error al cargar carreras:', err);
+          this.toastService.show('Error al obtener la lista de carreras.', 'error');
+        }
+      });
+  }
+
+  abrirNuevoFormulario(): void {
     this.carreraForm.reset();
     this.isEditing.set(false);
     this.currentId.set(null);
     this.showForm.set(true);
   }
 
-  abrirEditarFormulario(carrera: Carrera) {
+  abrirEditarFormulario(carrera: Carrera): void {
     this.isEditing.set(true);
     this.currentId.set(carrera.id);
     this.carreraForm.patchValue({
@@ -78,44 +103,62 @@ export class CarrerasComponent implements OnInit {
     this.showForm.set(true);
   }
 
-  cancelarFormulario() {
+  cancelarFormulario(): void {
+    if (this.isSaving()) return;
     this.showForm.set(false);
     this.carreraForm.reset();
   }
 
-  guardarCarrera() {
+  guardarCarrera(): void {
     if (this.carreraForm.invalid) {
       this.carreraForm.markAllAsTouched();
       return;
     }
 
-    const formData = this.carreraForm.value;
+    this.isSaving.set(true);
+    const formData = this.carreraForm.getRawValue();
+    const id = this.currentId();
 
-    if (this.isEditing() && this.currentId()) {
-      this.carreraService.updateCarrera(this.currentId()!, formData).subscribe({
+    const peticion$ = (this.isEditing() && id)
+      ? this.carreraService.updateCarrera(id, formData)
+      : this.carreraService.createCarrera(formData);
+
+    peticion$
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
         next: () => {
-          this.cargarCarreras(); 
+          this.toastService.show(
+            this.isEditing() ? 'Carrera actualizada correctamente.' : 'Carrera registrada correctamente.',
+            'success'
+          );
+          this.cargarCarreras();
           this.cancelarFormulario();
         },
-        error: (err) => console.error('Error al actualizar carrera:', err)
+        error: (err: HttpErrorResponse) => {
+          console.error('Error al guardar carrera:', err);
+          this.toastService.show(this.extraerMensajeError(err, 'Error al procesar la solicitud.'), 'error');
+        }
       });
-    } else {
-      this.carreraService.createCarrera(formData).subscribe({
+  }
+
+  eliminarCarrera(id: string): void {
+    if (confirm('¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.')) {
+      this.carreraService.deleteCarrera(id).subscribe({
         next: () => {
-          this.cargarCarreras(); 
-          this.cancelarFormulario();
+          this.toastService.show('Carrera eliminada con éxito.', 'info');
+          this.cargarCarreras();
         },
-        error: (err) => console.error('Error al crear carrera:', err)
+        error: (err: HttpErrorResponse) => {
+          console.error('Error al eliminar carrera:', err);
+          this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
+        }
       });
     }
   }
 
-  eliminarCarrera(id: string) {
-    if (confirm('¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.')) {
-      this.carreraService.deleteCarrera(id).subscribe({
-        next: () => this.cargarCarreras(),
-        error: (err) => console.error('Error al eliminar carrera:', err)
-      });
-    }
+  private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {
+    const msg = err?.error?.message;
+    if (!msg) return fallback;
+    return Array.isArray(msg) ? msg.join(', ') : msg;
   }
 }
