@@ -1,5 +1,5 @@
 <div class="carreras-card animate-fade-in">
-  
+  <!-- CABECERA DE SECCIÓN -->
   <div class="header-section">
     <div>
       <h3 class="title">Gestión de Carreras</h3>
@@ -7,12 +7,13 @@
     </div>
     
     @if (!showForm()) {
-      <button class="btn btn-purple" (click)="abrirNuevoFormulario()">
+      <button type="button" class="btn btn-purple" (click)="abrirNuevoFormulario()">
         <i class="fas fa-plus"></i> Nueva Carrera
       </button>
     }
   </div>
 
+  <!-- FORMULARIO EXPANDIBLE CREAR/EDITAR -->
   @if (showForm()) {
     <div class="form-card animate-slide-down">
       <div class="form-header">
@@ -23,32 +24,55 @@
       <form [formGroup]="carreraForm" (ngSubmit)="guardarCarrera()">
         <div class="form-grid">
           <div class="form-group">
-            <label>Nombre de la Carrera</label>
-            <input type="text" formControlName="nombre" placeholder="Ej. Desarrollo de Software" class="form-control">
-            @if (carreraForm.get('nombre')?.touched && carreraForm.get('nombre')?.invalid) {
-              <span class="error-msg">El nombre es obligatorio.</span>
+            <label for="carrera-nombre">Nombre de la Carrera *</label>
+            <input 
+              id="carrera-nombre"
+              type="text" 
+              formControlName="nombre" 
+              placeholder="Ej. Desarrollo de Software" 
+              class="form-control"
+              [class.is-invalid]="carreraForm.controls.nombre.touched && carreraForm.controls.nombre.invalid"
+            >
+            @if (carreraForm.controls.nombre.touched && carreraForm.controls.nombre.hasError('required')) {
+              <small class="error-msg">El nombre es obligatorio.</small>
             }
           </div>
 
           <div class="form-group">
-            <label>Correo Institucional</label>
-            <input type="email" formControlName="correo_institucional" placeholder="ejemplo@tecazuay.edu.ec" class="form-control">
-            @if (carreraForm.get('correo_institucional')?.touched && carreraForm.get('correo_institucional')?.invalid) {
-              <span class="error-msg">Ingresa un correo institucional válido.</span>
+            <label for="carrera-correo">Correo Institucional *</label>
+            <input 
+              id="carrera-correo"
+              type="email" 
+              formControlName="correo_institucional" 
+              placeholder="ejemplo@tecazuay.edu.ec" 
+              class="form-control"
+              [class.is-invalid]="carreraForm.controls.correo_institucional.touched && carreraForm.controls.correo_institucional.invalid"
+            >
+            @if (carreraForm.controls.correo_institucional.touched) {
+              @if (carreraForm.controls.correo_institucional.hasError('required')) {
+                <small class="error-msg">El correo es obligatorio.</small>
+              } @else if (carreraForm.controls.correo_institucional.hasError('email')) {
+                <small class="error-msg">Formato de correo inválido.</small>
+              }
             }
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-outline" (click)="cancelarFormulario()">Cancelar</button>
-          <button type="submit" class="btn btn-purple" [disabled]="carreraForm.invalid">
-            <i class="fas fa-save"></i> Guardar Cambios
+          <button type="button" class="btn btn-outline" (click)="cancelarFormulario()" [disabled]="isSaving()">Cancelar</button>
+          <button type="submit" class="btn btn-purple" [disabled]="carreraForm.invalid || isSaving()">
+            @if (isSaving()) {
+              <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+            } @else {
+              <i class="fas fa-save"></i> {{ isEditing() ? 'Actualizar' : 'Guardar Carrera' }}
+            }
           </button>
         </div>
       </form>
     </div>
   }
 
+  <!-- BARRA DE BÚSQUEDA Y CONTADOR DE RESULTADOS -->
   @if (!isLoading()) {
     <div class="search-bar-wrapper">
       <div class="search-input-box">
@@ -61,31 +85,42 @@
           class="search-control"
         />
       </div>
-      <span class="count-badge">{{ carrerasFiltradas().length }} Carrera(s)</span>
+      <span class="count-badge">Total: {{ carrerasFiltradas().length }} Carrera(s)</span>
     </div>
   }
 
+  <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
     <div class="loading-state">
       <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
       <p>Cargando lista de carreras...</p>
     </div>
   } @else {
+    <!-- TABLA CON FILTRO DE ESTADO EN EL ENCABEZADO -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Nombre de la Carrera</th>
-            <th>Correo Institucional</th>
-            <th>Estado</th>
-            <th style="text-align: right;">Acciones</th>
+            <th class="col-nombre">Nombre de la Carrera</th>
+            <th class="col-correo">Correo Institucional</th>
+
+            <!-- FILTRO DESPLEGABLE EN EL TH POR ESTADO -->
+            <th class="col-estado">
+              <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
+                <option value="TODOS">ESTADO (TODOS)</option>
+                <option value="ACTIVA">ACTIVAS</option>
+                <option value="INACTIVA">INACTIVAS</option>
+              </select>
+            </th>
+
+            <th class="col-acc">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @for (carrera of carrerasFiltradas(); track carrera.id) {
             <tr>
               <td><strong>{{ carrera.nombre }}</strong></td>
-              <td class="text-muted">{{ carrera.correo_institucional }}</td>
+              <td style="color: var(--text-muted);">{{ carrera.correo_institucional }}</td>
               <td>
                 <span class="badge" [ngClass]="{'badge-success': !carrera.fecha_desactivacion, 'badge-danger': carrera.fecha_desactivacion}">
                   <i class="fas" [ngClass]="carrera.fecha_desactivacion ? 'fa-times-circle' : 'fa-check-circle'"></i>
@@ -93,19 +128,21 @@
                 </span>
               </td>
               <td style="text-align: right;">
-                <button class="btn-icon text-blue" (click)="abrirEditarFormulario(carrera)" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-icon text-red" (click)="eliminarCarrera(carrera.id)" title="Eliminar">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
+                <div class="actions-wrapper">
+                  <button type="button" class="btn-icon text-blue" (click)="abrirEditarFormulario(carrera)" title="Editar Carrera">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="btn-icon text-red" (click)="eliminarCarrera(carrera.id)" title="Eliminar Carrera">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           } @empty {
             <tr>
               <td colspan="4" class="empty-state">
                 <i class="fas fa-folder-open empty-icon"></i>
-                <p>No se encontraron carreras que coincidan con la búsqueda.</p>
+                <p style="font-weight: 600;">No se encontraron carreras que coincidan con la búsqueda o filtro.</p>
               </td>
             </tr>
           }

@@ -1,88 +1,150 @@
 <div class="carreras-card animate-fade-in">
+  <!-- CABECERA -->
   <div class="header-section">
     <div>
       <h3 class="title">Gestión de Formularios / Fichas</h3>
       <p class="subtitle">Crea, edita, clona y gestiona el versionamiento de las fichas socioeconómicas.</p>
     </div>
-    
-    <button class="btn btn-purple" (click)="abrirModalCrear()">
+
+    <button type="button" class="btn btn-purple" (click)="abrirModalCrear()">
       <i class="fas fa-plus"></i> Crear Nueva Ficha
     </button>
   </div>
 
+  <!-- BARRA DE BÚSQUEDA Y CONTADOR -->
+  @if (!isLoading()) {
+    <div class="search-bar-wrapper">
+      <div class="search-input-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          placeholder="Buscar por título o descripción..." 
+          [value]="searchTerm()"
+          (input)="onSearchChange($event)"
+          class="search-control"
+        />
+      </div>
+
+      <span class="count-badge">Total: {{ formulariosFiltrados().length }} Ficha(s)</span>
+    </div>
+  }
+
+  <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
     <div class="loading-state">
       <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
-      <p>Cargando formularios desde la base de datos...</p>
+      <p>Cargando formularios...</p>
     </div>
   } @else {
+    <!-- TABLA COMPLETA CON FILTROS INTEGRADOS EN ENCABEZADOS -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Título de la Ficha</th>
-            <th>Tipo</th>
-            <th>Versión</th>
-            <th>Estado</th>
-            <th style="text-align: right;">Acciones</th>
+            <th class="col-titulo">Título de la Ficha</th>
+
+            <!-- FILTRO DESPLEGABLE POR TIPO -->
+            <th class="col-tipo">
+              <select [value]="filtroTipo()" (change)="onTipoChange($event)" class="table-filter-select" title="Filtrar por tipo">
+                <option value="TODOS">TIPO (TODOS)</option>
+                @for (t of tiposFormulario(); track t.id) {
+                  <option [value]="t.id">{{ t.nombre | uppercase }}</option>
+                }
+              </select>
+            </th>
+
+            <!-- FILTRO DESPLEGABLE POR VERSIÓN -->
+            <th class="col-vers">
+              <select [value]="filtroVersion()" (change)="onVersionChange($event)" class="table-filter-select" title="Filtrar por versión">
+                <option value="TODOS">VERSIÓN (TODAS)</option>
+                @for (v of versionesDisponibles(); track v) {
+                  <option [value]="v.toString()">VERSIÓN {{ v }}</option>
+                }
+              </select>
+            </th>
+
+            <!-- FILTRO DESPLEGABLE POR ESTADO -->
+            <th class="col-estado">
+              <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
+                <option value="TODOS">ESTADO (TODOS)</option>
+                <option value="PUBLICADO">PUBLICADAS</option>
+                <option value="BORRADOR">BORRADORES</option>
+                <option value="BLOQUEADO">BLOQUEADAS</option>
+              </select>
+            </th>
+
+            <th class="col-acc">Acciones</th>
           </tr>
         </thead>
+
         <tbody>
-          @for (form of formularios(); track form.id) {
+          @for (form of formulariosFiltrados(); track form.id) {
             <tr style="cursor: pointer;" [routerLink]="['/admin/formularios/builder', form.id]">
               <td>
-                <strong>{{ form.titulo }}</strong>
-                <br>
-                <small class="text-muted">{{ form.descripcion || 'Sin descripción' }}</small>
+                <div class="cell-info">
+                  <span class="title-text">{{ form.titulo }}</span>
+                  <span class="sub-text">{{ form.descripcion || 'Sin descripción' }}</span>
+                </div>
               </td>
               <td><span class="badge badge-purple">{{ getNombreTipoFormulario(form) }}</span></td>
               <td><span class="badge badge-blue">v{{ form.version }}</span></td>
               <td>
                 @if (form.bloqueado) {
-                  <span class="badge badge-gray"><i class="fas fa-lock"></i> BLOQUEADO (versión anterior)</span>
+                  <span class="badge badge-gray"><i class="fas fa-lock"></i> BLOQUEADO</span>
                 } @else {
                   <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
                     {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
                   </span>
                 }
               </td>
+
+              <!-- ACCIONES COMPLETA -->
               <td style="text-align: right;" (click)="$event.stopPropagation()">
-                @if (!form.bloqueado) {
-                  <button class="btn-icon" [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
-                          (click)="togglePublicacion(form, $event)"
-                          [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
-                          [disabled]="isTogglingState()">
-                    <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
-                  </button>
-                }
+                <div class="actions-wrapper">
+                  @if (!form.bloqueado) {
+                    <button 
+                      type="button"
+                      class="btn-icon" 
+                      [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
+                      (click)="togglePublicacion(form, $event)"
+                      [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
+                      [disabled]="isTogglingState()"
+                    >
+                      <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                  }
 
-                <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue"
-                   [title]="form.bloqueado ? 'Ver preguntas (solo lectura)' : 'Diseñar Preguntas'">
-                  <i class="fas" [ngClass]="form.bloqueado ? 'fa-eye' : 'fa-tools'"></i>
-                </a>
+                  <a 
+                    [routerLink]="['/admin/formularios/builder', form.id]" 
+                    class="btn-icon text-blue"
+                    [title]="form.bloqueado ? 'Ver preguntas (solo lectura)' : 'Diseñar Preguntas'"
+                  >
+                    <i class="fas" [ngClass]="form.bloqueado ? 'fa-eye' : 'fa-tools'"></i>
+                  </a>
 
-                @if (!form.bloqueado) {
-                  <button class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
-                    <i class="fas fa-edit"></i>
-                  </button>
+                  @if (!form.bloqueado) {
+                    <button type="button" class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
+                      <i class="fas fa-edit"></i>
+                    </button>
 
-                  <button class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
-                    <i class="fas fa-clone"></i>
-                  </button>
-                }
+                    <button type="button" class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
+                      <i class="fas fa-clone"></i>
+                    </button>
+                  }
 
-                @if (!form.publicado && !form.bloqueado) {
-                  <button class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar Borrador">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                }
+                  @if (!form.publicado && !form.bloqueado) {
+                    <button type="button" class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar Borrador">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           } @empty {
             <tr>
               <td colspan="5" class="empty-state">
-                <i class="fas fa-file-alt empty-icon"></i>
-                <p>No hay formularios creados en la base de datos. Haz clic en 'Crear Nueva Ficha'.</p>
+                <i class="fas fa-folder-open empty-icon"></i>
+                <p style="font-weight: 600;">No hay formularios que coincidan con los criterios seleccionados.</p>
               </td>
             </tr>
           }
@@ -93,18 +155,21 @@
 
   <!-- MODAL CREAR / EDITAR -->
   @if (showModal()) {
-    <div class="modal-backdrop" (click)="cerrarModales()">
+    <div class="modal-backdrop" (click)="cerrarModales()" (keydown.escape)="cerrarModales()" tabindex="0">
       <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3>{{ isEditMode() ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica' }}</h3>
+        <h3 class="modal-title">
+          {{ isEditMode() ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica' }}
+        </h3>
+
         <form [formGroup]="formGroup" (ngSubmit)="guardarFormulario()">
-          <div class="form-group mb-3">
-            <label>Título de la Ficha *</label>
-            <input type="text" formControlName="titulo" class="form-control" placeholder="Ej. Ficha Socioeconómica ISTA 2026">
+          <div class="form-group-modal">
+            <label for="modal-titulo" class="form-label-modal">Título de la Ficha *</label>
+            <input id="modal-titulo" type="text" formControlName="titulo" class="form-control" placeholder="Ej. Ficha Socioeconómica ISTA 2026">
           </div>
 
-          <div class="form-group mb-3">
-            <label>Periodo Académico *</label>
-            <select formControlName="periodo_id" class="form-control">
+          <div class="form-group-modal">
+            <label for="modal-periodo" class="form-label-modal">Periodo Académico *</label>
+            <select id="modal-periodo" formControlName="periodo_id" class="form-control">
               <option value="">-- Selecciona un Periodo --</option>
               @for (p of periodos(); track p.id) {
                 <option [value]="p.id">{{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}</option>
@@ -112,28 +177,22 @@
             </select>
           </div>
 
-          <div class="form-group mb-3">
-            <label>Tipo de Formulario *</label>
-            <select formControlName="tipo_formulario_id" class="form-control">
+          <div class="form-group-modal">
+            <label for="modal-tipo" class="form-label-modal">Tipo de Formulario *</label>
+            <select id="modal-tipo" formControlName="tipo_formulario_id" class="form-control">
               <option value="">-- Selecciona un Tipo de Formulario --</option>
               @for (t of tiposFormulario(); track t.id) {
                 <option [value]="t.id">{{ t.nombre }}</option>
               }
             </select>
-            @if (tiposFormulario().length === 0) {
-              <small class="text-muted">
-                No hay tipos de formulario registrados.
-                <a routerLink="/admin/tipos-formulario">Crea uno primero</a>.
-              </small>
-            }
           </div>
 
-          <div class="form-group mb-3">
-            <label>Descripción / Objetivo</label>
-            <textarea formControlName="descripcion" class="form-control" rows="2" placeholder="Instrucciones generales para el estudiante..."></textarea>
+          <div class="form-group-modal" style="margin-bottom: 1.5rem;">
+            <label for="modal-desc" class="form-label-modal">Descripción / Objetivo</label>
+            <textarea id="modal-desc" formControlName="descripcion" class="form-control" rows="2" placeholder="Instrucciones generales..."></textarea>
           </div>
 
-          <div class="form-actions">
+          <div class="modal-footer">
             <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isSaving()">Cancelar</button>
             <button type="submit" class="btn btn-purple" [disabled]="formGroup.invalid || isSaving()">
               @if (isSaving()) {
@@ -148,19 +207,21 @@
     </div>
   }
 
-  <!-- MODAL CLONAR / CREAR NUEVA VERSIÓN -->
+  <!-- MODAL CLONAR -->
   @if (showCloneModal()) {
-    <div class="modal-backdrop" (click)="cerrarModales()">
+    <div class="modal-backdrop" (click)="cerrarModales()" (keydown.escape)="cerrarModales()" tabindex="0">
       <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3>Clonar Formulario / Crear Nueva Versión</h3>
-        <p class="text-xs text-gray-600 mb-4">
-          Se duplicará la estructura completa de secciones, preguntas y opciones. La copia se guardará en estado <strong>BORRADOR</strong> con una versión incrementada.
+        <h3 class="modal-title" style="margin-bottom: 0.5rem;">
+          Clonar Formulario / Crear Nueva Versión
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Se duplicará la estructura completa en estado <strong>BORRADOR</strong>.
         </p>
 
         <form [formGroup]="cloneFormGroup" (ngSubmit)="confirmarClonacion()">
-          <div class="form-group mb-3">
-            <label>Periodo Académico Destino *</label>
-            <select formControlName="periodo_destino_id" class="form-control">
+          <div class="form-group-modal" style="margin-bottom: 1.5rem;">
+            <label for="modal-periodo-destino" class="form-label-modal">Periodo Académico Destino *</label>
+            <select id="modal-periodo-destino" formControlName="periodo_destino_id" class="form-control">
               <option value="">-- Selecciona el Periodo --</option>
               @for (p of periodos(); track p.id) {
                 <option [value]="p.id">{{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}</option>
@@ -168,7 +229,7 @@
             </select>
           </div>
 
-          <div class="form-actions">
+          <div class="modal-footer">
             <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isCloning()">Cancelar</button>
             <button type="submit" class="btn btn-purple" [disabled]="cloneFormGroup.invalid || isCloning()">
               @if (isCloning()) {

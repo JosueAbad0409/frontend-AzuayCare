@@ -1,17 +1,17 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
+import { forkJoin, finalize } from 'rxjs';
 
 import { FormularioService } from '../../../core/services/formulario.service';
 import { PeriodoService } from '../../../core/services/periodo.service';
-import { TipoFormularioService } from '../../../core/services/tipo-formulario.service'; // NUEVO IMPORT
+import { TipoFormularioService } from '../../../core/services/tipo-formulario.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Formulario } from '../../../core/models/formulario.model';
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
-import { TipoFormulario } from '../../../core/models/tipo-formulario.model'; // NUEVO IMPORT
+import { TipoFormulario } from '../../../core/models/tipo-formulario.model';
 
 @Component({
   selector: 'app-formularios',
@@ -21,39 +21,75 @@ import { TipoFormulario } from '../../../core/models/tipo-formulario.model'; // 
   styleUrls: ['./formularios.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FormulariosComponent implements OnInit {
+export class FormulariosComponent {
   private readonly formularioService = inject(FormularioService);
   private readonly periodoService = inject(PeriodoService);
-  private readonly tipoFormularioService = inject(TipoFormularioService); // NUEVA INYECCIÓN
+  private readonly tipoFormularioService = inject(TipoFormularioService);
   private readonly toastService = inject(ToastService);
-  private readonly fb = inject(FormBuilder);
+  private readonly fb = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
 
-  // Signals de estado general
-  formularios = signal<Formulario[]>([]);
-  periodos = signal<PeriodoMatricula[]>([]);
-  tiposFormulario = signal<TipoFormulario[]>([]); // NUEVA SIGNAL
-  isLoading = signal<boolean>(true);
-  isSaving = signal<boolean>(false);
-  isCloning = signal<boolean>(false);
-  isTogglingState = signal<boolean>(false); // Para bloquear múltiples clics al publicar/despublicar
+  // Estado Base
+  readonly formularios = signal<Formulario[]>([]);
+  readonly periodos = signal<PeriodoMatricula[]>([]);
+  readonly tiposFormulario = signal<TipoFormulario[]>([]);
+  readonly isLoading = signal<boolean>(true);
+  readonly isSaving = signal<boolean>(false);
+  readonly isCloning = signal<boolean>(false);
+  readonly isTogglingState = signal<boolean>(false);
 
-  // Signals de modales
-  showModal = signal<boolean>(false);
-  showCloneModal = signal<boolean>(false);
-  isEditMode = signal<boolean>(false);
+  // Filtros
+  readonly searchTerm = signal<string>('');
+  readonly filtroTipo = signal<string>('TODOS');
+  readonly filtroVersion = signal<string>('TODOS');
+  readonly filtroEstado = signal<string>('TODOS');
 
-  selectedFormularioId = signal<string | null>(null);
+  // Modales
+  readonly showModal = signal<boolean>(false);
+  readonly showCloneModal = signal<boolean>(false);
+  readonly isEditMode = signal<boolean>(false);
+  readonly selectedFormularioId = signal<string | null>(null);
 
-  formGroup: FormGroup = this.fb.group({
+  // Forms
+  readonly formGroup = this.fb.group({
     titulo: ['', [Validators.required, Validators.maxLength(255)]],
     descripcion: [''],
     periodo_id: ['', Validators.required],
-    tipo_formulario_id: ['', Validators.required] // DESPUÉS
+    tipo_formulario_id: ['', Validators.required]
   });
 
-  cloneFormGroup: FormGroup = this.fb.group({
+  readonly cloneFormGroup = this.fb.group({
     periodo_destino_id: ['', Validators.required]
+  });
+
+  // Lista de versiones ordenada
+  readonly versionesDisponibles = computed(() => {
+    const versiones = this.formularios().map(f => f.version);
+    return Array.from(new Set(versiones)).sort((a, b) => b - a);
+  });
+
+  // Filtro Reactivo Computado
+  readonly formulariosFiltrados = computed(() => {
+    const term = this.searchTerm().toLowerCase().trim();
+    const tipo = this.filtroTipo();
+    const version = this.filtroVersion();
+    const estado = this.filtroEstado();
+
+    return this.formularios().filter(form => {
+      const coincideTexto = !term || 
+        form.titulo.toLowerCase().includes(term) || 
+        (form.descripcion && form.descripcion.toLowerCase().includes(term));
+
+      const coincideTipo = tipo === 'TODOS' || form.tipo_formulario_id === tipo;
+      const coincideVersion = version === 'TODOS' || form.version.toString() === version;
+
+      let coincideEstado = true;
+      if (estado === 'BLOQUEADO') coincideEstado = !!form.bloqueado;
+      else if (estado === 'PUBLICADO') coincideEstado = !form.bloqueado && !!form.publicado;
+      else if (estado === 'BORRADOR') coincideEstado = !form.bloqueado && !form.publicado;
+
+      return coincideTexto && coincideTipo && coincideVersion && coincideEstado;
+    });
   });
 
   @HostListener('document:keydown.escape')
@@ -61,8 +97,24 @@ export class FormulariosComponent implements OnInit {
     this.cerrarModales();
   }
 
-  ngOnInit(): void {
+  constructor() {
     this.cargarDatos();
+  }
+
+  onSearchChange(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
+  }
+
+  onTipoChange(event: Event): void {
+    this.filtroTipo.set((event.target as HTMLSelectElement).value);
+  }
+
+  onVersionChange(event: Event): void {
+    this.filtroVersion.set((event.target as HTMLSelectElement).value);
+  }
+
+  onEstadoChange(event: Event): void {
+    this.filtroEstado.set((event.target as HTMLSelectElement).value);
   }
 
   cargarDatos(): void {
@@ -71,18 +123,18 @@ export class FormulariosComponent implements OnInit {
     forkJoin({
       periodos: this.periodoService.getPeriodos(),
       formularios: this.formularioService.getFormularios(),
-      tiposFormulario: this.tipoFormularioService.getTiposFormulario() // NUEVO
-    }).subscribe({
+      tiposFormulario: this.tipoFormularioService.getTiposFormulario()
+    })
+    .pipe(finalize(() => this.isLoading.set(false)))
+    .subscribe({
       next: ({ periodos, formularios, tiposFormulario }) => {
         this.periodos.set(periodos || []);
         this.formularios.set(formularios || []);
-        this.tiposFormulario.set(tiposFormulario || []); // NUEVO
-        this.isLoading.set(false);
+        this.tiposFormulario.set(tiposFormulario || []);
       },
       error: (err: HttpErrorResponse) => {
-        console.error('Error al cargar datos del módulo de formularios:', err);
+        console.error('Error al cargar datos:', err);
         this.toastService.show(this.extraerMensajeError(err, 'Error al cargar los datos iniciales.'), 'error');
-        this.isLoading.set(false);
       }
     });
   }
@@ -98,15 +150,15 @@ export class FormulariosComponent implements OnInit {
       tipo_formulario_id: '',
       periodo_id: periodoActivo ? periodoActivo.id : ''
     });
-    this.formGroup.get('periodo_id')?.enable();
-    this.formGroup.get('tipo_formulario_id')?.enable(); // Se puede elegir libremente al crear
+    this.formGroup.controls.periodo_id.enable();
+    this.formGroup.controls.tipo_formulario_id.enable();
     this.showModal.set(true);
   }
 
   abrirModalEditar(form: Formulario, e: Event): void {
     e.stopPropagation();
     if (form.bloqueado) {
-      this.toastService.show('Este formulario es una versión anterior bloqueada y solo puede visualizarse.', 'info');
+      this.toastService.show('Formulario en versión bloqueada (solo lectura).', 'info');
       return;
     }
     this.isEditMode.set(true);
@@ -119,7 +171,7 @@ export class FormulariosComponent implements OnInit {
       tipo_formulario_id: form.tipo_formulario_id
     });
 
-    this.formGroup.get('tipo_formulario_id')?.disable(); // Bloqueado en edición, coincide con la regla del backend
+    this.formGroup.controls.tipo_formulario_id.disable();
     this.showModal.set(true);
   }
 
@@ -127,13 +179,13 @@ export class FormulariosComponent implements OnInit {
     e.stopPropagation();
     const form = this.formularios().find(f => f.id === formId);
     if (form?.bloqueado) {
-      this.toastService.show('No se puede clonar una versión anterior bloqueada.', 'error');
+      this.toastService.show('No se puede clonar una versión bloqueada.', 'error');
       return;
     }
 
     this.selectedFormularioId.set(formId);
-
     const periodoActivo = this.periodos().find(p => p.activo);
+
     this.cloneFormGroup.reset({
       periodo_destino_id: periodoActivo ? periodoActivo.id : ''
     });
@@ -156,81 +208,73 @@ export class FormulariosComponent implements OnInit {
 
     this.isSaving.set(true);
     const formData = this.formGroup.getRawValue();
+    const id = this.selectedFormularioId();
 
-    if (this.isEditMode() && this.selectedFormularioId()) {
-      this.formularioService.updateFormulario(this.selectedFormularioId()!, {
+    if (this.isEditMode() && id) {
+      this.formularioService.updateFormulario(id, {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         tipo_formulario_id: formData.tipo_formulario_id,
         periodo_id: formData.periodo_id
-      }).subscribe({
+      })
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
         next: () => {
           this.toastService.show('Formulario actualizado con éxito.', 'success');
-          this.isSaving.set(false);
           this.cerrarModales();
           this.cargarDatos();
         },
         error: (err: HttpErrorResponse) => {
-          console.error('Error al actualizar formulario:', err);
           this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el formulario.'), 'error');
-          this.isSaving.set(false);
         }
       });
     } else {
-      this.formularioService.createFormulario(formData).subscribe({
+      this.formularioService.createFormulario(formData)
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
         next: (nuevoForm: Formulario) => {
-          this.toastService.show('Formulario en borrador creado con éxito.', 'success');
-          this.isSaving.set(false);
+          this.toastService.show('Formulario borrador creado con éxito.', 'success');
           this.cerrarModales();
           this.router.navigate(['/admin/formularios/builder', nuevoForm.id]);
         },
         error: (err: HttpErrorResponse) => {
-          console.error('Error al crear formulario:', err);
           this.toastService.show(this.extraerMensajeError(err, 'Error al crear el formulario.'), 'error');
-          this.isSaving.set(false);
         }
       });
     }
   }
 
   confirmarClonacion(): void {
-    if (this.cloneFormGroup.invalid || !this.selectedFormularioId()) {
+    const id = this.selectedFormularioId();
+    if (this.cloneFormGroup.invalid || !id) {
       this.cloneFormGroup.markAllAsTouched();
       return;
     }
 
     this.isCloning.set(true);
-    const periodoDestinoId = this.cloneFormGroup.value.periodo_destino_id;
+    const periodoDestinoId = this.cloneFormGroup.getRawValue().periodo_destino_id;
 
-    this.formularioService.clonarFormulario(this.selectedFormularioId()!, periodoDestinoId).subscribe({
-      next: (clonado: Formulario) => {
-        const versionTexto = clonado?.version ? ` v${clonado.version}` : '';
-        this.toastService.show(`Formulario clonado con éxito a la versión${versionTexto}.`, 'success');
-        this.isCloning.set(false);
-        this.cerrarModales();
-        this.cargarDatos();
-      },
-      error: (err: HttpErrorResponse) => {
-        console.error('Error al clonar formulario:', err);
-        this.toastService.show(this.extraerMensajeError(err, 'Error al clonar el formulario.'), 'error');
-        this.isCloning.set(false);
-      }
-    });
+    this.formularioService.clonarFormulario(id, periodoDestinoId)
+      .pipe(finalize(() => this.isCloning.set(false)))
+      .subscribe({
+        next: (clonado: Formulario) => {
+          this.toastService.show(`Formulario clonado a versión v${clonado.version}.`, 'success');
+          this.cerrarModales();
+          this.cargarDatos();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.toastService.show(this.extraerMensajeError(err, 'Error al clonar el formulario.'), 'error');
+        }
+      });
   }
 
-  // Método Toggling de Publicación
   togglePublicacion(form: Formulario, e: Event): void {
     e.stopPropagation();
-    if (form.bloqueado) {
-      this.toastService.show('No se puede cambiar el estado de una versión bloqueada.', 'error');
-      return;
-    }
-    if (this.isTogglingState()) return;
+    if (form.bloqueado || this.isTogglingState()) return;
 
-    const accion = form.publicado ? 'despublicar' : 'publicar';
     const advertencia = form.publicado 
-      ? '¿Estás seguro de que deseas despublicar esta ficha? Volverá a estado borrador.'
-      : '¿Estás seguro de que deseas publicar esta ficha? Los estudiantes podrán empezar a llenarla.';
+      ? '¿Estás seguro de despublicar esta ficha? Volverá a estado borrador.'
+      : '¿Estás seguro de publicar esta ficha? Los estudiantes podrán empezar a completarla.';
 
     if (confirm(advertencia)) {
       this.isTogglingState.set(true);
@@ -238,39 +282,31 @@ export class FormulariosComponent implements OnInit {
         ? this.formularioService.despublicarFormulario(form.id)
         : this.formularioService.publicarFormulario(form.id);
 
-      peticion$.subscribe({
-        next: () => {
-          this.toastService.show(`Ficha ${form.publicado ? 'despublicada' : 'publicada'} con éxito.`, 'success');
-          this.isTogglingState.set(false);
-          this.cargarDatos();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error(`Error al ${accion} formulario:`, err);
-          this.toastService.show(this.extraerMensajeError(err, `Error al intentar ${accion} la ficha.`), 'error');
-          this.isTogglingState.set(false);
-        }
-      });
+      peticion$
+        .pipe(finalize(() => this.isTogglingState.set(false)))
+        .subscribe({
+          next: () => {
+            this.toastService.show(`Ficha ${form.publicado ? 'despublicada' : 'publicada'} con éxito.`, 'success');
+            this.cargarDatos();
+          },
+          error: (err: HttpErrorResponse) => {
+            this.toastService.show(this.extraerMensajeError(err, 'Error al cambiar estado de publicación.'), 'error');
+          }
+        });
     }
   }
 
   eliminarFormulario(id: string, e: Event): void {
     e.stopPropagation();
-    const form = this.formularios().find(f => f.id === id);
-    if (form?.bloqueado) {
-      this.toastService.show('No se puede eliminar una versión bloqueada.', 'error');
-      return;
-    }
-
-    if (confirm('¿Estás seguro de eliminar esta ficha en borrador? Esta acción no se puede deshacer.')) {
+    if (confirm('¿Estás seguro de eliminar este borrador? Esta acción no se puede deshacer.')) {
       this.formularioService.deleteFormulario(id).subscribe({
         next: () => {
           this.toastService.show('Formulario eliminado correctamente.', 'info');
           this.cargarDatos();
         },
         error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar formulario:', err);
           this.toastService.show(
-            this.extraerMensajeError(err, 'No se puede eliminar un formulario que ya ha sido publicado.'),
+            this.extraerMensajeError(err, 'No se puede eliminar un formulario que ya fue publicado.'),
             'error'
           );
         }
@@ -278,7 +314,6 @@ export class FormulariosComponent implements OnInit {
     }
   }
 
-  // Método auxiliar para obtener el nombre del tipo de formulario
   getNombreTipoFormulario(form: Formulario): string {
     return form.tipoFormulario?.nombre
       || this.tiposFormulario().find(t => t.id === form.tipo_formulario_id)?.nombre
@@ -286,7 +321,8 @@ export class FormulariosComponent implements OnInit {
   }
 
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {
-    if (!err?.error?.message) return fallback;
-    return Array.isArray(err.error.message) ? err.error.message.join(', ') : err.error.message;
+    const msg = err?.error?.message;
+    if (!msg) return fallback;
+    return Array.isArray(msg) ? msg.join(', ') : msg;
   }
 }

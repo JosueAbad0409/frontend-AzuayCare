@@ -1,5 +1,4 @@
-/* Reutiliza los mismos tokens visuales que ciclos.component.css / carreras.component.css
-   para mantener consistencia visual con el resto del panel admin. */
+/* Tokens visuales e integración con el panel admin */
 .carreras-card {
   background: #ffffff;
   border-radius: 24px;
@@ -23,31 +22,49 @@
   align-items: flex-start;
   margin-bottom: 2.5rem;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .title { margin: 0 0 0.5rem 0; font-size: 1.75rem; font-weight: 900; color: #0f172a; letter-spacing: -0.03em; }
-.subtitle { margin: 0; font-size: 0.95rem; color: #64748b; font-weight: 500; max-width: 620px; }
+.subtitle { margin: 0; font-size: 0.95rem; color: #64748b; font-weight: 500; max-width: 620px; line-height: 1.5; }
 
+/* Buscador y Contadores */
 .search-bar-wrapper {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 1.5rem; gap: 1.5rem; background: #f8fafc;
-  padding: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  margin-bottom: 1.5rem; 
+  gap: 1rem; 
+  background: #f8fafc;
+  padding: 1rem; 
+  border-radius: 16px; 
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
 }
-.search-input-box { position: relative; flex: 1; max-width: 480px; }
+.search-input-box { position: relative; flex: 1; min-width: 240px; }
 .search-icon { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
 .search-control {
   width: 100%; padding: 0.85rem 1.25rem 0.85rem 3rem; border: 1px solid #cbd5e1;
   border-radius: 12px; font-size: 0.95rem; outline: none; background-color: #ffffff; color: #0f172a;
+  box-sizing: border-box;
 }
 .search-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
 .count-badge {
   font-size: 0.85rem; font-weight: 800; color: #8b5cf6; background: #f3e8ff;
   padding: 0.5rem 1rem; border-radius: 9999px; border: 1px solid rgba(139, 92, 246, 0.2);
+  white-space: nowrap;
 }
 
-.table-container { overflow-x: auto; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-.admin-table { width: 100%; border-collapse: collapse; background: #ffffff; }
+/* Tabla Responsiva con Scroll Horizontal Limpio */
+.table-container { 
+  overflow-x: auto; 
+  -webkit-overflow-scrolling: touch;
+  border-radius: 16px; 
+  border: 1px solid #e2e8f0; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+  width: 100%;
+}
+.admin-table { width: 100%; border-collapse: collapse; background: #ffffff; min-width: 500px; }
 .admin-table th {
   text-align: left; padding: 1.25rem 1.5rem; background-color: #f8fafc; color: #475569;
   border-bottom: 2px solid #e2e8f0; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
@@ -59,36 +76,93 @@
 .tipo-chip {
   display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.4rem 0.9rem; border-radius: 9999px; font-size: 0.9rem;
+  max-width: 100%; word-break: break-word;
 }
+
+.text-right { text-align: right; }
+.actions-cell { display: flex; justify-content: flex-end; gap: 0.35rem; }
 
 .btn-icon {
   background: #ffffff; border: 1px solid #e2e8f0; cursor: pointer; font-size: 1rem;
-  margin-left: 0.5rem; width: 38px; height: 38px; border-radius: 10px;
+  width: 38px; height: 38px; border-radius: 10px;
   display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease; flex-shrink: 0;
 }
 .btn-icon.text-blue { color: #3b82f6; }
 .btn-icon.text-blue:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
 .btn-icon.text-red { color: #ef4444; }
 .btn-icon.text-red:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
+/* Modal Adaptable */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;
+  outline: none; overflow-y: auto;
 }
-.modal-box { background: #ffffff; border-radius: 24px; width: 100%; max-width: 520px; overflow: hidden; }
-.modal-header { padding: 1.75rem 2rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.modal-box { 
+  background: #ffffff; 
+  border-radius: 24px; 
+  width: 100%; 
+  max-width: 520px; 
+  overflow: hidden; 
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header { padding: 1.5rem 1.75rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
 .modal-header h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; }
-.modal-body { padding: 2rem; }
-.form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.5rem; }
-.form-control { width: 100%; padding: 0.85rem 1.1rem; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; }
-.form-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
-.color-input { padding: 0.35rem; height: 48px; cursor: pointer; }
-.form-actions { display: flex; justify-content: flex-end; gap: 1rem; padding: 1.5rem 2rem; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+.modal-body { padding: 1.5rem 1.75rem; overflow-y: auto; }
 
-.empty-state { text-align: center; padding: 4rem 2rem !important; color: #64748b; }
-.empty-icon { font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem; }
-.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: #8b5cf6; }
-.spinner-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.5rem; }
+.form-control { width: 100%; padding: 0.85rem 1.1rem; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; transition: border-color 0.2s; box-sizing: border-box; }
+.form-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); outline: none; }
+.form-control.is-invalid { border-color: #ef4444; }
+
+.form-row { display: flex; gap: 1rem; align-items: flex-start; }
+.flex-1 { flex: 1; }
+
+.error-text { color: #ef4444; font-size: 0.75rem; margin-top: 0.35rem; display: block; font-weight: 600; }
+.color-input { padding: 0.25rem; height: 46px; width: 70px; cursor: pointer; }
+.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.25rem 1.75rem; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+
+.empty-state { text-align: center; padding: 3rem 1.5rem !important; color: #64748b; }
+.empty-icon { font-size: 2.5rem; color: #cbd5e1; margin-bottom: 0.75rem; }
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; color: #8b5cf6; }
+.spinner-icon { font-size: 2.25rem; margin-bottom: 0.75rem; }
 
 .animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* ==========================================================================
+   MEDIA QUERIES (Puntos de quiebre para Tabletas y Celulares)
+   ========================================================================== */
+
+/* Tablets (<= 768px) */
+@media (max-width: 768px) {
+  .carreras-card { padding: 1.5rem; border-radius: 18px; }
+  .header-section { flex-direction: column; align-items: stretch; gap: 1rem; margin-bottom: 1.5rem; }
+  .header-section button { width: 100%; justify-content: center; }
+  .title { font-size: 1.4rem; }
+  .subtitle { font-size: 0.88rem; }
+  
+  .search-bar-wrapper { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .search-input-box { max-width: 100%; min-width: 0; }
+  .count-badge { text-align: center; width: auto; align-self: flex-start; }
+}
+
+/* Celulares (< 576px) */
+@media (max-width: 576px) {
+  .carreras-card { padding: 1.25rem 0.9rem; border-radius: 14px; }
+  
+  .modal-box { border-radius: 16px; margin: 0.5rem; }
+  .modal-header, .modal-body, .form-actions { padding: 1.25rem 1rem; }
+  
+  .form-row { flex-direction: column; gap: 0; }
+  .color-input { width: 100%; }
+
+  .form-actions { flex-direction: column-reverse; }
+  .form-actions button { width: 100%; justify-content: center; }
+  
+  .admin-table th, .admin-table td { padding: 1rem 0.75rem; }
+}
