@@ -1,43 +1,186 @@
-<div class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md mt-6">
-  <h2 class="text-xl font-bold text-gray-800 mb-6">⚙️ Configuración del Perfil de Atención</h2>
-
-  <div *ngIf="mensajeExito()" class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
-    {{ mensajeExito() }}
-  </div>
-
-  <div *ngIf="mensajeError()" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-    {{ mensajeError() }}
-  </div>
-
-  <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="space-y-4">
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Título / Nombre Profesional</label>
-      <input type="text" formControlName="titulo_profesional" placeholder="Ej: Ing. Juan Pérez - Coordinador Bienestar" class="w-full border rounded p-2 text-sm">
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación de Oficina</label>
-        <input type="text" formControlName="ubicacion_oficina" placeholder="Ej: Edificio A, Planta Baja, Oficina 102" class="w-full border rounded p-2 text-sm">
+<div class="perfil-card animate-fade-in">
+  <!-- ENCABEZADO CON BADGE Y SUBTÍTULO -->
+  <div class="header-section">
+    <div class="header-title-wrapper">
+      <div class="title-icon-badge">
+        <i class="fas fa-user-cog"></i>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono / Extensión</label>
-        <input type="text" formControlName="telefono_contacto" placeholder="Ej: 07 4135000 ext. 104" class="w-full border rounded p-2 text-sm">
+        <h2 class="title">Perfil de Atención</h2>
+        <span class="status-pill">
+          <i class="fas fa-shield-alt"></i> Configuración Pública
+        </span>
+      </div>
+    </div>
+    <p class="subtitle">
+      Personaliza tu información pública de contacto y horario para la atención y orientación de estudiantes.
+    </p>
+  </div>
+
+  <!-- ALERTAS DE ESTADO DESCARTABLES -->
+  @if (mensajeExito()) {
+    <div class="alert alert-success animate-pop">
+      <div class="alert-content">
+        <i class="fas fa-check-circle alert-icon"></i>
+        <span>{{ mensajeExito() }}</span>
+      </div>
+      <button type="button" class="btn-close-alert" (click)="limpiarAlertas()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  }
+
+  @if (mensajeError()) {
+    <div class="alert alert-error animate-pop">
+      <div class="alert-content">
+        <i class="fas fa-exclamation-circle alert-icon"></i>
+        <span>{{ mensajeError() }}</span>
+      </div>
+      <button type="button" class="btn-close-alert" (click)="limpiarAlertas()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  }
+
+  <!-- FORMULARIO DE PERFIL -->
+  <form [formGroup]="perfilForm" (ngSubmit)="guardar()">
+    
+    <!-- Título Profesional -->
+    <div class="form-group">
+      <label>
+        Título / Nombre Profesional <span class="required-asterisk">*</span>
+      </label>
+      <div class="input-wrapper" [class.is-invalid]="isFieldInvalid('titulo_profesional')">
+        <i class="fas fa-id-badge input-icon-prefix"></i>
+        <input 
+          type="text" 
+          formControlName="titulo_profesional" 
+          placeholder="Ej: Ing. Juan Pérez - Coordinador Bienestar" 
+          class="form-control"
+        />
+      </div>
+      @if (isFieldInvalid('titulo_profesional')) {
+        <span class="error-text animate-pop">
+          <i class="fas fa-exclamation-triangle"></i>
+          @if (perfilForm.get('titulo_profesional')?.hasError('required')) {
+            El título o nombre profesional es obligatorio.
+          } @else if (perfilForm.get('titulo_profesional')?.hasError('minlength')) {
+            Debe tener al menos 3 caracteres.
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Ubicación y Teléfono (Grid Responsiva 2 columnas) -->
+    <div class="form-grid-2">
+      <!-- Ubicación de Oficina -->
+      <div class="form-group">
+        <label>
+          Ubicación de Oficina <span class="required-asterisk">*</span>
+        </label>
+        <div class="input-wrapper" [class.is-invalid]="isFieldInvalid('ubicacion_oficina')">
+          <i class="fas fa-map-marker-alt input-icon-prefix"></i>
+          <input 
+            type="text" 
+            formControlName="ubicacion_oficina" 
+            placeholder="Ej: Edificio A, Planta Baja, Oficina 102" 
+            class="form-control"
+          />
+        </div>
+        @if (isFieldInvalid('ubicacion_oficina')) {
+          <span class="error-text animate-pop">
+            <i class="fas fa-exclamation-triangle"></i> La ubicación de la oficina es obligatoria.
+          </span>
+        }
+      </div>
+
+      <!-- Teléfono / Extensión -->
+      <div class="form-group">
+        <label>
+          Teléfono / Extensión <span class="required-asterisk">*</span>
+        </label>
+        <div class="input-wrapper" [class.is-invalid]="isFieldInvalid('telefono_contacto')">
+          <i class="fas fa-phone-alt input-icon-prefix"></i>
+          <input 
+            type="text" 
+            formControlName="telefono_contacto" 
+            placeholder="Ej: 07 4135000 ext. 104" 
+            class="form-control"
+          />
+        </div>
+        @if (isFieldInvalid('telefono_contacto')) {
+          <span class="error-text animate-pop">
+            <i class="fas fa-exclamation-triangle"></i>
+            @if (perfilForm.get('telefono_contacto')?.hasError('required')) {
+              El teléfono de contacto es obligatorio.
+            } @else if (perfilForm.get('telefono_contacto')?.hasError('pattern')) {
+              Formato de teléfono inválido.
+            }
+          </span>
+        }
       </div>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Horario de Atención</label>
-      <input type="text" formControlName="horario_atencion" placeholder="Ej: Lunes a Viernes de 08:00 a 13:00" class="w-full border rounded p-2 text-sm">
+    <!-- Horario de Atención -->
+    <div class="form-group">
+      <label>
+        Horario de Atención <span class="required-asterisk">*</span>
+      </label>
+      <div class="input-wrapper" [class.is-invalid]="isFieldInvalid('horario_atencion')">
+        <i class="fas fa-clock input-icon-prefix"></i>
+        <input 
+          type="text" 
+          formControlName="horario_atencion" 
+          placeholder="Ej: Lunes a Viernes de 08:00 a 13:00" 
+          class="form-control"
+        />
+      </div>
+      @if (isFieldInvalid('horario_atencion')) {
+        <span class="error-text animate-pop">
+          <i class="fas fa-exclamation-triangle"></i> El horario de atención es obligatorio.
+        </span>
+      }
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje de Orientación al Estudiante</label>
-      <textarea formControlName="mensaje_ayuda_estudiantes" rows="3" placeholder="Ej: Si tienes problemas para llenar la sección socioeconómica, acércate a mi oficina." class="w-full border rounded p-2 text-sm"></textarea>
+    <!-- Mensaje de Orientación + Contador de Caracteres -->
+    <div class="form-group">
+      <div class="label-with-counter">
+        <label>Mensaje de Orientación al Estudiante</label>
+        <span class="char-counter">
+          {{ perfilForm.get('mensaje_ayuda_estudiantes')?.value?.length || 0 }}/500
+        </span>
+      </div>
+      <div class="input-wrapper" [class.is-invalid]="isFieldInvalid('mensaje_ayuda_estudiantes')" style="align-items: flex-start;">
+        <i class="fas fa-comment-medical input-icon-prefix" style="top: 1.1rem;"></i>
+        <textarea 
+          formControlName="mensaje_ayuda_estudiantes" 
+          rows="3" 
+          maxlength="500"
+          placeholder="Ej: Si tienes dudas al llenar la ficha socioeconómica, acércate a mi oficina en el horario indicado." 
+          class="form-control"
+        ></textarea>
+      </div>
+      @if (isFieldInvalid('mensaje_ayuda_estudiantes')) {
+        <span class="error-text animate-pop">
+          <i class="fas fa-exclamation-triangle"></i> El mensaje supera el máximo de caracteres permitido.
+        </span>
+      }
     </div>
 
-    <button type="submit" [disabled]="perfilForm.invalid || loading()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
-      {{ loading() ? 'Guardando...' : 'Guardar Cambios' }}
-    </button>
+    <!-- BOTONES Y ACCIONES -->
+    <div class="form-actions">
+      <button 
+        type="submit" 
+        [disabled]="perfilForm.invalid || loading()" 
+        class="btn btn-purple"
+      >
+        @if (loading()) {
+          <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+        } @else {
+          <i class="fas fa-save"></i> Guardar Cambios
+        }
+      </button>
+    </div>
+
   </form>
 </div>
