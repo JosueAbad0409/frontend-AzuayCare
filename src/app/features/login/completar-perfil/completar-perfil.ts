@@ -10,11 +10,6 @@ import { Carrera } from '../../../core/models/carrera.model';
 import { Ciclo } from '../../../core/models/ciclo.model';
 import { cedulaEcuatorianaValidator } from '../../../core/validators/cedula.validator';
 
-
-// Pequeño formulario que aparece justo después de que el estudiante
-// inicia sesión con Google por primera vez. Los nombres y apellidos
-// ya vienen de Google (solo lectura); el estudiante llena cédula,
-// carrera y ciclo para terminar su registro.
 @Component({
   selector: 'app-completar-perfil',
   standalone: true,
@@ -39,22 +34,18 @@ export class CompletarPerfilComponent implements OnInit {
 
   carreras = signal<Carrera[]>([]);
   private todosLosCiclos = signal<Ciclo[]>([]);
-
-  // Signal reflejando la carrera elegida en el <select>. Se actualiza a
-  // mano en valueChanges porque un FormControl no es un signal y por eso
-  // el computed de abajo no se recalculaba al cambiar de carrera.
   private carreraSeleccionada = signal<string>('');
 
   nombreCompleto = computed(() => this.authService.user()?.nombre ?? 'Estudiante');
   correo = computed(() => this.authService.user()?.email ?? '');
 
+  // Declaración inicial sin requerimientos en carrera y ciclo por defecto
   perfilForm: FormGroup = this.fb.group({
     cedula: ['', [Validators.required, cedulaEcuatorianaValidator()]],
-    carrera_id: ['', Validators.required],
-    ciclo_id: [{ value: '', disabled: true }, Validators.required],
+    carrera_id: [''],
+    ciclo_id: [{ value: '', disabled: true }],
   });
 
-  // Ciclos filtrados según la carrera seleccionada en el formulario.
   ciclosDisponibles = computed(() => {
     const carreraId = this.carreraSeleccionada();
     if (!carreraId) return [];
@@ -62,10 +53,17 @@ export class CompletarPerfilComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Si el estudiante ya completó su registro, no tiene nada que hacer aquí.
     if (this.authService.perfilCompleto()) {
       this.router.navigate(['/estudiante/inicio']);
       return;
+    }
+
+    // Si el usuario es de rol ESTUDIANTE, exigimos de forma obligatoria carrera y ciclo
+    if (this.authService.user()?.rol === 'ESTUDIANTE') {
+      this.perfilForm.get('carrera_id')!.setValidators([Validators.required]);
+      this.perfilForm.get('ciclo_id')!.setValidators([Validators.required]);
+      this.perfilForm.get('carrera_id')!.updateValueAndValidity();
+      this.perfilForm.get('ciclo_id')!.updateValueAndValidity();
     }
 
     this.cargarCatalogos();
@@ -115,9 +113,14 @@ export class CompletarPerfilComponent implements OnInit {
     this.loading.set(true);
     const { cedula, carrera_id, ciclo_id } = this.perfilForm.getRawValue();
 
-    this.usuarioService.completarPerfil({ cedula, carrera_id, ciclo_id }).subscribe({
+    // Filtramos los campos opcionales para evitar enviar strings vacíos al backend
+    const payload: { cedula: string; carrera_id?: string; ciclo_id?: string } = { cedula };
+    if (carrera_id) payload.carrera_id = carrera_id;
+    if (ciclo_id) payload.ciclo_id = ciclo_id;
+
+    this.usuarioService.completarPerfil(payload).subscribe({
       next: () => {
-        this.authService.marcarPerfilCompleto({ cedula, carrera_id, ciclo_id });
+        this.authService.marcarPerfilCompleto(payload);
         this.loading.set(false);
         this.router.navigate(['/estudiante/inicio']);
       },

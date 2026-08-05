@@ -368,7 +368,7 @@
 :root[data-theme='dark'] .badge-danger  { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.25); }
 
 /* ==========================================
-   MODALES Y FORMULARIOS
+   MODALES Y FORMULARIOS (CORRECCIÓN DE SCROLL Y CENTRADO)
    ========================================== */
 .modal-backdrop {
   position: fixed;
@@ -379,7 +379,8 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 1.5rem;
+  overflow-y: auto; /* Permite scroll externo */
 }
 
 .modal-box {
@@ -390,6 +391,25 @@
   max-width: 500px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
+  margin: auto; /* Evita que crezca y desaparezca hacia arriba de la pantalla */
+  max-height: 90vh; /* Límite de alto respecto al viewport */
+  overflow-y: auto; /* Scroll interno en caso de formularios muy largos */
+}
+
+/* Scrollbar estilizada */
+.modal-box::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-box::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 :root[data-theme='dark'] .modal-box {

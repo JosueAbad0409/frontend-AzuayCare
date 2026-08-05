@@ -158,7 +158,7 @@ export class AuthService {
   // Se llama al terminar de guardar el pequeño formulario de registro
   // (cédula, carrera, ciclo) para que el resto de la app deje de bloquear
   // la navegación del estudiante.
-  marcarPerfilCompleto(datos: { cedula: string; carrera_id: string; ciclo_id: string }): void {
+  marcarPerfilCompleto(datos: { cedula: string; carrera_id?: string; ciclo_id?: string }): void {
     this.perfilCompleto.set(true);
     localStorage.setItem(PERFIL_COMPLETO_KEY, 'true');
     this.user.update((actual) => (actual ? { ...actual, ...datos } : actual));

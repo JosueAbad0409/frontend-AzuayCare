@@ -14,7 +14,7 @@ export const routes: Routes = [
   {
     path: 'completar-perfil',
     loadComponent: () => import('./features/login/completar-perfil/completar-perfil').then(m => m.CompletarPerfilComponent),
-    canActivate: [authGuard, roleGuard(['ESTUDIANTE'])]
+    canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])]
   },
 
   { 
