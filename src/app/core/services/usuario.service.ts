@@ -44,4 +44,9 @@ export class UsuarioService {
     return this.http.delete(`${environment.apiUrl}/usuarios/${id}`);
   }
   
+  subirFoto(file: File): Observable<Usuario> {
+    const formData = new FormData();
+    formData.append('foto', file);
+    return this.http.patch<Usuario>(`${this.apiUrl}/foto`, formData);
+  }
 }

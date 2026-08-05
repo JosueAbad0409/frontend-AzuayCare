@@ -1,71 +1,40 @@
-:host {
-  display: block;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+/* --- Mejoras Responsivas para el Formulario --- */
+
+/* Hace que las matrices (tablas) se puedan deslizar lateralmente en móviles sin desarmar el diseño */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+    width: 100%;
+    display: block;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 8px;
 }
 
-/* Clases para inputs en modo claro */
-.input-light {
-  width: 100%;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  color: #1e293b;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 8px;
 }
 
-.input-light:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+/* Ajustes de inputs para que no hagan auto-zoom en iOS Safari */
+input[type="text"], input[type="number"], 
+select, textarea {
+    font-size: 16px !important;
 }
 
-.input-light:disabled {
-  background-color: #f8fafc;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
-
-/* Botones Base */
-.btn-blue {
-  background-color: #2563eb;
-  color: white;
-  font-weight: 700;
-  padding: 0.6rem 1.5rem;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
-.btn-blue:hover:not(:disabled) {
-  background-color: #1d4ed8;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-.btn-blue:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-outline {
-  background-color: white;
-  color: #475569;
-  font-weight: 700;
-  padding: 0.6rem 1.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-}
-.btn-outline:hover:not(:disabled) {
-  background-color: #f8fafc;
-  color: #1e293b;
-  border-color: #94a3b8;
+/* Ajuste del Sidebar en modo móvil */
+@media (max-width: 1024px) {
+    aside {
+        /* En móviles, la barra lateral debe ir arriba, quitamos el position sticky */
+        position: static !important;
+        width: 100% !important;
+        margin-bottom: 1.5rem;
+    }
 }

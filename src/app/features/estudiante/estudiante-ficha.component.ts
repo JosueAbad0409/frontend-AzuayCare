@@ -1,8 +1,8 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, ElementRef, ViewChild, afterNextRender, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef, OnDestroy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router'; // 👈 IMPORTANTE: Agregado RouterModule
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
@@ -19,9 +19,8 @@ import { PreguntaDependencia } from '../../core/models/dependencia.model';
 import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
-import { EstudiantePerfilModalComponent } from './components/estudiante-perfil-modal.component';
 import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
-import { forkJoin, of, catchError, debounceTime } from 'rxjs';
+import { forkJoin, of, debounceTime, catchError } from 'rxjs';
 import Swal from 'sweetalert2'; 
 
 function minSelectedCheckboxesValidator(min = 1) {
@@ -33,7 +32,6 @@ function minSelectedCheckboxesValidator(min = 1) {
 
 function requireAtLeastOneMatrixRowValidator() {
   return (group: AbstractControl): ValidationErrors | null => {
-    // Verifica si alguna fila (que ahora es un array) tiene al menos un elemento seleccionado
     const hasValue = Object.values(group.value).some((val: any) => Array.isArray(val) && val.length > 0);
     return hasValue ? null : { required: true };
   };
@@ -42,12 +40,13 @@ function requireAtLeastOneMatrixRowValidator() {
 @Component({
   selector: 'app-estudiante-ficha',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, EstudiantePerfilModalComponent],
+  // ✅ CORRECCIÓN: Quitamos EstudiantePerfilModalComponent y agregamos RouterModule para el enlace <a>
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './estudiante-ficha.component.html',
   styleUrls: ['./estudiante-ficha.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EstudianteFichaComponent implements OnInit {
+export class EstudianteFichaComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly fichaService = inject(FichaService);
   private readonly formularioService = inject(FormularioService);
@@ -64,10 +63,8 @@ export class EstudianteFichaComponent implements OnInit {
 
   isDescargandoPdf = this.descargaService.isDescargando;
 
-  // --- NUEVAS VARIABLES PARA EL FLUJO DE LISTA ---
   formulariosDisponibles = signal<Formulario[]>([]);
   vistaActual = signal<'LISTA' | 'FORMULARIO'>('LISTA');
-  // -----------------------------------------------
 
   misFichas = signal<FichaRevision[]>([]);
   fichaActiva = signal<FichaRevision | null>(null);
@@ -86,11 +83,6 @@ export class EstudianteFichaComponent implements OnInit {
   respuestaIdParaAdjunto = signal<string | null>(null);
 
   perfilEstudiante = signal<EstudiantePerfil | null>(null);
-  mostrarModalPerfil = signal<boolean>(false);
-
-  @ViewChild('stars') starsEl!: ElementRef;
-  @ViewChild('stars2') stars2El!: ElementRef;
-  @ViewChild('stars3') stars3El!: ElementRef;
 
   seccionActualIndex = signal<number>(0);
 
@@ -105,7 +97,7 @@ export class EstudianteFichaComponent implements OnInit {
   });
 
   private autosaveData: any = null;
-  private respuestasBDCache: any[] = []; // 👈 NUEVO: respuestas del backend, disponibles antes de construir controles
+  private respuestasBDCache: any[] = [];
   private readonly AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
   respuestasForm: FormGroup = this.fb.group({
@@ -114,14 +106,6 @@ export class EstudianteFichaComponent implements OnInit {
   });
 
   valormap = signal<Record<string, any>>({});
-
-  constructor() {
-    afterNextRender(() => {
-      this.generateStars(this.starsEl?.nativeElement, 120);
-      this.generateStars(this.stars2El?.nativeElement, 60);
-      this.generateStars(this.stars3El?.nativeElement, 20);
-    });
-  }
 
   ngOnInit(): void {
     this.recuperarAutosaveValido();
@@ -137,7 +121,7 @@ export class EstudianteFichaComponent implements OnInit {
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
         const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-        localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave)); // ✅ ahora sí
+        localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
         setTimeout(() => this.isSavingLocal.set(false), 800);
       });
   }
@@ -168,9 +152,6 @@ export class EstudianteFichaComponent implements OnInit {
       });
     }
   }
-
-  abrirPerfil(): void { this.mostrarModalPerfil.set(true); }
-  cerrarPerfil(): void { this.mostrarModalPerfil.set(false); }
 
   get respuestasGroup(): FormGroup { return this.respuestasForm.get('respuestas') as FormGroup; }
   get matricesGroup(): FormGroup { return this.respuestasForm.get('matrices') as FormGroup; }
@@ -238,7 +219,6 @@ export class EstudianteFichaComponent implements OnInit {
     localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(currentData));
   }
 
-  // --- NUEVA LÓGICA DE CARGA SIMPLIFICADA ---
   cargarDatosEstudiante(): void {
     this.isLoading.set(true);
 
@@ -254,7 +234,6 @@ export class EstudianteFichaComponent implements OnInit {
           this.periodoActivo.set(pActivo || null);
           this.misFichas.set(fichas);
 
-          // Filtrar formularios publicados del periodo activo
           const formsPublicados = formularios.filter(f => {
             const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
             return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
@@ -302,18 +281,13 @@ export class EstudianteFichaComponent implements OnInit {
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
 
-    // Reconstruir el form desde cero (no solo resetear valores)
-    // para que construirControlesPreguntas() vuelva a inyectar el autoguardado
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
       matrices: this.fb.group({})
     });
 
-    // Releer localStorage por si hay cambios más recientes
     this.recuperarAutosaveValido();
   }
-
-  // ------------------------------------------
 
   evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
     const tieneBorradorLleno = localStorage.getItem(this.AUTOSAVE_KEY) !== null;
@@ -419,7 +393,6 @@ export class EstudianteFichaComponent implements OnInit {
               preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
 
               if (fichaActual) {
-                // Ya tenemos this.respuestasBDCache cargado (o vacío si falló/es ficha nueva)
                 this.aplicarRespuestasGuardadas(this.respuestasBDCache, fichaActual.estado_ficha);
 
                 if (fichaActual.estado_ficha !== 'BORRADOR') {
@@ -434,9 +407,6 @@ export class EstudianteFichaComponent implements OnInit {
             };
 
             if (fichaActual) {
-              // 👇 CAMBIO CLAVE: traemos las respuestas del backend ANTES de construir
-              // los controles, para que cargarEstructuraMatriz() pueda usarlas al armar
-              // el FormGroup de cada pregunta MATRIZ (ya no llega tarde).
               this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
                 .pipe(takeUntilDestroyed(this.destroyRef))
                 .subscribe({
@@ -483,7 +453,7 @@ export class EstudianteFichaComponent implements OnInit {
 
   construirControlesPreguntas(p: Pregunta): void {
     const isMultiple = p.tipoCampo?.nombre === 'SELECCION_MULTIPLE';
-    const isMatriz = p.tipoCampo?.nombre === 'MATRIZ'; // Añadimos esta variable
+    const isMatriz = p.tipoCampo?.nombre === 'MATRIZ';
 
     if (isMultiple) {
       if (!this.respuestasGroup.contains(p.id)) {
@@ -498,8 +468,6 @@ export class EstudianteFichaComponent implements OnInit {
         this.respuestasGroup.addControl(p.id, formArray);
       }
     } else if (isMatriz) {
-      // IMPORTANTE: Las matrices tienen su propio grupo (matricesGroup), 
-      // NO deben entrar en respuestasGroup para evitar el campo "fantasma".
       this.cargarEstructuraMatriz(p);
     } else {
       const validators = p.es_obligatorio ? [Validators.required] : [];
@@ -537,7 +505,6 @@ export class EstudianteFichaComponent implements OnInit {
     return formArray.controls.some(ctrl => ctrl.value === opcionId);
   }
 
-  // --- INICIO NUEVAS FUNCIONES PARA LA MATRIZ MULTIPLE ---
   onToggleMatrizMultiple(preguntaId: string, filaId: string, columnaId: string, event: Event): void {
     if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
 
@@ -568,7 +535,6 @@ export class EstudianteFichaComponent implements OnInit {
 
     return filaArray.controls.some(ctrl => ctrl.value === columnaId);
   }
-  // --- FIN NUEVAS FUNCIONES PARA LA MATRIZ MULTIPLE ---
 
   esPreguntaDependiente(preguntaId: string): boolean {
     return this.dependencias().some(d => d.pregunta_dependiente_id === preguntaId);
@@ -591,7 +557,6 @@ export class EstudianteFichaComponent implements OnInit {
         const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
         const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
 
-        // 👇 NUEVO: buscamos si el backend ya trae respuesta guardada para esta pregunta MATRIZ
         const respuestaBD = this.respuestasBDCache.find((r: any) => r.pregunta_id === pregunta.id);
         const matrizPorFilaBD: Record<string, string[]> = {};
         if (respuestaBD?.respuestasMatriz?.length > 0) {
@@ -604,7 +569,6 @@ export class EstudianteFichaComponent implements OnInit {
         filas.forEach((fila: any) => {
           let savedColArr: string[] = [];
 
-          // Prioridad: 1) backend (fuente de verdad), 2) autosave local
           if (matrizPorFilaBD[fila.id]) {
             savedColArr = matrizPorFilaBD[fila.id];
           } else {
@@ -668,7 +632,6 @@ export class EstudianteFichaComponent implements OnInit {
   }
 
   obtenerTextoRespuesta(pregunta: Pregunta): string {
-    // 1. Lógica especial para las MATRICES
     if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
       const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
       if (!matrizValores) return 'Sin responder';
@@ -679,26 +642,21 @@ export class EstudianteFichaComponent implements OnInit {
         const columnasSeleccionadas = matrizValores[filaId];
 
         if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-          // Extraemos el texto real de la fila
           const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
           const textoFila = fila ? fila.texto_fila : 'Fila';
 
-          // Extraemos los textos de las columnas seleccionadas
           const textosColumnas = columnasSeleccionadas.map((colId: string) => {
             const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
             return col ? col.texto_columna : colId;
           });
 
-          // Lo juntamos: "Padre: Cabeza de hogar, Aporta económicamente"
           resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
         }
       });
 
-      // Unimos cada fila con un salto de línea
       return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
     }
 
-    // 2. Lógica normal para el resto de los campos (Texto, Numérico, Selects)
     const val = this.respuestasGroup.getRawValue()[pregunta.id];
     if (val === null || val === undefined || val === '') return 'Sin responder';
 
@@ -719,15 +677,12 @@ export class EstudianteFichaComponent implements OnInit {
     return String(val);
   }
 
-  
-
   aplicarRespuestasGuardadas(respuestasBD: any[], estadoFicha: string): void {
   if (!respuestasBD || respuestasBD.length === 0) return;
 
   const valoresParaElFormulario: any = {};
 
   respuestasBD.forEach(resp => {
-    // Las de tipo MATRIZ ya se restauraron dentro de cargarEstructuraMatriz()
     if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
 
     const controlArray = this.respuestasGroup.get(resp.pregunta_id);
@@ -759,7 +714,6 @@ export class EstudianteFichaComponent implements OnInit {
     this.matricesGroup.enable({ emitEvent: false });
   }
 }
-
 
   descargarPdfResumen(fichaId: string): void {
     const ficha = this.fichaActiva();
@@ -881,8 +835,8 @@ guardarYEnviar(esFinal: boolean = true): void {
     this.enviando.set(false);
     localStorage.removeItem(this.AUTOSAVE_KEY);
     this.toastService.show('¡Ficha socioeconómica enviada exitosamente a Bienestar!', 'success');
-    this.volverALista(); // Volvemos a la lista en lugar de recargar
-    this.cargarDatosEstudiante(); // Recargamos las fichas
+    this.volverALista();
+    this.cargarDatosEstudiante();
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
@@ -927,19 +881,6 @@ guardarYEnviar(esFinal: boolean = true): void {
     });
   }
 
-  private generateStars(element: HTMLElement, count: number): void {
-    if (!element) return;
-    const shadows: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const x = (Math.random() * 100).toFixed(2);
-      const y = (Math.random() * 100).toFixed(2);
-      shadows.push(`${x}vw ${y}vh #FFF`);
-    }
-    element.style.boxShadow = shadows.join(', ');
-  }
-
-  // Añadir dentro de la clase EstudianteFichaComponent
-
   getIconoSeccion(nombre: string): string {
     const n = nombre.toLowerCase();
     if (n.includes('consentimiento')) return 'far fa-user';
@@ -947,7 +888,7 @@ guardarYEnviar(esFinal: boolean = true): void {
     if (n.includes('salud') || n.includes('discapacidad')) return 'far fa-heart';
     if (n.includes('familiar') || n.includes('hijos')) return 'fas fa-users';
     if (n.includes('econom')) return 'fas fa-coins';
-    return 'far fa-folder'; // Icono por defecto
+    return 'far fa-folder';
   }
 
   numeroRomano(num: number): string {

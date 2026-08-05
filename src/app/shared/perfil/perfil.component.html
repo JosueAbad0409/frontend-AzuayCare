@@ -1,0 +1,124 @@
+<div class="perfil-page">
+  <section class="perfil-header">
+    <div class="avatar-wrapper">
+      @if (usuario()?.foto_url) {
+        <img [src]="usuario()?.foto_url" alt="Foto de perfil" class="avatar-img" />
+      } @else {
+        <div class="avatar-fallback">{{ iniciales() }}</div>
+      }
+
+      <button type="button" class="avatar-edit-btn" (click)="abrirSelectorFoto()"
+        [disabled]="subiendoFoto()" title="Cambiar foto de perfil">
+        @if (subiendoFoto()) { <i class="fas fa-spinner fa-spin"></i> }
+        @else { <i class="fas fa-camera"></i> }
+      </button>
+
+      <input #fotoInput type="file" accept="image/png,image/jpeg,image/webp"
+        class="hidden-input" (change)="onFotoSeleccionada($event)" />
+    </div>
+
+    <div class="header-texto">
+      <h1>{{ usuario()?.nombre }}</h1>
+      <p class="correo">{{ usuario()?.email }}</p>
+      <span class="rol-chip">{{ etiquetaRol() }}</span>
+    </div>
+  </section>
+
+  @if (errorFoto()) {
+    <div class="alerta alerta-error"><i class="fas fa-exclamation-circle"></i> {{ errorFoto() }}</div>
+  }
+
+  <section class="perfil-grid">
+    <div class="perfil-card">
+      <h2><i class="fas fa-id-card"></i> Información de la cuenta</h2>
+      <div class="campo-info">
+        <span class="etiqueta">Nombre completo</span>
+        <span class="valor">{{ usuario()?.nombre }}</span>
+      </div>
+      <div class="campo-info">
+        <span class="etiqueta">Correo institucional</span>
+        <span class="valor">{{ usuario()?.email }}</span>
+      </div>
+      <div class="campo-info">
+        <span class="etiqueta">Rol</span>
+        <span class="valor">{{ etiquetaRol() }}</span>
+      </div>
+    </div>
+
+    @if (esEstudianteOInvitado()) {
+      <div class="perfil-card">
+        <h2><i class="fas fa-graduation-cap"></i> Información académica</h2>
+        @if (cargandoAcademico()) {
+          <p class="texto-carga">Cargando información académica...</p>
+        } @else {
+          <div class="campo-info">
+            <span class="etiqueta">Cédula</span>
+            <span class="valor">{{ usuario()?.cedula || 'No registrada' }}</span>
+          </div>
+          @if (usuario()?.rol === 'ESTUDIANTE') {
+            <div class="campo-info">
+              <span class="etiqueta">Carrera</span>
+              <span class="valor">{{ nombreCarrera() }}</span>
+            </div>
+            <div class="campo-info">
+              <span class="etiqueta">Ciclo</span>
+              <span class="valor">{{ nombreCiclo() }}</span>
+            </div>
+          }
+        }
+        <p class="nota-ayuda"><i class="fas fa-info-circle"></i> ¿Necesitas corregir estos datos? Contacta a Bienestar Estudiantil.</p>
+      </div>
+    }
+
+    @if (esCoordinador()) {
+      <div class="perfil-card perfil-card-ancho">
+        <h2><i class="fas fa-briefcase"></i> Información de coordinación</h2>
+
+        @if (cargandoPerfilCoordinador()) {
+          <p class="texto-carga">Cargando tu información...</p>
+        } @else {
+          <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador()" class="form-coordinador">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="titulo">Título profesional</label>
+                <input id="titulo" type="text" formControlName="titulo_profesional" class="form-control" placeholder="Ej. Psicóloga Clínica" />
+              </div>
+              <div class="form-group">
+                <label for="telefono">Teléfono de contacto</label>
+                <input id="telefono" type="text" formControlName="telefono_contacto" class="form-control" placeholder="Ej. 0987654321" />
+              </div>
+              <div class="form-group">
+                <label for="correo">Correo de contacto</label>
+                <input id="correo" type="email" formControlName="correo_contacto" class="form-control" placeholder="correo@azuay.edu.ec" />
+                @if (coordinadorForm.get('correo_contacto')?.invalid && coordinadorForm.get('correo_contacto')?.touched) {
+                  <span class="hint-error">Ingresa un correo válido.</span>
+                }
+              </div>
+              <div class="form-group">
+                <label for="ubicacion">Ubicación de oficina</label>
+                <input id="ubicacion" type="text" formControlName="ubicacion_oficina" class="form-control" placeholder="Ej. Bloque A, oficina 203" />
+              </div>
+              <div class="form-group">
+                <label for="horario">Horario de atención</label>
+                <input id="horario" type="text" formControlName="horario_atencion" class="form-control" placeholder="Ej. Lunes a viernes, 8h00-16h00" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="mensaje">Mensaje para estudiantes</label>
+              <textarea id="mensaje" rows="3" formControlName="mensaje_ayuda_estudiantes" class="form-control"
+                placeholder="Escribe un mensaje de bienvenida o ayuda para tus estudiantes..."></textarea>
+            </div>
+
+            @if (errorCoordinador()) { <div class="alerta alerta-error">{{ errorCoordinador() }}</div> }
+            @if (mensajeExitoCoordinador()) { <div class="alerta alerta-exito">{{ mensajeExitoCoordinador() }}</div> }
+
+            <button type="submit" class="btn-guardar" [disabled]="guardandoCoordinador()">
+              @if (guardandoCoordinador()) { <span>Guardando...</span> } @else { <span>Guardar cambios</span> }
+            </button>
+          </form>
+        }
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,67 @@
+<div class="student-layout">
+  <!-- HEADER ESCRITORIO / TABLET -->
+  <header class="top-header">
+    
+    <!-- Lado Izquierdo: Logo y Marca -->
+    <div class="brand">
+      <div class="brand-logo"><i class="fas fa-heartbeat"></i></div>
+      <div class="brand-info">
+        <h2>AzuayCare</h2>
+        <span>Portal Estudiantil</span>
+      </div>
+    </div>
+
+    <!-- Centro: Navegación para pantallas grandes -->
+    <nav class="desktop-nav">
+      <a routerLink="/estudiante/inicio" routerLinkActive="active" class="nav-link">
+        <i class="fas fa-home"></i> Inicio
+      </a>
+      <a routerLink="/estudiante/ficha" routerLinkActive="active" class="nav-link">
+        <i class="fas fa-file-alt"></i> Mi Ficha
+      </a>
+      <a routerLink="/estudiante/documentos" routerLinkActive="active" class="nav-link">
+        <i class="fas fa-folder-open"></i> Documentos
+      </a>
+      <a routerLink="/estudiante/perfil" routerLinkActive="active" class="nav-link">
+        <i class="fas fa-user-circle"></i> Perfil
+      </a>
+    </nav>
+
+    <!-- Lado Derecho: Usuario y Botón Salir -->
+    <div class="header-actions">
+      <div class="user-greeting">
+        Hola, <span>{{ usuarioNombre() }}</span>
+      </div>
+      <button class="btn-logout" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Salir</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL (Donde cargan las vistas) -->
+  <main class="main-content">
+    <div class="content-wrapper animate-fade-in">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <!-- NAVEGACIÓN INFERIOR (SÓLO PARA MÓVILES) -->
+  <nav class="bottom-nav">
+    <a routerLink="/estudiante/inicio" routerLinkActive="active" class="bottom-nav-item">
+      <i class="fas fa-home"></i>
+      <span>Inicio</span>
+    </a>
+    <a routerLink="/estudiante/ficha" routerLinkActive="active" class="bottom-nav-item">
+      <i class="fas fa-file-alt"></i>
+      <span>Ficha</span>
+    </a>
+    <a routerLink="/estudiante/documentos" routerLinkActive="active" class="bottom-nav-item">
+      <i class="fas fa-folder-open"></i>
+      <span>Archivos</span>
+    </a>
+    <a routerLink="/estudiante/perfil" routerLinkActive="active" class="bottom-nav-item">
+      <i class="fas fa-user-circle"></i>
+      <span>Perfil</span>
+    </a>
+  </nav>
+</div>

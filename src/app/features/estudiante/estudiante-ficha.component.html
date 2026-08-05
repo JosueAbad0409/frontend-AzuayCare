@@ -5,9 +5,16 @@
     <!-- HEADER -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm">
       <div class="flex items-center gap-4">
-        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center font-black text-white shadow-sm text-lg">
-          AC
-        </div>
+        
+        <!-- FOTO DE PERFIL DINÁMICA -->
+        @if (authService.user()?.foto_url) {
+          <img [src]="authService.user()?.foto_url" alt="Foto Perfil" class="w-11 h-11 rounded-xl object-cover shadow-sm border border-slate-200">
+        } @else {
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center font-black text-white shadow-sm text-lg">
+            {{ (authService.user()?.nombre | slice:0:1) || 'U' }}
+          </div>
+        }
+
         <div>
           <h1 class="font-extrabold text-lg md:text-xl text-slate-800 tracking-wide">Ficha Socioeconómica Estudiantil</h1>
           <div class="flex items-center gap-2 mt-0.5">
@@ -21,10 +28,11 @@
       </div>
 
       <div class="flex items-center gap-2.5">
-        <button type="button" (click)="abrirPerfil()"
-          class="px-3.5 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-200 hover:text-slate-800 transition-all flex items-center gap-2 cursor-pointer">
+        <!-- NAVEGACIÓN A LA NUEVA PÁGINA UNIFICADA -->
+        <a routerLink="/estudiante/perfil"
+          class="px-3.5 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-200 hover:text-slate-800 transition-all flex items-center gap-2 cursor-pointer no-underline">
           <i class="fas fa-id-card text-emerald-500"></i> Mi Perfil
-        </button>
+        </a>
         <button type="button" (click)="logout()"
           class="px-3.5 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="fas fa-sign-out-alt"></i> Salir
@@ -435,9 +443,3 @@
     }
   </div>
 </div>
-
-<app-estudiante-perfil-modal
-  [perfil]="perfilEstudiante()"
-  [visible]="mostrarModalPerfil()"
-  (cerrar)="cerrarPerfil()">
-</app-estudiante-perfil-modal>
