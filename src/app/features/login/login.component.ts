@@ -73,8 +73,9 @@ export class LoginComponent implements OnInit {
 
       // Redirección adaptativa según el rol decodificado del JWT
       const rol = this.auth.user()?.rol;
-      if (rol === 'ESTUDIANTE' && !this.auth.perfilCompleto()) {
-        // Primer ingreso: falta cédula, carrera o ciclo.
+      
+      if ((rol === 'ESTUDIANTE' || rol === 'INVITADO') && !this.auth.perfilCompleto()) {
+        // Primer ingreso: falta cédula (y carrera/ciclo si es estudiante).
         await this.router.navigate(['/completar-perfil']);
       } else if (rol === 'ESTUDIANTE' || rol === 'INVITADO') {
         await this.router.navigate(['/estudiante/inicio']);

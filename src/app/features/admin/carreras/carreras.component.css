@@ -429,6 +429,112 @@
   margin-bottom: 0.75rem;
 }
 
+/* ==========================================
+   MODAL - CORRECCIÓN DE DESPLAZAMIENTO (SCROLL Y CENTRADO)
+   ========================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  overflow-y: auto; /* Permite scroll externo */
+}
+
+.modal-box {
+  background: var(--bg-main);
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  margin: auto; /* Centrado absoluto con flexbox y auto-ajuste si excede pantalla */
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Scrollbar estilizada */
+.modal-box::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-box::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+:root[data-theme='dark'] .modal-box {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.modal-title {
+  margin-top: 0;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 1.25rem;
+}
+
+:root[data-theme='dark'] .modal-title { color: #f8fafc; }
+
+.form-group-modal {
+  margin-bottom: 1rem;
+}
+
+.form-label-modal {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.4rem;
+}
+
+:root[data-theme='dark'] .form-label-modal { color: #cbd5e1; }
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.925rem;
+  outline: none;
+  background-color: var(--bg-main);
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+:root[data-theme='dark'] .form-control {
+  background-color: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #f8fafc;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.25rem;
+}
+
+:root[data-theme='dark'] .modal-footer { border-top-color: rgba(148, 163, 184, 0.15); }
+
 @media (max-width: 768px) {
   .carreras-card { padding: 1.5rem; }
   .header-section { flex-direction: column; align-items: stretch; gap: 1rem; }

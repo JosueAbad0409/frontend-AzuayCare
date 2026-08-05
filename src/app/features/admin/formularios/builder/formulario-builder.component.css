@@ -397,7 +397,9 @@ select.form-control {
   margin-top: 0.5rem;
 }
 
-/* Modal */
+/* ==========================================
+   MODAL - CORRECCIÓN DE DESPLAZAMIENTO (SCROLL Y CENTRADO)
+   ========================================== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -407,7 +409,9 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
+  padding: 1.5rem;
+  overflow-y: auto; /* Permite scroll externo si es necesario */
 }
 
 .modal-box {
@@ -417,6 +421,25 @@ select.form-control {
   width: 90%;
   max-width: 520px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  margin: auto; /* El truco de magia: Previene que flexbox lo tire hacia arriba */
+  max-height: 90vh; /* Altura máxima respecto a la pantalla */
+  overflow-y: auto; /* Scroll interno si el formulario crece demasiado */
+}
+
+/* Scrollbar estilizada para el modal */
+.modal-box::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-box::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.modal-box::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .modal-box h3 {

@@ -25,10 +25,9 @@ export interface CreateUsuarioDto {
   carrera_id?: string;
 }
 
-// Datos que el propio estudiante llena en el pequeño formulario
-// que aparece tras su primer inicio de sesión con Google.
+// ✅ CORRECCIÓN: Los campos carrera y ciclo ahora son opcionales
 export interface CompletarPerfilDto {
   cedula: string;
-  carrera_id: string;
-  ciclo_id: string;
+  carrera_id?: string;
+  ciclo_id?: string;
 }
