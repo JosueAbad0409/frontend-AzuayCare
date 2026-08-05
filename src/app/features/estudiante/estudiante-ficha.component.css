@@ -1,4 +1,6 @@
-/* --- Mejoras Responsivas para el Formulario --- */
+/* ==========================================
+   Mejoras Responsivas para el Formulario
+   ========================================== */
 
 /* Hace que las matrices (tablas) se puedan deslizar lateralmente en móviles sin desarmar el diseño */
 .overflow-x-auto {
@@ -24,15 +26,14 @@
 }
 
 /* Ajustes de inputs para que no hagan auto-zoom en iOS Safari */
-input[type="text"], input[type="number"], 
+input[type="text"], input[type="number"],
 select, textarea {
     font-size: 16px !important;
 }
 
-/* Ajuste del Sidebar en modo móvil */
+/* Ajuste del Sidebar en modo móvil (red de seguridad; Tailwind lg:sticky ya lo resuelve) */
 @media (max-width: 1024px) {
     aside {
-        /* En móviles, la barra lateral debe ir arriba, quitamos el position sticky */
         position: static !important;
         width: 100% !important;
         margin-bottom: 1.5rem;

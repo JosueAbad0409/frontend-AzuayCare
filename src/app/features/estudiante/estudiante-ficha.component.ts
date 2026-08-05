@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, D
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router'; 
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
@@ -14,14 +14,35 @@ import { DependenciasService } from '../../core/services/dependencias.service';
 import { MatricesService } from '../../core/services/matrices.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Formulario, Seccion, Pregunta } from '../../core/models/formulario.model';
-import { FichaRevision } from '../../core/models/revision-ficha.model';
+import { FichaRevision, EstadoFicha } from '../../core/models/revision-ficha.model';
 import { PreguntaDependencia } from '../../core/models/dependencia.model';
 import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
 import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
 import { forkJoin, of, debounceTime, catchError } from 'rxjs';
-import Swal from 'sweetalert2'; 
+import Swal from 'sweetalert2';
+
+// Estado normalizado para la UI (unifica variantes históricas del backend: ENVIADA/ENVIADO, RECHAZADA/RECHAZADO)
+export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
+
+export interface FormularioUI extends Formulario {
+  estado_ui: EstadoUI;
+}
+
+/** Normaliza las variantes de ortografía que existen en datos históricos del backend. */
+function normalizarEstado(estado?: string | null): EstadoUI {
+  switch (estado) {
+    case 'BORRADOR': return 'BORRADOR';
+    case 'ENVIADA':
+    case 'ENVIADO': return 'ENVIADA';
+    case 'VALIDADO': return 'VALIDADO';
+    case 'RECHAZADA':
+    case 'RECHAZADO': return 'RECHAZADA';
+    case 'CERRADA_POR_PLAZO': return 'CERRADA_POR_PLAZO';
+    default: return 'NUEVA';
+  }
+}
 
 function minSelectedCheckboxesValidator(min = 1) {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -62,7 +83,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   isDescargandoPdf = this.descargaService.isDescargando;
 
-  formulariosDisponibles = signal<Formulario[]>([]);
+  formulariosDisponibles = signal<FormularioUI[]>([]);
   vistaActual = signal<'LISTA' | 'FORMULARIO'>('LISTA');
 
   misFichas = signal<FichaRevision[]>([]);
@@ -84,6 +105,18 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   perfilEstudiante = signal<EstudiantePerfil | null>(null);
 
   seccionActualIndex = signal<number>(0);
+
+  /** Estado normalizado de la ficha activa (soluciona 'RECHAZADO' vs 'RECHAZADA' y 'ENVIADO' vs 'ENVIADA'). */
+  estadoActivoUI = computed<EstadoUI>(() => normalizarEstado(this.fichaActiva()?.estado_ficha));
+
+  /**
+   * Una ficha es editable si está en BORRADOR o si fue RECHAZADA (el estudiante debe poder
+   * corregirla y reenviarla). ENVIADA, VALIDADO y CERRADA_POR_PLAZO son de solo lectura.
+   */
+  esEditable = computed(() => {
+    const estado = this.estadoActivoUI();
+    return estado === 'BORRADOR' || estado === 'RECHAZADA';
+  });
 
   progreso = computed(() => {
     const totalPasos = this.secciones().length + 1;
@@ -114,7 +147,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.respuestasForm.valueChanges
       .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(val => {
-        if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+        if (!this.esEditable()) return;
 
         this.isSavingLocal.set(true);
         this.valormap.set(val.respuestas || {});
@@ -141,7 +174,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const user = this.authService.user();
     if (user) {
       this.perfilEstudiante.set({
-        cedula: (user as any).cedula || (user as any).identificacion || 'N/A',
+        cedula: user.cedula || 'N/A',
         rol: (user.rol as any) || 'ESTUDIANTE',
         correo: user.email || user.nombre,
         carrera: (user as any).carrera || 'General',
@@ -186,7 +219,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   validarSeccionActual(): boolean {
-    if (this.esPasoResumen() || this.fichaActiva()?.estado_ficha !== 'BORRADOR') return true;
+    if (this.esPasoResumen() || !this.esEditable()) return true;
 
     const seccionActual = this.secciones()[this.seccionActualIndex()];
     if (!seccionActual) return true;
@@ -211,9 +244,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     }
     return esValido;
   }
-  
+
   private guardarPasoEnLocal(): void {
-    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    if (!this.esEditable()) return;
     const currentData = JSON.parse(localStorage.getItem(this.AUTOSAVE_KEY) || '{}');
     currentData.seccionIndex = this.seccionActualIndex();
     localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(currentData));
@@ -234,17 +267,27 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           this.periodoActivo.set(pActivo || null);
           this.misFichas.set(fichas);
 
+          // Filtramos solo los formularios publicados para este periodo
           const formsPublicados = formularios.filter(f => {
             const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
             return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
           });
 
-          this.formulariosDisponibles.set(formsPublicados);
+          // Mapeamos para inyectar el estado visual normalizado a la tarjeta
+          const formsUI = formsPublicados.map((f): FormularioUI => {
+            const fichaAsociada = fichas.find(fi => fi.formulario_id === f.id && (fi.periodo_id === pActivo?.id));
+            return {
+              ...f,
+              estado_ui: normalizarEstado(fichaAsociada?.estado_ficha)
+            };
+          });
+
+          this.formulariosDisponibles.set(formsUI);
           this.vistaActual.set('LISTA');
           this.isLoading.set(false);
         },
         error: (err) => {
-          console.error('Error al cargar datos iniciales del estudiante:', err);
+          console.error('Error al cargar datos:', err);
           this.toastService.show('Error de conexión al cargar tus datos.', 'error');
           this.isLoading.set(false);
         }
@@ -293,7 +336,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const tieneBorradorLleno = localStorage.getItem(this.AUTOSAVE_KEY) !== null;
     const tieneFichasAnteriores = fichas.length > 1;
 
-    if (!tieneBorradorLleno && tieneFichasAnteriores && this.fichaActiva()?.estado_ficha === 'BORRADOR') {
+    if (!tieneBorradorLleno && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR') {
       this.mostrarBannerPrecarga.set(true);
     }
   }
@@ -352,90 +395,90 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   cargarEstructuraFormulario(formularioId: string): void {
-  forkJoin({
-    dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
-    formulario: this.formularioService.getFormularioById(formularioId),
-    secciones: this.formularioService.getSeccionesByFormulario(formularioId)
-  })
-  .pipe(takeUntilDestroyed(this.destroyRef))
-  .subscribe({
-    next: ({ dependencias, formulario, secciones }) => {
-      this.dependencias.set(dependencias);
-      this.formularioActivo.set(formulario);
-      this.secciones.set(secciones);
+    forkJoin({
+      dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
+      formulario: this.formularioService.getFormularioById(formularioId),
+      secciones: this.formularioService.getSeccionesByFormulario(formularioId)
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ dependencias, formulario, secciones }) => {
+          this.dependencias.set(dependencias);
+          this.formularioActivo.set(formulario);
+          this.secciones.set(secciones);
 
-      const preguntasReqs = secciones.map((s: Seccion) =>
-        this.formularioService.getPreguntasBySeccion(s.id)
-      );
+          const preguntasReqs = secciones.map((s: Seccion) =>
+            this.formularioService.getPreguntasBySeccion(s.id)
+          );
 
-      if (preguntasReqs.length === 0) {
-        this.isLoading.set(false);
-        return;
-      }
-
-      forkJoin(preguntasReqs)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (preguntasPorSeccion: Pregunta[][]) => {
-            const seccionesActualizadas = secciones.map((s: Seccion, index: number) => ({
-              ...s,
-              preguntas: preguntasPorSeccion[index]
-            }));
-            this.secciones.set(seccionesActualizadas);
-
-            const preguntasTodas = preguntasPorSeccion.flat();
-            const idsPreguntasExistentes = new Set(preguntasTodas.map(p => p.id));
-            this.sanitizarAutosave(idsPreguntasExistentes);
-
-            const fichaActual = this.fichaActiva();
-
-            const construirTodo = () => {
-              preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
-
-              if (fichaActual) {
-                this.aplicarRespuestasGuardadas(this.respuestasBDCache, fichaActual.estado_ficha);
-
-                if (fichaActual.estado_ficha !== 'BORRADOR') {
-                  this.seccionActualIndex.set(this.secciones().length);
-                } else if (this.autosaveData?.seccionIndex !== undefined) {
-                  const savedStep = this.autosaveData.seccionIndex;
-                  const maxStep = this.secciones().length;
-                  this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
-                }
-              }
-              this.isLoading.set(false);
-            };
-
-            if (fichaActual) {
-              this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
-                .pipe(takeUntilDestroyed(this.destroyRef))
-                .subscribe({
-                  next: (respuestasBD) => {
-                    this.respuestasBDCache = respuestasBD || [];
-                    construirTodo();
-                  },
-                  error: () => {
-                    this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
-                    this.respuestasBDCache = [];
-                    construirTodo();
-                  }
-                });
-            } else {
-              construirTodo();
-            }
-          },
-          error: () => {
-            this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
+          if (preguntasReqs.length === 0) {
             this.isLoading.set(false);
+            return;
           }
-        });
-    },
-    error: () => {
-      this.toastService.show('Error de conexión con el formulario.', 'error');
-      this.isLoading.set(false);
-    }
-  });
-}
+
+          forkJoin(preguntasReqs)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: (preguntasPorSeccion: Pregunta[][]) => {
+                const seccionesActualizadas = secciones.map((s: Seccion, index: number) => ({
+                  ...s,
+                  preguntas: preguntasPorSeccion[index]
+                }));
+                this.secciones.set(seccionesActualizadas);
+
+                const preguntasTodas = preguntasPorSeccion.flat();
+                const idsPreguntasExistentes = new Set(preguntasTodas.map(p => p.id));
+                this.sanitizarAutosave(idsPreguntasExistentes);
+
+                const fichaActual = this.fichaActiva();
+
+                const construirTodo = () => {
+                  preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
+
+                  if (fichaActual) {
+                    this.aplicarRespuestasGuardadas(this.respuestasBDCache);
+
+                    if (!this.esEditable()) {
+                      this.seccionActualIndex.set(this.secciones().length);
+                    } else if (this.autosaveData?.seccionIndex !== undefined) {
+                      const savedStep = this.autosaveData.seccionIndex;
+                      const maxStep = this.secciones().length;
+                      this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
+                    }
+                  }
+                  this.isLoading.set(false);
+                };
+
+                if (fichaActual) {
+                  this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
+                    .pipe(takeUntilDestroyed(this.destroyRef))
+                    .subscribe({
+                      next: (respuestasBD) => {
+                        this.respuestasBDCache = respuestasBD || [];
+                        construirTodo();
+                      },
+                      error: () => {
+                        this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
+                        this.respuestasBDCache = [];
+                        construirTodo();
+                      }
+                    });
+                } else {
+                  construirTodo();
+                }
+              },
+              error: () => {
+                this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
+                this.isLoading.set(false);
+              }
+            });
+        },
+        error: () => {
+          this.toastService.show('Error de conexión con el formulario.', 'error');
+          this.isLoading.set(false);
+        }
+      });
+  }
 
   private sanitizarAutosave(idsPreguntasExistentes: Set<string>): void {
     if (!this.autosaveData) return;
@@ -481,7 +524,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   onToggleSeleccionMultiple(preguntaId: string, opcionId: string, event: Event): void {
-    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    if (!this.esEditable()) return;
 
     const checked = (event.target as HTMLInputElement).checked;
     const formArray = this.respuestasGroup.get(preguntaId) as FormArray;
@@ -506,7 +549,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   onToggleMatrizMultiple(preguntaId: string, filaId: string, columnaId: string, event: Event): void {
-    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    if (!this.esEditable()) return;
 
     const checked = (event.target as HTMLInputElement).checked;
     const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
@@ -541,55 +584,55 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   cargarEstructuraMatriz(pregunta: Pregunta): void {
-  forkJoin({
-    filas: this.matricesService.getFilas(pregunta.id),
-    columnas: this.matricesService.getColumnas(pregunta.id)
-  })
-  .pipe(takeUntilDestroyed(this.destroyRef))
-  .subscribe({
-    next: ({ filas, columnas }) => {
-      this.secciones.update(secs => secs.map(s => ({
-        ...s,
-        preguntas: s.preguntas?.map(p => p.id === pregunta.id ? { ...p, filasMatriz: filas, columnasMatriz: columnas } : p)
-      })));
+    forkJoin({
+      filas: this.matricesService.getFilas(pregunta.id),
+      columnas: this.matricesService.getColumnas(pregunta.id)
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ filas, columnas }) => {
+          this.secciones.update(secs => secs.map(s => ({
+            ...s,
+            preguntas: s.preguntas?.map(p => p.id === pregunta.id ? { ...p, filasMatriz: filas, columnasMatriz: columnas } : p)
+          })));
 
-      if (!this.matricesGroup.contains(pregunta.id)) {
-        const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
-        const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
+          if (!this.matricesGroup.contains(pregunta.id)) {
+            const groupValidators = pregunta.es_obligatorio ? [requireAtLeastOneMatrixRowValidator()] : [];
+            const matrizFormGroup = this.fb.group({}, { validators: groupValidators });
 
-        const respuestaBD = this.respuestasBDCache.find((r: any) => r.pregunta_id === pregunta.id);
-        const matrizPorFilaBD: Record<string, string[]> = {};
-        if (respuestaBD?.respuestasMatriz?.length > 0) {
-          respuestaBD.respuestasMatriz.forEach((rm: any) => {
-            if (!matrizPorFilaBD[rm.fila_id]) matrizPorFilaBD[rm.fila_id] = [];
-            matrizPorFilaBD[rm.fila_id].push(rm.columna_id);
-          });
-        }
+            const respuestaBD = this.respuestasBDCache.find((r: any) => r.pregunta_id === pregunta.id);
+            const matrizPorFilaBD: Record<string, string[]> = {};
+            if (respuestaBD?.respuestasMatriz?.length > 0) {
+              respuestaBD.respuestasMatriz.forEach((rm: any) => {
+                if (!matrizPorFilaBD[rm.fila_id]) matrizPorFilaBD[rm.fila_id] = [];
+                matrizPorFilaBD[rm.fila_id].push(rm.columna_id);
+              });
+            }
 
-        filas.forEach((fila: any) => {
-          let savedColArr: string[] = [];
+            filas.forEach((fila: any) => {
+              let savedColArr: string[] = [];
 
-          if (matrizPorFilaBD[fila.id]) {
-            savedColArr = matrizPorFilaBD[fila.id];
-          } else {
-            const savedData = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id];
-            if (Array.isArray(savedData)) savedColArr = savedData;
-            else if (savedData) savedColArr = [savedData];
+              if (matrizPorFilaBD[fila.id]) {
+                savedColArr = matrizPorFilaBD[fila.id];
+              } else {
+                const savedData = this.autosaveData?.matrices?.[pregunta.id]?.[fila.id];
+                if (Array.isArray(savedData)) savedColArr = savedData;
+                else if (savedData) savedColArr = [savedData];
+              }
+
+              const formArray = this.fb.array(savedColArr.map(id => this.fb.control(id)));
+              matrizFormGroup.addControl(fila.id, formArray);
+            });
+
+            this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
+
+            if (!this.esEditable()) {
+              matrizFormGroup.disable({ emitEvent: false });
+            }
           }
-
-          const formArray = this.fb.array(savedColArr.map(id => this.fb.control(id)));
-          matrizFormGroup.addControl(fila.id, formArray);
-        });
-
-        this.matricesGroup.addControl(pregunta.id, matrizFormGroup);
-
-        if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') {
-          matrizFormGroup.disable({ emitEvent: false });
         }
-      }
-    }
-  });
-}
+      });
+  }
 
   esPreguntaVisible(preguntaId: string): boolean {
     const dep = this.dependencias().find(d => d.pregunta_dependiente_id === preguntaId);
@@ -613,7 +656,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   private limpiarPreguntasOcultas(): void {
-    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    if (!this.esEditable()) return;
 
     this.dependencias().forEach(dep => {
       if (!this.esPreguntaVisible(dep.pregunta_dependiente_id)) {
@@ -677,43 +720,43 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return String(val);
   }
 
-  aplicarRespuestasGuardadas(respuestasBD: any[], estadoFicha: string): void {
-  if (!respuestasBD || respuestasBD.length === 0) return;
+  aplicarRespuestasGuardadas(respuestasBD: any[]): void {
+    if (!respuestasBD || respuestasBD.length === 0) return;
 
-  const valoresParaElFormulario: any = {};
+    const valoresParaElFormulario: any = {};
 
-  respuestasBD.forEach(resp => {
-    if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
+    respuestasBD.forEach(resp => {
+      if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
 
-    const controlArray = this.respuestasGroup.get(resp.pregunta_id);
+      const controlArray = this.respuestasGroup.get(resp.pregunta_id);
 
-    if (controlArray instanceof FormArray) {
-      controlArray.clear({ emitEvent: false });
-      if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
-        resp.opcionesSeleccionadas.forEach((opc: any) => {
-          controlArray.push(this.fb.control(opc.opcion_id), { emitEvent: false });
-        });
+      if (controlArray instanceof FormArray) {
+        controlArray.clear({ emitEvent: false });
+        if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+          resp.opcionesSeleccionadas.forEach((opc: any) => {
+            controlArray.push(this.fb.control(opc.opcion_id), { emitEvent: false });
+          });
+        }
+      } else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
+        valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
+      } else if (resp.documentos && resp.documentos.length > 0) {
+        valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
+      } else {
+        valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
       }
-    } else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
-      valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
-    } else if (resp.documentos && resp.documentos.length > 0) {
-      valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
+    });
+
+    this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
+    this.valormap.set(this.respuestasGroup.getRawValue());
+
+    if (!this.esEditable()) {
+      this.respuestasGroup.disable({ emitEvent: false });
+      this.matricesGroup.disable({ emitEvent: false });
     } else {
-      valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
+      this.respuestasGroup.enable({ emitEvent: false });
+      this.matricesGroup.enable({ emitEvent: false });
     }
-  });
-
-  this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
-  this.valormap.set(this.respuestasGroup.getRawValue());
-
-  if (estadoFicha !== 'BORRADOR') {
-    this.respuestasGroup.disable({ emitEvent: false });
-    this.matricesGroup.disable({ emitEvent: false });
-  } else {
-    this.respuestasGroup.enable({ emitEvent: false });
-    this.matricesGroup.enable({ emitEvent: false });
   }
-}
 
   descargarPdfResumen(fichaId: string): void {
     const ficha = this.fichaActiva();
@@ -725,7 +768,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     );
   }
 
-guardarYEnviar(esFinal: boolean = true): void {
+  guardarYEnviar(esFinal: boolean = true): void {
     const ficha = this.fichaActiva();
     if (!ficha) return;
 
@@ -807,14 +850,17 @@ guardarYEnviar(esFinal: boolean = true): void {
     };
 
     if (esFinal) {
+      const eraCorreccion = this.estadoActivoUI() === 'RECHAZADA';
       Swal.fire({
-        title: '¿Seguro que quieres terminar la ficha?',
-        text: 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
+        title: eraCorreccion ? '¿Enviar la corrección de tu ficha?' : '¿Seguro que quieres terminar la ficha?',
+        text: eraCorreccion
+          ? 'Tu ficha corregida será enviada nuevamente a Bienestar Estudiantil para revisión.'
+          : 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#2563eb',
         cancelButtonColor: '#e11d48',
-        confirmButtonText: 'Sí, terminar ficha',
+        confirmButtonText: eraCorreccion ? 'Sí, reenviar ficha' : 'Sí, terminar ficha',
         cancelButtonText: 'Revisar de nuevo',
         customClass: {
           popup: 'rounded-2xl',
@@ -836,11 +882,11 @@ guardarYEnviar(esFinal: boolean = true): void {
     localStorage.removeItem(this.AUTOSAVE_KEY);
     this.toastService.show('¡Ficha socioeconómica enviada exitosamente a Bienestar!', 'success');
     this.volverALista();
-    this.cargarDatosEstudiante();
+    this.cargarDatosEstudiante(); // Recarga para actualizar el estado UI de las tarjetas
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
-    if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
+    if (!this.esEditable()) return;
 
     const element = event.currentTarget as HTMLInputElement;
     const fileList: FileList | null = element.files;
@@ -874,7 +920,7 @@ guardarYEnviar(esFinal: boolean = true): void {
   }
 
   ngOnDestroy(): void {
-    if (this.fichaActiva()?.estado_ficha === 'BORRADOR') {
+    if (this.esEditable()) {
       const val = this.respuestasForm.getRawValue();
       const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
       localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
