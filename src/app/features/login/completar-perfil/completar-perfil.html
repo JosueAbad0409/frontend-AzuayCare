@@ -8,7 +8,7 @@
         Antes de continuar, confirma tus datos académicos. Solo lo pedimos una vez.
     </p>
 
-    <!-- Datos que ya vienen de Google, solo lectura -->
+    <!-- Datos de Google -->
     <div class="datos-google">
         <div class="avatar-inicial">{{ nombreCompleto().charAt(0) }}</div>
         <div class="datos-google-texto">
@@ -58,12 +58,18 @@
         </div>
         }
 
-        <button type="submit" class="btn-guardar" [disabled]="loading() || cargandoCatalogos()">
-            @if (loading()) {
-            <span>Guardando...</span>
-            } @else {
-            <span>Guardar y continuar</span>
-            }
-        </button>
+        <!-- Grupo de botones responsivo -->
+        <div class="button-group">
+            <button type="button" class="btn-cancelar" (click)="cancelarOVolver()">
+                Cancelar
+            </button>
+            <button type="submit" class="btn-guardar" [disabled]="loading() || cargandoCatalogos()">
+                @if (loading()) {
+                <span>Guardando...</span>
+                } @else {
+                <span>Guardar y continuar</span>
+                }
+            </button>
+        </div>
     </form>
 </div>

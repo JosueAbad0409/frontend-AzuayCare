@@ -5,7 +5,6 @@ import { AuthService } from '../../../core/services/auth.service';
 import { FichaService } from '../../../core/services/ficha.service';
 import { FichaRevision } from '../../../core/models/revision-ficha.model';
 
-
 @Component({
   selector: 'app-estudiante-inicio',
   standalone: true,
@@ -136,16 +135,19 @@ export class EstudianteInicioComponent implements OnInit {
   isLoading = signal<boolean>(true);
 
   nombreUsuario(): string {
-    return this.authService.user()?.nombre?.split(' ')[0] || 'Estudiante';
+    // Usamos 'any' por si la interfaz User no está tipando correctamente 'nombre'
+    const usuario = this.authService.user() as any;
+    return usuario?.nombre?.split(' ')[0] || 'Estudiante';
   }
 
   esEstudiante(): boolean {
-    return this.authService.user()?.rol === 'ESTUDIANTE';
+    const usuario = this.authService.user() as any;
+    return usuario?.rol === 'ESTUDIANTE';
   }
 
   ngOnInit(): void {
     this.fichaService.getMisFichas().subscribe({
-      next: (fichas) => {
+      next: (fichas: FichaRevision[]) => {
         if (fichas && fichas.length > 0) {
           // Buscamos la primera activa o la más reciente
           const activa = fichas.find(f => f.estado_ficha === 'BORRADOR' || f.estado_ficha === 'ENVIADA') || fichas[0];

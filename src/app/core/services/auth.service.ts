@@ -13,6 +13,7 @@ export interface UsuarioLogueado {
   carrera_id?: string | null;
   cedula?: string | null;
   ciclo_id?: string | null;
+  foto_url?: string | null;
 }
 
 export interface LoginGoogleResponse {
@@ -133,7 +134,7 @@ export class AuthService {
       this.setToken(data.accessToken);
     }
 
-    // El JWT decodificado no trae cedula/ciclo_id, así que completamos
+    // El JWT decodificado no trae cedula/ciclo_id/foto_url, así que completamos
     // el usuario en memoria con lo que vino en el cuerpo de la respuesta.
     if (data?.usuario) {
       this.user.update((actual) =>
@@ -143,6 +144,7 @@ export class AuthService {
               cedula: data.usuario!.cedula ?? null,
               ciclo_id: data.usuario!.ciclo_id ?? null,
               carrera_id: data.usuario!.carrera_id ?? actual.carrera_id ?? null,
+              foto_url: (data.usuario as any).foto_url ?? null,
             }
           : actual
       );
@@ -162,5 +164,9 @@ export class AuthService {
     this.perfilCompleto.set(true);
     localStorage.setItem(PERFIL_COMPLETO_KEY, 'true');
     this.user.update((actual) => (actual ? { ...actual, ...datos } : actual));
+  }
+
+  actualizarFotoPerfil(fotoUrl: string): void {
+    this.user.update((actual) => (actual ? { ...actual, foto_url: fotoUrl } : actual));
   }
 }

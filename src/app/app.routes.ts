@@ -69,8 +69,9 @@ export const routes: Routes = [
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
+        // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil-coordinador',
-        loadComponent: () => import('./features/admin/perfil-coordinador-form/perfil-coordinador-form.component').then(m => m.PerfilCoordinadorFormComponent)
+        loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
       }
     ]
   },
@@ -95,8 +96,9 @@ export const routes: Routes = [
         loadComponent: () => import('./features/estudiante/documentos/estudiante-documentos.component').then(m => m.EstudianteDocumentosComponent)
       },
       {
+        // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil',
-        loadComponent: () => import('./features/estudiante/estudiante-ficha.component').then(m => m.EstudianteFichaComponent)
+        loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
       }
     ]
   },

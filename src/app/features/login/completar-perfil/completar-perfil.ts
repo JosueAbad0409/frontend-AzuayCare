@@ -36,8 +36,9 @@ export class CompletarPerfilComponent implements OnInit {
   private todosLosCiclos = signal<Ciclo[]>([]);
   private carreraSeleccionada = signal<string>('');
 
-  nombreCompleto = computed(() => this.authService.user()?.nombre ?? 'Estudiante');
-  correo = computed(() => this.authService.user()?.email ?? '');
+  // Casteos seguros en caso de que user() retorne unknown
+  nombreCompleto = computed(() => (this.authService.user() as any)?.nombre ?? 'Estudiante');
+  correo = computed(() => (this.authService.user() as any)?.email ?? '');
 
   // Declaración inicial sin requerimientos en carrera y ciclo por defecto
   perfilForm: FormGroup = this.fb.group({
@@ -59,7 +60,8 @@ export class CompletarPerfilComponent implements OnInit {
     }
 
     // Si el usuario es de rol ESTUDIANTE, exigimos de forma obligatoria carrera y ciclo
-    if (this.authService.user()?.rol === 'ESTUDIANTE') {
+    const usuario = this.authService.user() as any;
+    if (usuario?.rol === 'ESTUDIANTE') {
       this.perfilForm.get('carrera_id')!.setValidators([Validators.required]);
       this.perfilForm.get('ciclo_id')!.setValidators([Validators.required]);
       this.perfilForm.get('carrera_id')!.updateValueAndValidity();
@@ -131,5 +133,12 @@ export class CompletarPerfilComponent implements OnInit {
         );
       },
     });
+  }
+
+  // Método que faltaba y era requerido en el HTML
+  cancelarOVolver(): void {
+    // Opcional: Si tienes implementado el método logout, lo puedes usar aquí
+    // this.authService.logout();
+    this.router.navigate(['/']); 
   }
 }

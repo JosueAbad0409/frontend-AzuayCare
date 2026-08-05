@@ -1,6 +1,13 @@
 /* ==========================================
-   CONFIGURACIÓN GLOBAL - APP COMPONENT
+   CONFIGURACIÓN GLOBAL Y RESPONSIVA
    ========================================== */
+:root {
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 8px;
+  --nav-bottom-height: 70px; /* Margen para navegación móvil */
+}
+
 :host {
   display: block;
   width: 100%;
@@ -15,6 +22,7 @@
 
 :root[data-theme='dark'] :host {
   background: linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
+  color: #f8fafc;
 }
 
 main {
@@ -22,14 +30,17 @@ main {
   min-height: 100vh;
 }
 
-/* --- TARJETAS Y SUPERFICIES ELEVADAS --- */
+/* --- TARJETAS Y SUPERFICIES ELEVADAS (FLUIDAS) --- */
 .card-surface {
-  border-radius: var(--radius-lg, 24px);
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(226, 232, 240, 0.9);
   background: linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%);
   box-shadow: var(--shadow-subtle, 0 10px 30px -5px rgba(0, 0, 0, 0.08));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .text-gradient {
@@ -45,26 +56,21 @@ main {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- RESETEO DE CONTROLES DE FORMULARIO --- */
-button,
-input,
-textarea,
-select {
+/* --- RESETEO DE CONTROLES DE FORMULARIO PARA MÓVILES --- */
+button, input, textarea, select {
   font-family: inherit;
+  font-size: 16px; /* Previene el auto-zoom en iOS Safari */
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 button {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px; /* Área táctil mínima recomendada */
 }
 
 button:hover:not(:disabled) {
@@ -74,47 +80,54 @@ button:hover:not(:disabled) {
 .app-shell {
   position: relative;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
+/* --- BOTÓN TEMA: ADAPTACIÓN MÓVIL --- */
 .theme-toggle {
   position: fixed;
   right: 1.2rem;
   bottom: 1.2rem;
-  z-index: 60;
+  z-index: 9999;
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 999px;
   background: var(--surface-glass, rgba(255,255,255,0.8));
-  color: var(--text-main);
-  box-shadow: var(--shadow-md);
+  color: var(--text-main, #0f172a);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 :root[data-theme='dark'] .theme-toggle {
   background: rgba(15, 23, 42, 0.9);
   border-color: rgba(148, 163, 184, 0.24);
-  box-shadow: 0 18px 45px -18px rgba(2, 6, 23, 0.7);
+  color: #f8fafc;
 }
 
-.theme-toggle:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-button:focus-visible {
-  outline: 2px solid rgba(21, 128, 61, 0.5);
-  outline-offset: 2px;
-}
-
-button:disabled {
-  transform: none;
-  opacity: 0.6;
-  cursor: not-allowed;
+/* ==========================================
+   MEDIA QUERIES (TABLETS Y MÓVILES)
+   ========================================== */
+@media (max-width: 768px) {
+  .card-surface {
+    padding: 1.25rem; 
+    border-radius: var(--radius-md);
+  }
+  
+  .theme-toggle {
+    /* Elevar el botón para que no choque con la barra inferior del estudiante */
+    bottom: calc(var(--nav-bottom-height) + 1.2rem);
+    padding: 0.75rem;
+  }
+  
+  .theme-toggle span {
+    display: none; 
+  }
 }

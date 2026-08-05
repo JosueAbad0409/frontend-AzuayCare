@@ -1,0 +1,131 @@
+:host { display: block; width: 100%; }
+
+.dashboard-container {
+    max-width: 64rem;
+    margin: 1rem auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Banner Principal */
+.hero-banner {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 2rem;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    color: white;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.hero-glow {
+    position: absolute;
+    bottom: -50px;
+    right: -50px;
+    width: 300px;
+    height: 300px;
+    background: rgba(52, 211, 153, 0.15);
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+.badge-green {
+    background: rgba(6, 78, 59, 0.8);
+    border: 1px solid rgba(4, 120, 87, 0.5);
+    color: #34d399;
+    padding: 0.35rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge-yellow {
+    background: rgba(69, 26, 3, 0.8);
+    border: 1px solid rgba(180, 83, 9, 0.5);
+    color: #fbbf24;
+    padding: 0.35rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Tarjetas Informativas */
+.info-card {
+    background: #8c919d;
+    border-radius: 2rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-card:hover { transform: translateY(-3px); }
+
+.status-box {
+    background: #5c6574;
+    border: 2px dashed #717a8a;
+    border-radius: 1.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.status-box:hover { background: #636c7c; }
+
+.icon-circle {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.btn-primary-outline {
+    background: rgba(52, 211, 153, 0.2);
+    color: #34d399;
+    padding: 0.6rem 1.5rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary-outline:hover { background: rgba(52, 211, 153, 0.3); }
+
+/* Grid responsivo */
+.cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .dashboard-container { padding: 1.5rem; }
+    .hero-banner { padding: 2.5rem; }
+    .cards-grid { grid-template-columns: repeat(3, 1fr); }
+    .col-span-2 { grid-column: span 2 / span 2; }
+}
