@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, D
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router'; // 👈 IMPORTANTE: Agregado RouterModule
+import { Router, RouterModule } from '@angular/router'; 
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
@@ -40,7 +40,6 @@ function requireAtLeastOneMatrixRowValidator() {
 @Component({
   selector: 'app-estudiante-ficha',
   standalone: true,
-  // ✅ CORRECCIÓN: Quitamos EstudiantePerfilModalComponent y agregamos RouterModule para el enlace <a>
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './estudiante-ficha.component.html',
   styleUrls: ['./estudiante-ficha.component.css'],
@@ -212,6 +211,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     }
     return esValido;
   }
+  
   private guardarPasoEnLocal(): void {
     if (this.fichaActiva()?.estado_ficha !== 'BORRADOR') return;
     const currentData = JSON.parse(localStorage.getItem(this.AUTOSAVE_KEY) || '{}');
@@ -856,29 +856,6 @@ guardarYEnviar(esFinal: boolean = true): void {
           error: () => this.toastService.show('Error al subir el archivo.', 'error')
         });
     }
-  }
-
-  logout(): void {
-    Swal.fire({
-      title: '¿Cerrar sesión?',
-      text: 'Tendrás que volver a ingresar tus credenciales para continuar.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2563eb',
-      cancelButtonColor: '#e11d48',
-      confirmButtonText: 'Sí, salir',
-      cancelButtonText: 'Cancelar',
-      customClass: {
-        popup: 'rounded-2xl',
-        confirmButton: 'rounded-xl',
-        cancelButton: 'rounded-xl'
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.authService.logout();
-        this.router.navigate(['/login']);
-      }
-    });
   }
 
   getIconoSeccion(nombre: string): string {
