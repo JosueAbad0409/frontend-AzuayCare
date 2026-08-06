@@ -20,6 +20,7 @@ export interface FichaRevision {
   balance_final: number;
   nivel_economico_id: string | null;
   estado_ficha: EstadoFicha;
+  nivel_prioridad?: string; // 🔥 NUEVO CAMPO: Viene del motor dinámico
   rango_resultado_id?: string | null;
   created_at: string;
   updated_at: string;

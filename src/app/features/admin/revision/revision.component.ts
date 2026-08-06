@@ -4,17 +4,15 @@ import {
   inject, 
   signal, 
   computed, 
-  ChangeDetectionStrategy, 
-  OnDestroy 
+  ChangeDetectionStrategy 
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RevisionService } from '../../../core/services/revision.service';
 import { HistorialEstadoService } from '../../../core/services/historial-estado.service';
-import { FichaRevision, FichasPaginadasResponse, EstadoFicha } from '../../../core/models/revision-ficha.model';
+import { FichaRevision, EstadoFicha } from '../../../core/models/revision-ficha.model';
 import { HistorialEstadoFicha } from '../../../core/models/historial-estado.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-revision',
@@ -24,23 +22,53 @@ import { HistorialEstadoFicha } from '../../../core/models/historial-estado.mode
   styleUrls: ['./revision.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RevisionComponent implements OnInit, OnDestroy {
+export class RevisionComponent implements OnInit {
   private readonly revisionService = inject(RevisionService);
   private readonly historialService = inject(HistorialEstadoService);
+  private readonly router = inject(Router);
 
-  // Estados reactivos principales
+  // Estado principal: Guarda TODAS las fichas traídas del servidor
   fichas = signal<FichaRevision[]>([]);
   isLoading = signal<boolean>(true);
 
-  // Paginación y filtros
+  // Controles de interfaz
   searchTerm = signal<string>('');
   estadoFiltro = signal<string>('TODOS');
   paginaActual = signal<number>(1);
   limite = signal<number>(10);
-  totalRegistros = signal<number>(0);
 
-  // Cálculo derivado para el total de páginas
+  // 1. FILTRO COMPUTADO (Igual que en usuarios)
+  fichasFiltradas = computed(() => {
+    const term = this.searchTerm().toLowerCase().trim();
+    const estado = this.estadoFiltro();
+
+    return this.fichas().filter(f => {
+      // Filtrar por estado
+      if (estado !== 'TODOS' && f.estado_ficha !== estado) return false;
+
+      // Filtrar por texto
+      if (!term) return true;
+      const nombre = f.usuario?.primer_nombre?.toLowerCase() || '';
+      const apellido = f.usuario?.primer_apellido?.toLowerCase() || '';
+      const cedula = f.usuario?.cedula?.toLowerCase() || '';
+      const correo = f.usuario?.email_institucional?.toLowerCase() || '';
+
+      return nombre.includes(term) || 
+             apellido.includes(term) || 
+             cedula.includes(term) || 
+             correo.includes(term);
+    });
+  });
+
+  // 2. PAGINACIÓN EN MEMORIA COMPUTADA
+  totalRegistros = computed(() => this.fichasFiltradas().length);
   totalPaginas = computed(() => Math.ceil(this.totalRegistros() / this.limite()) || 1);
+  
+  fichasPaginadas = computed(() => {
+    const inicio = (this.paginaActual() - 1) * this.limite();
+    const fin = inicio + this.limite();
+    return this.fichasFiltradas().slice(inicio, fin);
+  });
 
   // Estado del Modal y Detalle
   fichaSeleccionada = signal<FichaRevision | null>(null);
@@ -50,84 +78,47 @@ export class RevisionComponent implements OnInit, OnDestroy {
   comentarioCambio = signal<string>('');
   guardandoEstado = signal<boolean>(false);
 
-  // Subject RxJS para la búsqueda optimizada (Debounce)
-  private readonly searchSubject = new Subject<string>();
-  private searchSubscription!: Subscription;
-
   ngOnInit(): void {
-    // Configuración del Debounce para evitar saturar el backend NestJS con peticiones
-    this.searchSubscription = this.searchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
-    ).subscribe(term => {
-      this.searchTerm.set(term);
-      this.paginaActual.set(1); // Reiniciar a la primera página tras una búsqueda
-      this.cargarFichas();
-    });
-
-    this.cargarFichas();
-  }
-
-  ngOnDestroy(): void {
-    if (this.searchSubscription) {
-      this.searchSubscription.unsubscribe();
-    }
+    this.cargarTodasLasFichas();
   }
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchSubject.next(value);
+    this.searchTerm.set(value);
+    this.paginaActual.set(1); // Regresa a la página 1 al buscar
   }
 
   onEstadoChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.estadoFiltro.set(value);
-    this.paginaActual.set(1); // Reiniciar a la primera página
-    this.cargarFichas();
+    this.paginaActual.set(1); // Regresa a la página 1 al filtrar
   }
 
   cambiarPagina(nuevaPagina: number): void {
     if (nuevaPagina >= 1 && nuevaPagina <= this.totalPaginas()) {
       this.paginaActual.set(nuevaPagina);
-      this.cargarFichas();
     }
   }
 
-  cargarFichas(): void {
+  cargarTodasLasFichas(): void {
     this.isLoading.set(true);
-
-    // Cálculo explícito de offset para NestJS (TypeORM/Prisma skip & take)
-    const skip = (this.paginaActual() - 1) * this.limite();
-
-    this.revisionService.getFichasPaginadas(
-      skip,
-      this.limite(),
-      this.searchTerm(),
-      this.estadoFiltro()
-    ).subscribe({
-      next: (response: FichasPaginadasResponse) => {
+    
+    // Pedimos un límite muy alto para traer todo a la memoria (ej: 10,000)
+    // Ya no enviamos el search ni el estado, traemos TODO.
+    this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').subscribe({
+      next: (response: any) => {
         this.fichas.set(response.data || []);
-        this.totalRegistros.set(response.total || 0);
         this.isLoading.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar fichas paginadas:', err);
+        console.error('Error al cargar fichas:', err);
         this.isLoading.set(false);
       }
     });
   }
 
   verDetalleFicha(ficha: FichaRevision): void {
-    this.fichaSeleccionada.set(ficha);
-    this.tabActiva.set('DETALLE');
-    this.comentarioCambio.set('');
-
-    this.revisionService.getRespuestasPorFicha(ficha.id).subscribe({
-      next: (respuestas) => this.respuestasFicha.set(respuestas),
-      error: (err) => console.error('Error al cargar respuestas:', err)
-    });
-
-    this.cargarHistorial(ficha.id);
+    this.router.navigate(['/admin/revision-fichas', ficha.id]);
   }
 
   cargarHistorial(fichaId: string): void {
@@ -152,7 +143,11 @@ export class RevisionComponent implements OnInit, OnDestroy {
         this.guardandoEstado.set(false);
         this.fichaSeleccionada.set(fichaActualizada);
         this.cargarHistorial(ficha.id);
-        this.cargarFichas(); // Recargar lista paginada para reflejar cambios
+        
+        // Actualizamos la ficha localmente en memoria sin volver a llamar al servidor
+        this.fichas.update(fichas => 
+          fichas.map(f => f.id === ficha.id ? fichaActualizada : f)
+        );
       },
       error: (err) => {
         console.error('Error al actualizar el estado:', err);
@@ -165,5 +160,7 @@ export class RevisionComponent implements OnInit, OnDestroy {
     this.fichaSeleccionada.set(null);
     this.respuestasFicha.set([]);
     this.historialFicha.set([]);
+    this.comentarioCambio.set('');
+    document.body.style.overflow = '';
   }
 }

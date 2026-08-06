@@ -54,7 +54,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (f of fichas(); track f.id) {
+          @for (f of fichasPaginadas(); track f.id) {
             <tr>
               <td>
                 <strong>{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
@@ -119,115 +119,143 @@
 
   <!-- MODAL DE AUDITORÍA Y LÍNEA DE TIEMPO -->
   @if (fichaSeleccionada()) {
-    <div class="modal-backdrop">
-      <div class="modal-box animate-pop" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3 style="margin: 0; font-weight: 800; color: #0f172a;">Evaluación y Auditoría de Ficha</h3>
-          <button class="btn-icon text-red" (click)="cerrarModal()" style="margin: 0;"><i class="fas fa-times"></i></button>
+    <div class="modal-backdrop" (click)="cerrarModal()">
+      <div class="modal-box animate-pop" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+
+        <!-- Header -->
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">Evaluación y Auditoría de Ficha</h3>
+            <p class="modal-subtitle">Revisa respuestas, balances y decide el estado</p>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Cerrar">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
 
-        <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
-        <div class="tabs-nav mb-4">
-          <button 
-            type="button" 
-            class="tab-btn" 
-            [class.active]="tabActiva() === 'DETALLE'" 
-            (click)="setTab('DETALLE')"
-          >
+        <!-- Tabs -->
+        <div class="tabs-nav">
+          <button type="button" class="tab-btn" [class.active]="tabActiva() === 'DETALLE'" (click)="setTab('DETALLE')">
             <i class="fas fa-file-alt"></i> Detalle de Ficha
           </button>
-          <button 
-            type="button" 
-            class="tab-btn" 
-            [class.active]="tabActiva() === 'HISTORIAL'" 
-            (click)="setTab('HISTORIAL')"
-          >
+          <button type="button" class="tab-btn" [class.active]="tabActiva() === 'HISTORIAL'" (click)="setTab('HISTORIAL')">
             <i class="fas fa-history"></i> Línea de Tiempo
           </button>
         </div>
 
-        <!-- PESTAÑA 1: DETALLE DE FICHA Y RESPUESTAS -->
-        @if (tabActiva() === 'DETALLE') {
-          <div class="estudiante-info-box mb-3" style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
-            <p style="margin: 0 0 0.5rem 0;">
-              <strong>Estudiante:</strong> {{ fichaSeleccionada()?.usuario?.primer_nombre }} {{ fichaSeleccionada()?.usuario?.primer_apellido }}
-            </p>
-            <p style="margin: 0;"><strong>Cédula:</strong> {{ fichaSeleccionada()?.usuario?.cedula || 'N/A' }}</p>
-            
-            <div style="display: flex; gap: 2rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-              <span>Ingresos: <strong>${{ fichaSeleccionada()?.total_ingresos | number:'1.2-2' }}</strong></span>
-              <span>Egresos: <strong>${{ fichaSeleccionada()?.total_egresos | number:'1.2-2' }}</strong></span>
-              <span>Balance: <strong style="color: #10b981;">${{ fichaSeleccionada()?.balance_final | number:'1.2-2' }}</strong></span>
-            </div>
-          </div>
+        <!-- Contenido con scroll interno -->
+        <div class="modal-body">
 
-          <h4 style="font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem;">Respuestas Registradas:</h4>
-          <div class="space-y-2 mb-4" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
-            @for (resp of respuestasFicha(); track resp.id) {
-              <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 0.75rem 1rem; border-radius: 8px;">
-                <p style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin: 0;">{{ resp.pregunta?.enunciado }}</p>
-                <p style="font-size: 0.9rem; color: #8b5cf6; font-weight: 700; margin: 0.25rem 0 0 0;">
-                  {{ resp.valor_texto || resp.valor_numerico || 'Opción Seleccionada' }}
-                </p>
+          @if (tabActiva() === 'DETALLE') {
+            <!-- Info estudiante + balances -->
+            <div class="student-card">
+              <div class="student-main">
+                <div class="student-avatar">
+                  <i class="fas fa-user-graduate"></i>
+                </div>
+                <div>
+                  <p class="student-name">
+                    {{ fichaSeleccionada()?.usuario?.primer_nombre }}
+                    {{ fichaSeleccionada()?.usuario?.primer_apellido }}
+                  </p>
+                  <p class="student-meta">
+                    Cédula: <strong>{{ fichaSeleccionada()?.usuario?.cedula || 'N/A' }}</strong>
+                  </p>
+                </div>
               </div>
-            } @empty {
-              <p style="font-size: 0.85rem; color: #64748b; font-style: italic;">No hay respuestas cargadas para esta ficha.</p>
-            }
-          </div>
 
-          <!-- CAMBIO DE ESTADO (VALIDAR / RECHAZAR) -->
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
-            <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Comentario de Revisión / Justificación:</label>
-            <textarea 
-              [value]="comentarioCambio()" 
-              (input)="comentarioCambio.set($any($event.target).value)"
-              class="form-control" 
-              rows="2" 
-              placeholder="Escriba la razón de aprobación o rechazo..."
-            ></textarea>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
-              <button class="btn btn-outline" (click)="cambiarEstado('RECHAZADO')" [disabled]="guardandoEstado()">
-                <i class="fas fa-times-circle"></i> Rechazar
-              </button>
-              <button class="btn btn-purple" (click)="cambiarEstado('VALIDADO')" [disabled]="guardandoEstado()">
-                <i class="fas fa-check-circle"></i> Validar Ficha
-              </button>
+              <div class="balance-grid">
+                <div class="balance-item">
+                  <span class="balance-label">Ingresos</span>
+                  <span class="balance-value">
+                    ${{ fichaSeleccionada()?.total_ingresos | number:'1.2-2' }}
+                  </span>
+                </div>
+                <div class="balance-item">
+                  <span class="balance-label">Egresos</span>
+                  <span class="balance-value">
+                    ${{ fichaSeleccionada()?.total_egresos | number:'1.2-2' }}
+                  </span>
+                </div>
+                <div class="balance-item balance-highlight">
+                  <span class="balance-label">Balance</span>
+                  <span class="balance-value text-success">
+                    ${{ fichaSeleccionada()?.balance_final | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        }
 
-        <!-- PESTAÑA 2: LÍNEA DE TIEMPO / HISTORIAL -->
-        @if (tabActiva() === 'HISTORIAL') {
-          <div class="timeline-container">
-            <div class="timeline">
-              @for (h of historialFicha(); track h.id) {
-                <div class="timeline-item">
-                  <div class="timeline-badge" [ngClass]="{
-                    'bg-green-500': h.estado_nuevo === 'VALIDADO',
-                    'bg-red-500': h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA',
-                    'bg-blue-500': h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO',
-                    'bg-yellow-500': h.estado_nuevo === 'BORRADOR'
-                  }"></div>
-                  <div class="timeline-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <strong style="font-size: 0.9rem; color: #0f172a;">Transición a {{ h.estado_nuevo }}</strong>
-                      <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">{{ h.created_at | date:'medium' }}</span>
-                    </div>
-                    <p style="font-size: 0.825rem; color: #475569; margin: 0.35rem 0 0 0;">
-                      {{ h.comentario || 'Sin comentario registrado' }}
-                    </p>
-                  </div>
+            <!-- Respuestas -->
+            <h4 class="section-title">Respuestas Registradas</h4>
+            <div class="respuestas-list">
+              @for (resp of respuestasFicha(); track resp.id) {
+                <div class="respuesta-card">
+                  <p class="respuesta-pregunta">{{ resp.pregunta?.enunciado }}</p>
+                  <p class="respuesta-valor">
+                    {{ resp.valor_texto || resp.valor_numerico || 'Opción Seleccionada' }}
+                  </p>
                 </div>
               } @empty {
-                <p style="font-size: 0.85rem; color: #64748b; text-align: center; padding: 2rem 0;">No existen registros históricos para esta ficha.</p>
+                <p class="empty-text">No hay respuestas cargadas para esta ficha.</p>
               }
             </div>
-          </div>
-        }
 
+            <!-- Comentario + acciones -->
+            <div class="review-actions">
+              <label class="form-label">Comentario de Revisión / Justificación</label>
+              <textarea
+                [value]="comentarioCambio()"
+                (input)="comentarioCambio.set($any($event.target).value)"
+                class="form-control"
+                rows="3"
+                placeholder="Escriba la razón de aprobación o rechazo..."
+              ></textarea>
+
+              <div class="actions-row">
+                <button type="button" class="btn btn-outline btn-reject" (click)="cambiarEstado('RECHAZADO')" [disabled]="guardandoEstado()">
+                  @if (guardandoEstado()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i class="fas fa-times-circle"></i> }
+                  Rechazar
+                </button>
+                <button type="button" class="btn btn-purple btn-approve" (click)="cambiarEstado('VALIDADO')" [disabled]="guardandoEstado()">
+                  @if (guardandoEstado()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i class="fas fa-check-circle"></i> }
+                  Validar Ficha
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (tabActiva() === 'HISTORIAL') {
+            <div class="timeline-container">
+              <div class="timeline">
+                @for (h of historialFicha(); track h.id) {
+                  <div class="timeline-item">
+                    <div class="timeline-badge" [ngClass]="{
+                      'bg-green-500': h.estado_nuevo === 'VALIDADO',
+                      'bg-red-500': h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA',
+                      'bg-blue-500': h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO',
+                      'bg-yellow-500': h.estado_nuevo === 'BORRADOR'
+                    }"></div>
+                    <div class="timeline-card">
+                      <div class="timeline-header">
+                        <strong>Transición a {{ h.estado_nuevo }}</strong>
+                        <span>{{ h.created_at | date:'medium' }}</span>
+                      </div>
+                      <p class="timeline-comment">{{ h.comentario || 'Sin comentario registrado' }}</p>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="empty-text" style="text-align:center; padding: 2rem 0;">
+                    No existen registros históricos para esta ficha.
+                  </p>
+                }
+              </div>
+            </div>
+          }
+
+        </div>
       </div>
     </div>
   }
+  
 </div>

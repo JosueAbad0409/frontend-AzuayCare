@@ -436,53 +436,5 @@
       }
     </main>
 
-    <!-- MODAL NUEVA SECCIÓN -->
-    @if (showSeccionModal()) {
-      <div class="modal-backdrop" (click)="showSeccionModal.set(false)">
-        <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-          <h3>Nueva Sección</h3>
-          <form [formGroup]="seccionForm" (ngSubmit)="guardarSeccion()">
-            <div class="form-group mb-3">
-              <label class="font-semibold text-xs">Nombre de Sección *</label>
-              <input type="text" formControlName="nombre" class="form-control" placeholder="Ej: Información Financiera Familiar">
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="font-semibold text-xs">Descripción</label>
-              <input type="text" formControlName="descripcion" class="form-control" placeholder="Breve explicación...">
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-              <div class="form-group">
-                <label class="font-semibold text-xs">Tipo de Sección *</label>
-                <select formControlName="tipo_seccion" class="form-control">
-                  <option value="INFORMACION_GENERAL">Información General</option>
-                  <option value="FINANCIERA">Sección Financiera (Balances / Montos)</option>
-                </select>
-              </div>
-
-              @if (seccionForm.get('tipo_seccion')?.value === 'FINANCIERA') {
-                <div class="form-group animate-fade-in">
-                  <label class="font-semibold text-xs">Subcategoría Financiera *</label>
-                  <select formControlName="subcategoria_financiera" class="form-control">
-                    <option value="INGRESOS">Exclusivamente Ingresos</option>
-                    <option value="GASTOS">Exclusivamente Egresos / Gastos</option>
-                    <option value="AMBOS">Ambos (Ingresos y Gastos)</option>
-                  </select>
-                </div>
-              }
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn btn-outline" (click)="showSeccionModal.set(false)" [disabled]="isSavingSeccion()">Cancelar</button>
-              <button type="submit" class="btn btn-purple" [disabled]="seccionForm.invalid || isSavingSeccion()">
-                @if (isSavingSeccion()) { <i class="fas fa-spinner fa-spin"></i> Guardando... } @else { Guardar Sección }
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
-
   </div>
 }

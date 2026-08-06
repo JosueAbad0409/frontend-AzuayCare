@@ -18,6 +18,8 @@ export class AdminLayoutComponent implements AfterViewInit {
 
   isSidebarCollapsed = signal<boolean>(false);
 
+  isSidebarOpenMobile = signal<boolean>(false);
+
   ngAfterViewInit() {
     this.animateEntrance();
   }
@@ -35,8 +37,17 @@ export class AdminLayoutComponent implements AfterViewInit {
   }
 
   toggleSidebar() {
+  if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+    this.isSidebarOpenMobile.update(v => !v);
+  } else {
     this.isSidebarCollapsed.update(val => !val);
   }
+}
+
+closeSidebarMobile() {
+  this.isSidebarOpenMobile.set(false);
+}
+
 
   logout() {
     this.authService.logout();
