@@ -8,6 +8,10 @@ export interface UsuarioRevision {
   segundo_apellido?: string | null;
   email_institucional: string;
   cedula: string | null;
+  carrera?: {
+    id?: string;
+    nombre: string;
+  } | null;
 }
 
 export interface FichaRevision {
@@ -38,6 +42,12 @@ export interface FichaRevision {
     nombre: string;
   } | null;
   rangoResultado?: {
+    id: string;
+    nombre: string;
+  } | null;
+  puntaje_vulnerabilidad?: number;
+  rango_vulnerabilidad_id?: string | null;
+  rangoVulnerabilidad?: {
     id: string;
     nombre: string;
   } | null;

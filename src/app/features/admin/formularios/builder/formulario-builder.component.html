@@ -150,70 +150,127 @@
           </div>
 
           <div class="questions-container" (dragover)="onDragOver($event)">
-            @for (pregunta of seccion.preguntas; track pregunta.id || $index; let j = $index) {
-              <!-- TARJETA DE PREGUNTA EXISTENTE -->
+            @for (pregunta of preguntasVisibles(seccion); track pregunta.id || $index; let j = $index) {
+
+              <!-- TARJETA DE PREGUNTA (la cabecera cambia entre lectura y edición, el resto siempre se ve) -->
               <div 
                 class="question-item flex-col gap-3"
-                [class.cursor-move]="!esSoloLectura()"
-                [draggable]="!esSoloLectura()" 
+                [class.cursor-move]="!esSoloLectura() && editingPreguntaId() !== pregunta.id"
+                [draggable]="!esSoloLectura() && editingPreguntaId() !== pregunta.id" 
                 (dragstart)="onDragStart(i, j)" 
                 (drop)="onDrop(i, j)"
               >
-                <div class="flex justify-between w-full items-start">
-                  <div class="question-main flex items-center gap-3">
-                    @if (!esSoloLectura()) {
-                      <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
-                    }
-                    <span class="question-num">{{ j + 1 }}.</span>
-                    <div class="question-content">
-                      <strong>{{ pregunta.enunciado }}</strong>
-                      <div class="question-badges">
-                        <span class="tag tag-tipo">{{ getNombreTipoCampo(pregunta.tipo_campo_id) }}</span>
-                        @if (pregunta.categoria_financiera && pregunta.categoria_financiera !== 'NINGUNO') {
-                          <span class="tag" [ngClass]="pregunta.categoria_financiera === 'INGRESO' ? 'tag-ingreso' : 'tag-egreso'">
-                            {{ pregunta.categoria_financiera }}
-                          </span>
-                        }
-                        @if (pregunta.requiere_evidencia) {
-                          <span class="tag tag-evid"><i class="fas fa-paperclip"></i> Evidencia Requerida</span>
-                        }
-                        @if (pregunta.es_obligatorio) {
-                          <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]"></i> Obligatoria</span>
-                        }
+                @if (editingPreguntaId() === pregunta.id) {
+                  <!-- CABECERA EN MODO EDICIÓN: formulario de enunciado/tipo/categoría -->
+                  <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
+                } @else {
+                  <!-- CABECERA EN MODO LECTURA -->
+                  <div class="flex justify-between w-full items-start">
+                    <div class="question-main flex items-center gap-3">
+                      @if (!esSoloLectura()) {
+                        <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
+                      }
+                      <span class="question-num">{{ j + 1 }}.</span>
+                      <div class="question-content">
+                        <strong>{{ pregunta.enunciado }}</strong>
+                        <div class="question-badges">
+                          <span class="tag tag-tipo">{{ getNombreTipoCampo(pregunta.tipo_campo_id) }}</span>
+                          @if (pregunta.categoria_financiera && pregunta.categoria_financiera !== 'NINGUNO') {
+                            <span class="tag" [ngClass]="pregunta.categoria_financiera === 'INGRESO' ? 'tag-ingreso' : 'tag-egreso'">
+                              {{ pregunta.categoria_financiera }}
+                            </span>
+                          }
+                          @if (pregunta.requiere_evidencia) {
+                            <span class="tag tag-evid"><i class="fas fa-paperclip"></i> Evidencia Requerida</span>
+                          }
+                          @if (pregunta.es_obligatorio) {
+                            <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]"></i> Obligatoria</span>
+                          }
+                        </div>
                       </div>
                     </div>
+
+                    <!-- BOTONERA DE ACCIONES DE PREGUNTA -->
+                    @if (!esSoloLectura()) {
+                      <div class="flex items-center gap-1">
+                        <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </div>
+                    }
                   </div>
+                }
 
-                  <!-- BOTONERA DE ACCIONES DE PREGUNTA -->
-                  @if (!esSoloLectura()) {
-                    <div class="flex items-center gap-1">
-                      <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </div>
-                  }
-                </div>
-
-                <!-- OPCIONES SELECCIÓN -->
+                <!-- OPCIONES SELECCIÓN: siempre visible (editando o no) -->
                 @if (esTipoSeleccion(pregunta.tipo_campo_id)) {
                   <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2">
                     <h5 class="font-bold text-sm text-blue-900"><i class="fas fa-list-ul"></i> Opciones Configuradas</h5>
                     <ul class="text-xs space-y-1">
                       @for (opcion of pregunta.opciones; track opcion.id || $index) {
-                        <li class="bg-white p-2 rounded border flex justify-between items-center">
-                          <span>
-                            • {{ opcion.texto_opcion }}
-                            @if (opcion.es_correcta) { <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold ml-1 text-[10px]">✔️ CORRECTA</span> }
-                            @if (opcion.permite_texto_libre) { <em class="text-gray-500 ml-1">(Especificar texto libre)</em> }
-                            @if (opcion.valor_ponderado) { <strong class="text-purple-700 ml-2">[{{ opcion.valor_ponderado }} pts]</strong> }
-                          </span>
-                          @if (!esSoloLectura()) {
-                            <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)">
-                              <i class="fas fa-trash"></i>
-                            </button>
+                        <li class="bg-white p-2 rounded border">
+                          @if (editingOpcionId() === opcion.id) {
+                            <!-- MODO EDICIÓN DE ESTA OPCIÓN -->
+                            <div [formGroup]="editarOpcionForm" class="space-y-2 p-1">
+                              <input type="text" formControlName="texto_opcion" placeholder="Texto de la opción" class="form-control text-xs w-full">
+                              <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label class="text-[10px] font-bold text-slate-500 block mb-0.5">Puntos</label>
+                                  <input type="number" formControlName="valor_ponderado" class="form-control text-xs w-full">
+                                </div>
+                                <div>
+                                  <label class="text-[10px] font-bold text-slate-500 block mb-0.5">Riesgo</label>
+                                  <input type="number" formControlName="puntaje_riesgo" class="form-control text-xs w-full">
+                                </div>
+                              </div>
+                              <div class="flex flex-wrap gap-2">
+                                <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-100/50 px-2 py-1 rounded-lg border border-blue-200">
+                                  <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> Correcta
+                                </label>
+                                <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                                  <input type="checkbox" formControlName="permite_texto_libre" class="accent-purple-600 w-3.5 h-3.5"> Permite 'Otros'
+                                </label>
+                              </div>
+                              <div class="flex justify-end gap-2 pt-1">
+                                <button type="button" class="btn btn-outline btn-sm text-xs" (click)="cancelarEdicionOpcion()">Cancelar</button>
+                                <button type="button" class="btn btn-purple btn-sm text-xs" [disabled]="editarOpcionForm.invalid" (click)="guardarEdicionOpcion(pregunta.id)">
+                                  <i class="fas fa-check"></i> Guardar
+                                </button>
+                              </div>
+                            </div>
+                          } @else {
+                            <!-- MODO LECTURA DE ESTA OPCIÓN -->
+                            <div class="flex justify-between items-center">
+                              <span>
+                                • {{ opcion.texto_opcion }}
+                                @if (opcion.es_correcta) { <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold ml-1 text-[10px]">✔️ CORRECTA</span> }
+                                @if (opcion.permite_texto_libre) { <em class="text-gray-500 ml-1">(Especificar texto libre)</em> }
+                                @if (opcion.valor_ponderado) { <strong class="text-purple-700 ml-2">[{{ opcion.valor_ponderado }} pts]</strong> }
+                                @if (opcion.puntaje_riesgo) { <strong class="text-red-600 ml-2">[Riesgo: {{ opcion.puntaje_riesgo }}]</strong> }
+                              </span>
+                              @if (!esSoloLectura()) {
+                                <div class="flex items-center gap-2 shrink-0">
+                                  <button type="button" class="text-purple-600 hover:text-purple-800" (click)="abrirEditarOpcion(opcion)" title="Editar opción">
+                                    <i class="fas fa-edit"></i>
+                                  </button>
+                                  <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)" title="Eliminar opción">
+                                    <i class="fas fa-trash"></i>
+                                  </button>
+                                </div>
+                              }
+                            </div>
+
+                            <!-- SUBPREGUNTA VINCULADA A ESTA OPCIÓN (ya no aparece como pregunta suelta) -->
+                            @if (opcion.id && obtenerSubpreguntaDeOpcion(opcion.id); as subpregunta) {
+                              <div class="mt-2 ml-3 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-2">
+                                <span class="text-[10px] font-extrabold text-emerald-700 uppercase block mb-0.5">
+                                  <i class="fas fa-level-down-alt"></i> Se activa al elegir "{{ opcion.texto_opcion }}":
+                                </span>
+                                <span class="text-xs font-semibold text-slate-700">{{ subpregunta.enunciado }}</span>
+                              </div>
+                            }
                           }
                         </li>
                       } @empty {
@@ -237,7 +294,7 @@
                   </div>
                 }
 
-                <!-- CONFIGURACIÓN MATRIZ EXISTENTE SIN BINDING ERRÓNEO -->
+                <!-- CONFIGURACIÓN MATRIZ EXISTENTE: siempre visible (editando o no) -->
                 @if (esTipoMatriz(pregunta.tipo_campo_id)) {
                   <app-matriz-builder
                     [preguntaId]="pregunta.id"
@@ -252,8 +309,17 @@
               </div>
             }
 
-            <!-- FORMULARIO PARA CREAR O EDITAR PREGUNTA -->
-            @if (activeSeccionIdForQuestion() === seccion.id && !esSoloLectura()) {
+            <!-- FORMULARIO PARA CREAR NUEVA PREGUNTA (solo si NO se está editando una existente) -->
+            @if (activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() === null && !esSoloLectura()) {
+              <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
+            } @else if (!esSoloLectura() && !(activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() !== null)) {
+              <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
+                <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
+              </button>
+            }
+
+            <!-- TEMPLATE COMPARTIDO: se usa tanto para crear como para editar -->
+            <ng-template #preguntaFormTpl>
               <div class="new-question-box border-2 border-purple-500 rounded-xl p-4 bg-white shadow-lg my-4">
                 <h4 class="text-purple-900 font-bold mb-3 flex items-center gap-2">
                   <i class="fas" [ngClass]="editingPreguntaId() ? 'fa-edit' : 'fa-plus-circle'"></i> 
@@ -426,11 +492,7 @@
                   </div>
                 </form>
               </div>
-            } @else if (!esSoloLectura()) {
-              <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
-                <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
-              </button>
-            }
+            </ng-template>
           </div>
         </div>
       }

@@ -15,9 +15,11 @@ export interface DashboardResumenBackend {
   totalCarreras: number;
   totalFormularios: number;
   totalFichasEvaluadas: number;
-  periodoActivo: PeriodoMatricula | null;
+  periodoActivo: any;
   graficos: {
     nivelesEconomicos: { labels: string[]; data: number[] };
+    // 🔥 NUEVO GRÁFICO AGREGADO AQUÍ:
+    nivelesVulnerabilidad: { labels: string[]; data: number[] };
     fichasPorCarrera: { labels: string[]; enviadas: number[]; validadas: number[] };
   };
 }

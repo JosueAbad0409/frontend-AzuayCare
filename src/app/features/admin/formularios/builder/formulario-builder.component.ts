@@ -85,6 +85,16 @@ export class FormularioBuilderComponent implements OnInit {
 
   nuevaOpcionTexto = signal<string>('');
 
+  // 🔥 Edición inline de una opción ya existente
+  editingOpcionId = signal<string | null>(null);
+  editarOpcionForm: FormGroup = this.fb.group({
+    texto_opcion: ['', Validators.required],
+    valor_ponderado: [0],
+    puntaje_riesgo: [0],
+    es_correcta: [false],
+    permite_texto_libre: [false]
+  });
+
   // Drag & Drop State
   draggedSeccionIndex: number | null = null;
   draggedPreguntaIndex: number | null = null;
@@ -340,6 +350,28 @@ private guardarSeccionDesdeSwal(data: {
     });
   }
 
+  /** True si esta pregunta es en realidad una subpregunta (se activa por una dependencia). */
+  esSubpregunta(preguntaId: string): boolean {
+    return this.dependencias().some(d => d.pregunta_id === preguntaId);
+  }
+
+  /** Preguntas "de primer nivel" de una sección: excluye las que son subpreguntas de otra. */
+  preguntasVisibles(seccion: Seccion): Pregunta[] {
+    return (seccion.preguntas || []).filter(p => !this.esSubpregunta(p.id));
+  }
+
+  /** Busca la subpregunta (si existe) que se activa al elegir una opción concreta. */
+  obtenerSubpreguntaDeOpcion(opcionId: string): Pregunta | undefined {
+    const dep = this.dependencias().find(d => d.opcion_disparadora_id === opcionId);
+    if (!dep) return undefined;
+
+    for (const s of this.secciones()) {
+      const encontrada = s.preguntas?.find(p => p.id === dep.pregunta_id);
+      if (encontrada) return encontrada;
+    }
+    return undefined;
+  }
+
   esTipoMatriz(tipoCampoId: string): boolean {
     const tipo = this.tiposCampo().find(t => t.id === tipoCampoId);
     return tipo?.nombre === 'MATRIZ';
@@ -462,6 +494,49 @@ private guardarSeccionDesdeSwal(data: {
         this.cargarOpcionesPregunta(preguntaId);
       },
       error: (err) => console.error('Error al eliminar opción:', err)
+    });
+  }
+
+  abrirEditarOpcion(opcion: OpcionPregunta): void {
+    if (this.esSoloLectura() || !opcion.id) return;
+
+    this.editingOpcionId.set(opcion.id);
+    this.editarOpcionForm.reset({
+      texto_opcion: opcion.texto_opcion,
+      valor_ponderado: opcion.valor_ponderado || 0,
+      puntaje_riesgo: opcion.puntaje_riesgo || 0,
+      es_correcta: Boolean(opcion.es_correcta),
+      permite_texto_libre: Boolean(opcion.permite_texto_libre)
+    });
+  }
+
+  cancelarEdicionOpcion(): void {
+    this.editingOpcionId.set(null);
+  }
+
+  guardarEdicionOpcion(preguntaId: string): void {
+    if (this.esSoloLectura()) return;
+    const opcionId = this.editingOpcionId();
+    if (!opcionId || this.editarOpcionForm.invalid) return;
+
+    const raw = this.editarOpcionForm.getRawValue();
+    const payload = {
+      texto_opcion: String(raw.texto_opcion).trim(),
+      valor_ponderado: raw.valor_ponderado ? Number(raw.valor_ponderado) : 0,
+      puntaje_riesgo: raw.puntaje_riesgo ? Number(raw.puntaje_riesgo) : 0,
+      es_correcta: Boolean(raw.es_correcta),
+      permite_texto_libre: Boolean(raw.permite_texto_libre)
+    };
+
+    this.formularioService.updateOpcion(opcionId, payload, preguntaId).subscribe({
+      next: () => {
+        this.toastService.show('Opción actualizada correctamente.', 'success');
+        this.editingOpcionId.set(null);
+        this.cargarOpcionesPregunta(preguntaId);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar la opción.'), 'error');
+      }
     });
   }
 
@@ -660,6 +735,7 @@ private guardarSeccionDesdeSwal(data: {
   cancelarPregunta(): void {
     this.activeSeccionIdForQuestion.set(null);
     this.editingPreguntaId.set(null);
+    this.editingOpcionId.set(null);
   }
 
   guardarPregunta(seccionId: string): void {
@@ -768,7 +844,7 @@ private guardarSeccionDesdeSwal(data: {
                     this.dependenciasService.createDependencia({
                       pregunta_disparadora_id: preguntaCreada.id,
                       opcion_disparadora_id: opcionGuardada.id,
-                      pregunta_dependiente_id: subpreguntaGuardada.id
+                      pregunta_id: subpreguntaGuardada.id
                     })
                   );
                 }
