@@ -1,6 +1,4 @@
-// C:\Proyecto AzuayCare\frontend-AzuayCare\src\app\core\models\formulario.model.ts
-
-import { TipoFormulario } from './tipo-formulario.model'; // NUEVO IMPORT
+import { TipoFormulario } from './tipo-formulario.model';
 import { 
   FilaMatriz, 
   ColumnaMatriz, 
@@ -14,8 +12,8 @@ export type { FilaMatriz, ColumnaMatriz, CreateFilaDto, CreateColumnaDto };
 export interface RangoCalculado {
   id: string;
   formulario_id: string;
-  variable_calculo: string; // ej. 'BALANCE'
-  nombre: string;           // ej. 'Vulnerable / Prioritario'
+  variable_calculo: string;
+  nombre: string;
   valor_min: number;
   valor_max?: number | null;
   orden: number;
@@ -36,14 +34,21 @@ export interface Formulario {
   id: string;
   titulo: string;
   descripcion?: string | null;
-  tipo_formulario_id: string;        // reemplaza a "tipo: string"
-  tipoFormulario?: TipoFormulario;   // objeto relacionado que llega del backend en findOne/findAll
+  tipo_formulario_id: string;
+  tipoFormulario?: TipoFormulario;
   periodo_id: string;
   version: number;
   publicado: boolean;
-  bloqueado: boolean;                // NUEVO: indica versión de solo lectura
-  fecha_bloqueo?: string | null;     // NUEVO
+  bloqueado: boolean;
+  fecha_bloqueo?: string | null;
   fecha_publicacion?: string | null;
+  
+  // 🔥 NUEVOS CAMPOS: Umbrales del Motor de Prioridad
+  umbral_balance_critico?: number;
+  puntos_balance_critico?: number;
+  umbral_prioridad_alta?: number;
+  umbral_auto_validacion?: number;
+
   created_at: string;
   secciones?: Seccion[];
   rangos_calculados?: RangoCalculado[];
@@ -53,7 +58,13 @@ export interface CreateFormularioDto {
   periodo_id: string;
   titulo: string;
   descripcion?: string;
-  tipo_formulario_id: string; // reemplaza a "tipo?: string", ahora obligatorio
+  tipo_formulario_id: string;
+  
+  // 🔥 NUEVOS CAMPOS: Umbrales del Motor de Prioridad
+  umbral_balance_critico?: number;
+  puntos_balance_critico?: number;
+  umbral_prioridad_alta?: number;
+  umbral_auto_validacion?: number;
 }
 
 // --- INTERFAZ SECCIÓN ---
@@ -92,7 +103,8 @@ export interface OpcionPregunta {
   orden?: number;
   permite_texto_libre?: boolean;
   valor_ponderado?: number;
-  es_correcta?: boolean; // <--- NUEVO CAMPO
+  es_correcta?: boolean;
+  puntaje_riesgo?: number; // 🔥 NUEVO CAMPO: Triage Automático
   dispara_dependencia?: boolean;
   pregunta_hija_id?: string;
   subpregunta_enunciado?: string;
@@ -107,7 +119,8 @@ export interface CreateOpcionDto {
   orden?: number;
   permite_texto_libre?: boolean;
   valor_ponderado?: number;
-  es_correcta?: boolean; // <--- NUEVO CAMPO
+  es_correcta?: boolean;
+  puntaje_riesgo?: number; // 🔥 NUEVO CAMPO: Triage Automático
   dispara_dependencia?: boolean;
   pregunta_hija_id?: string;
   subpregunta_enunciado?: string;
@@ -124,6 +137,10 @@ export interface Pregunta {
   tipo_campo_id: string;
   tipoCampo?: TipoCampoForm;
   categoria_financiera: 'INGRESO' | 'EGRESO' | 'NINGUNO';
+  
+  clave_semantica?: string | null; // 🔥 NUEVO CAMPO
+  revision_manual_obligatoria?: boolean; // 🔥 NUEVO CAMPO
+  
   es_obligatorio: boolean;
   orden: number;
   codigo_sistema?: string | null;
@@ -138,6 +155,10 @@ export interface CreatePreguntaDto {
   enunciado: string;
   tipo_campo_id: string;
   categoria_financiera?: 'INGRESO' | 'EGRESO' | 'NINGUNO';
+  
+  clave_semantica?: string | null; // 🔥 NUEVO CAMPO
+  revision_manual_obligatoria?: boolean; // 🔥 NUEVO CAMPO
+  
   es_obligatorio?: boolean;
   orden?: number;
   codigo_sistema?: string;

@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { FormularioService } from '../../../../core/services/formulario.service';
 import { MatricesService } from '../../../../core/services/matrices.service';
@@ -124,18 +125,116 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   abrirModalNuevaSeccion(): void {
-    if (this.esSoloLectura()) {
-      this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
-      return;
-    }
-    this.seccionForm.reset({
-      nombre: '',
-      descripcion: '',
-      tipo_seccion: 'INFORMACION_GENERAL',
-      subcategoria_financiera: 'NINGUNO'
-    });
-    this.showSeccionModal.set(true);
+  if (this.esSoloLectura()) {
+    this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
+    return;
   }
+
+  Swal.fire({
+    title: 'Nueva Sección',
+    html: `
+      <div class="text-left space-y-4" style="text-align:left">
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Nombre de Sección *</label>
+          <input id="swal-nombre" class="swal2-input" placeholder="Ej: Información Financiera Familiar" style="margin:0;width:100%;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción</label>
+          <input id="swal-descripcion" class="swal2-input" placeholder="Breve explicación..." style="margin:0;width:100%;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Tipo de Sección *</label>
+          <select id="swal-tipo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
+            <option value="INFORMACION_GENERAL">Información General</option>
+            <option value="FINANCIERA">Sección Financiera (Balances / Montos)</option>
+          </select>
+        </div>
+        <div id="swal-subcat-container" style="display:none">
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Subcategoría Financiera *</label>
+          <select id="swal-subcat" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
+            <option value="INGRESOS">Exclusivamente Ingresos</option>
+            <option value="GASTOS">Exclusivamente Egresos / Gastos</option>
+            <option value="AMBOS">Ambos (Ingresos y Gastos)</option>
+          </select>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    focusConfirm: false,
+    confirmButtonText: 'Guardar Sección',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#8b5cf6',
+    cancelButtonColor: '#64748b',
+    width: '520px',
+    customClass: {
+      popup: 'rounded-2xl',
+      confirmButton: 'rounded-xl',
+      cancelButton: 'rounded-xl',
+      htmlContainer: 'swal-html-container-custom'
+    },
+    didOpen: () => {
+      const tipoEl = document.getElementById('swal-tipo') as HTMLSelectElement | null;
+      const subcatCont = document.getElementById('swal-subcat-container');
+      tipoEl?.addEventListener('change', () => {
+        if (subcatCont) {
+          subcatCont.style.display = tipoEl.value === 'FINANCIERA' ? 'block' : 'none';
+        }
+      });
+      (document.getElementById('swal-nombre') as HTMLInputElement | null)?.focus();
+    },
+    preConfirm: () => {
+      const nombre = (document.getElementById('swal-nombre') as HTMLInputElement)?.value?.trim() || '';
+      const descripcion = (document.getElementById('swal-descripcion') as HTMLInputElement)?.value?.trim() || '';
+      const tipo_seccion = (document.getElementById('swal-tipo') as HTMLSelectElement)?.value || 'INFORMACION_GENERAL';
+      let subcategoria_financiera = (document.getElementById('swal-subcat') as HTMLSelectElement)?.value || 'NINGUNO';
+
+      if (!nombre) {
+        Swal.showValidationMessage('El nombre de la sección es obligatorio');
+        return false;
+      }
+
+      if (tipo_seccion !== 'FINANCIERA') {
+        subcategoria_financiera = 'NINGUNO';
+      }
+
+      return { nombre, descripcion, tipo_seccion, subcategoria_financiera };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      this.guardarSeccionDesdeSwal(result.value);
+    }
+  });
+}
+private guardarSeccionDesdeSwal(data: {
+  nombre: string;
+  descripcion: string;
+  tipo_seccion: string;
+  subcategoria_financiera: string;
+}): void {
+  if (this.esSoloLectura() || !this.formulario()) return;
+  this.isSavingSeccion.set(true);
+
+  const payload = {
+    formulario_id: this.formulario()!.id,
+    nombre: data.nombre,
+    descripcion: data.descripcion || '',
+    tipo_seccion: data.tipo_seccion as 'INFORMACION_GENERAL' | 'FINANCIERA',
+    subcategoria_financiera: data.subcategoria_financiera as 'NINGUNO' | 'INGRESOS' | 'GASTOS' | 'AMBOS',
+    orden: this.secciones().length + 1
+  };
+
+  this.formularioService.createSeccion(payload).subscribe({
+    next: () => {
+      this.isSavingSeccion.set(false);
+      this.toastService.show('Sección creada exitosamente.', 'success');
+      this.cargarSecciones(this.formulario()!.id);
+    },
+    error: (err: HttpErrorResponse) => {
+      this.isSavingSeccion.set(false);
+      this.toastService.show(this.extraerMensajeError(err, 'Ocurrió un error al crear la sección.'), 'error');
+    }
+  });
+}
 
   cargarTodo(formularioId: string): void {
     this.isLoading.set(true);

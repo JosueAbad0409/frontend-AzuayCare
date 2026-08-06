@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin, finalize } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { FormularioService } from '../../../core/services/formulario.service';
 import { PeriodoService } from '../../../core/services/periodo.service';
@@ -140,40 +141,166 @@ export class FormulariosComponent {
   }
 
   abrirModalCrear(): void {
-    this.isEditMode.set(false);
-    this.selectedFormularioId.set(null);
-    const periodoActivo = this.periodos().find(p => p.activo);
-
-    this.formGroup.reset({
-      titulo: '',
-      descripcion: '',
-      tipo_formulario_id: '',
-      periodo_id: periodoActivo ? periodoActivo.id : ''
-    });
-    this.formGroup.controls.periodo_id.enable();
-    this.formGroup.controls.tipo_formulario_id.enable();
-    this.showModal.set(true);
-  }
+  this.isEditMode.set(false);
+  this.selectedFormularioId.set(null);
+  this.abrirSwalFicha();
+}
 
   abrirModalEditar(form: Formulario, e: Event): void {
-    e.stopPropagation();
-    if (form.bloqueado) {
-      this.toastService.show('Formulario en versión bloqueada (solo lectura).', 'info');
-      return;
-    }
-    this.isEditMode.set(true);
-    this.selectedFormularioId.set(form.id);
-
-    this.formGroup.patchValue({
-      titulo: form.titulo,
-      descripcion: form.descripcion || '',
-      periodo_id: form.periodo_id,
-      tipo_formulario_id: form.tipo_formulario_id
-    });
-
-    this.formGroup.controls.tipo_formulario_id.disable();
-    this.showModal.set(true);
+  e.stopPropagation();
+  if (form.bloqueado) {
+    this.toastService.show('Formulario en versión bloqueada (solo lectura).', 'info');
+    return;
   }
+  this.isEditMode.set(true);
+  this.selectedFormularioId.set(form.id);
+  this.abrirSwalFicha(form);
+}
+
+private abrirSwalFicha(form?: Formulario): void {
+  const esEdicion = this.isEditMode();
+  const periodoActivo = this.periodos().find(p => p.activo);
+
+  // Opciones de Periodo
+  const opcionesPeriodo = this.periodos()
+    .map(p => `<option value="${p.id}" ${
+      (esEdicion && form?.periodo_id === p.id) || (!esEdicion && periodoActivo?.id === p.id)
+        ? 'selected' : ''
+    }>${p.nombre}${p.activo ? ' (ACTIVO)' : ''}</option>`)
+    .join('');
+
+  // Opciones de Tipo de Formulario
+  const opcionesTipo = this.tiposFormulario()
+    .map(t => `<option value="${t.id}" ${
+      esEdicion && form?.tipo_formulario_id === t.id ? 'selected' : ''
+    }>${t.nombre}</option>`)
+    .join('');
+
+  Swal.fire({
+    title: esEdicion ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica',
+    html: `
+      <div style="text-align:left; display:flex; flex-direction:column; gap:1rem;">
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Título de la Ficha *</label>
+          <input id="swal-titulo" class="swal2-input" placeholder="Ej. Ficha Socioeconómica ISTA 2026"
+            value="${esEdicion && form ? this.escapeHtml(form.titulo) : ''}"
+            style="margin:0;width:100%;box-sizing:border-box">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Periodo Académico *</label>
+          <select id="swal-periodo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box"
+            ${esEdicion ? '' : ''}>
+            <option value="">-- Selecciona un Periodo --</option>
+            ${opcionesPeriodo}
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Tipo de Formulario *</label>
+          <select id="swal-tipo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box"
+            ${esEdicion ? 'disabled' : ''}>
+            <option value="">-- Selecciona un Tipo de Formulario --</option>
+            ${opcionesTipo}
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción / Objetivo</label>
+          <textarea id="swal-desc" class="swal2-textarea" rows="2" placeholder="Instrucciones generales..."
+            style="margin:0;width:100%;box-sizing:border-box">${esEdicion && form ? this.escapeHtml(form.descripcion || '') : ''}</textarea>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    focusConfirm: false,
+    confirmButtonText: esEdicion ? 'Actualizar' : 'Crear y Diseñar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#8b5cf6',
+    cancelButtonColor: '#64748b',
+    width: '520px',
+    customClass: {
+      popup: 'rounded-2xl',
+      confirmButton: 'rounded-xl',
+      cancelButton: 'rounded-xl'
+    },
+    didOpen: () => {
+      (document.getElementById('swal-titulo') as HTMLInputElement | null)?.focus();
+    },
+    preConfirm: () => {
+      const titulo = (document.getElementById('swal-titulo') as HTMLInputElement)?.value?.trim() || '';
+      const periodo_id = (document.getElementById('swal-periodo') as HTMLSelectElement)?.value || '';
+      const tipo_formulario_id = (document.getElementById('swal-tipo') as HTMLSelectElement)?.value || '';
+      const descripcion = (document.getElementById('swal-desc') as HTMLTextAreaElement)?.value?.trim() || '';
+
+      if (!titulo) {
+        Swal.showValidationMessage('El título es obligatorio');
+        return false;
+      }
+      if (!periodo_id) {
+        Swal.showValidationMessage('Selecciona un periodo académico');
+        return false;
+      }
+      if (!tipo_formulario_id) {
+        Swal.showValidationMessage('Selecciona un tipo de formulario');
+        return false;
+      }
+
+      return { titulo, periodo_id, tipo_formulario_id, descripcion };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      this.guardarFichaDesdeSwal(result.value);
+    }
+  });
+}
+private guardarFichaDesdeSwal(data: {
+  titulo: string;
+  periodo_id: string;
+  tipo_formulario_id: string;
+  descripcion: string;
+}): void {
+  this.isSaving.set(true);
+  const id = this.selectedFormularioId();
+
+  if (this.isEditMode() && id) {
+    this.formularioService.updateFormulario(id, {
+      titulo: data.titulo,
+      descripcion: data.descripcion,
+      tipo_formulario_id: data.tipo_formulario_id,
+      periodo_id: data.periodo_id
+    })
+    .pipe(finalize(() => this.isSaving.set(false)))
+    .subscribe({
+      next: () => {
+        this.toastService.show('Formulario actualizado con éxito.', 'success');
+        this.cargarDatos();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el formulario.'), 'error');
+      }
+    });
+  } else {
+    this.formularioService.createFormulario(data)
+    .pipe(finalize(() => this.isSaving.set(false)))
+    .subscribe({
+      next: (nuevoForm: Formulario) => {
+        this.toastService.show('Formulario borrador creado con éxito.', 'success');
+        this.router.navigate(['/admin/formularios/builder', nuevoForm.id]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.toastService.show(this.extraerMensajeError(err, 'Error al crear el formulario.'), 'error');
+      }
+    });
+  }
+}
+
+private escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 
   abrirModalClonar(formId: string, e: Event): void {
     e.stopPropagation();

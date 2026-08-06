@@ -1,0 +1,139 @@
+@if (isLoading()) {
+<div class="loading-state">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    <p>Cargando ficha...</p>
+</div>
+} @else if (ficha()) {
+<div class="detalle-page animate-fade-in">
+
+    <!-- CABECERA -->
+    <header class="page-header">
+        <div class="header-left">
+            <button type="button" class="btn-back" (click)="volver()">
+                <i class="fas fa-arrow-left"></i> Volver a lista
+            </button>
+            <div>
+                <h2>Evaluación y Auditoría de Ficha</h2>
+                <p class="subtitle">Revisa respuestas, balances y decide el estado</p>
+            </div>
+        </div>
+        <span class="estado-badge" [attr.data-estado]="ficha()!.estado_ficha">
+            {{ ficha()!.estado_ficha }}
+        </span>
+    </header>
+
+    <!-- TABS -->
+    <div class="tabs-nav">
+        <button type="button" class="tab-btn" [class.active]="tabActiva() === 'DETALLE'" (click)="setTab('DETALLE')">
+            <i class="fas fa-file-alt"></i> Detalle de Ficha
+        </button>
+        <button type="button" class="tab-btn" [class.active]="tabActiva() === 'HISTORIAL'"
+            (click)="setTab('HISTORIAL')">
+            <i class="fas fa-history"></i> Línea de Tiempo
+        </button>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="page-body">
+
+        @if (tabActiva() === 'DETALLE') {
+        <!-- Estudiante + balances -->
+        <div class="student-card">
+            <div class="student-main">
+                <div class="student-avatar"><i class="fas fa-user-graduate"></i></div>
+                <div>
+                    <p class="student-name">
+                        {{ ficha()?.usuario?.primer_nombre }} {{ ficha()?.usuario?.primer_apellido }}
+                    </p>
+                    <p class="student-meta">
+                        Cédula: <strong>{{ ficha()?.usuario?.cedula || 'N/A' }}</strong>
+                        @if (ficha()?.periodo) {
+                        · Periodo: <strong>{{ ficha()?.periodo?.nombre }}</strong>
+                        }
+                    </p>
+                </div>
+            </div>
+
+            <div class="balance-grid">
+                <div class="balance-item">
+                    <span class="balance-label">Ingresos</span>
+                    <span class="balance-value">${{ ficha()?.total_ingresos | number:'1.2-2' }}</span>
+                </div>
+                <div class="balance-item">
+                    <span class="balance-label">Egresos</span>
+                    <span class="balance-value">${{ ficha()?.total_egresos | number:'1.2-2' }}</span>
+                </div>
+                <div class="balance-item">
+                    <span class="balance-label">Balance</span>
+                    <span class="balance-value text-success">${{ ficha()?.balance_final | number:'1.2-2' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Respuestas -->
+        <h3 class="section-title">Respuestas Registradas</h3>
+        <div class="respuestas-list">
+            @for (resp of respuestas(); track resp.id) {
+            <div class="respuesta-card">
+                <p class="respuesta-pregunta">{{ resp.pregunta?.enunciado }}</p>
+                <p class="respuesta-valor">
+                    {{ resp.valor_texto || resp.valor_numerico || 'Opción seleccionada' }}
+                </p>
+            </div>
+            } @empty {
+            <p class="empty-text">No hay respuestas cargadas para esta ficha.</p>
+            }
+        </div>
+
+        <!-- Acciones de revisión -->
+        <div class="review-panel">
+            <label class="form-label">Comentario de Revisión / Justificación</label>
+            <textarea class="form-control" rows="3" [value]="comentario()"
+                (input)="comentario.set($any($event.target).value)"
+                placeholder="Escriba la razón de aprobación o rechazo..."></textarea>
+
+            <div class="actions-row">
+                <button type="button" class="btn btn-outline" (click)="cambiarEstado('RECHAZADO')"
+                    [disabled]="guardando()">
+                    @if (guardando()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i
+                        class="fas fa-times-circle"></i> }
+                    Rechazar
+                </button>
+                <button type="button" class="btn btn-purple" (click)="cambiarEstado('VALIDADO')"
+                    [disabled]="guardando()">
+                    @if (guardando()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i
+                        class="fas fa-check-circle"></i> }
+                    Validar Ficha
+                </button>
+            </div>
+        </div>
+        }
+
+        @if (tabActiva() === 'HISTORIAL') {
+        <div class="timeline">
+            @for (h of historial(); track h.id) {
+            <div class="timeline-item">
+                <div class="timeline-badge" [class.bg-green]="h.estado_nuevo === 'VALIDADO'"
+                    [class.bg-red]="h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA'"
+                    [class.bg-blue]="h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO'"
+                    [class.bg-yellow]="h.estado_nuevo === 'BORRADOR'">
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-header">
+                        <strong>Transición a {{ h.estado_nuevo }}</strong>
+                        <span>{{ h.created_at | date:'medium' }}</span>
+                    </div>
+                    <p>{{ h.comentario || 'Sin comentario registrado' }}</p>
+                </div>
+            </div>
+            } @empty {
+            <p class="empty-text" style="text-align:center;padding:2rem 0">
+                No existen registros históricos para esta ficha.
+            </p>
+            }
+        </div>
+        }
+
+    </div>
+</div>
+}

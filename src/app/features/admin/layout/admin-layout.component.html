@@ -1,4 +1,11 @@
-<div class="app-layout" [class.collapsed]="isSidebarCollapsed()">
+<div class="app-layout" 
+[class.collapsed]="isSidebarCollapsed()"
+[class.sidebar-open]="isSidebarOpenMobile()">
+
+@if (isSidebarOpenMobile()) {
+    <div class="sidebar-overlay" (click)="closeSidebarMobile()"></div>
+  }
+
   <!-- BARRA LATERAL (SIDEBAR) -->
   <aside class="sidebar">
     <div class="sidebar-header">
@@ -91,10 +98,13 @@
   <!-- CONTENIDO DINÁMICO -->
   <div class="main-wrapper">
     <header class="top-header">
-      <div class="header-status">
-        <span class="live-dot"></span>
-        <span class="status-text">Sistema Socioeconómico Activo</span>
-      </div>
+  <div class="header-status">
+    <button type="button" class="btn-mobile-menu" (click)="toggleSidebar()" title="Menú" aria-label="Abrir menú">
+      <i class="fas fa-bars"></i>
+    </button>
+    <span class="live-dot"></span>
+    <span class="status-text">Sistema Socioeconómico Activo</span>
+  </div>
       
       <!-- PERFIL SUPERIOR -->
       <div class="header-user">

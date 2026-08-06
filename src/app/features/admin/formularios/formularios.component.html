@@ -153,59 +153,6 @@
     </div>
   }
 
-  <!-- MODAL CREAR / EDITAR -->
-  @if (showModal()) {
-    <div class="modal-backdrop" (click)="cerrarModales()" (keydown.escape)="cerrarModales()" tabindex="0">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">
-          {{ isEditMode() ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica' }}
-        </h3>
-
-        <form [formGroup]="formGroup" (ngSubmit)="guardarFormulario()">
-          <div class="form-group-modal">
-            <label for="modal-titulo" class="form-label-modal">Título de la Ficha *</label>
-            <input id="modal-titulo" type="text" formControlName="titulo" class="form-control" placeholder="Ej. Ficha Socioeconómica ISTA 2026">
-          </div>
-
-          <div class="form-group-modal">
-            <label for="modal-periodo" class="form-label-modal">Periodo Académico *</label>
-            <select id="modal-periodo" formControlName="periodo_id" class="form-control">
-              <option value="">-- Selecciona un Periodo --</option>
-              @for (p of periodos(); track p.id) {
-                <option [value]="p.id">{{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group-modal">
-            <label for="modal-tipo" class="form-label-modal">Tipo de Formulario *</label>
-            <select id="modal-tipo" formControlName="tipo_formulario_id" class="form-control">
-              <option value="">-- Selecciona un Tipo de Formulario --</option>
-              @for (t of tiposFormulario(); track t.id) {
-                <option [value]="t.id">{{ t.nombre }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group-modal" style="margin-bottom: 1.5rem;">
-            <label for="modal-desc" class="form-label-modal">Descripción / Objetivo</label>
-            <textarea id="modal-desc" formControlName="descripcion" class="form-control" rows="2" placeholder="Instrucciones generales..."></textarea>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isSaving()">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="formGroup.invalid || isSaving()">
-              @if (isSaving()) {
-                <i class="fas fa-circle-notch fa-spin"></i> Guardando...
-              } @else {
-                {{ isEditMode() ? 'Actualizar' : 'Crear y Diseñar' }}
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  }
 
   <!-- MODAL CLONAR -->
   @if (showCloneModal()) {

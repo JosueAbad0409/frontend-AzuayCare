@@ -399,3 +399,96 @@
   padding: 2.25rem;
   flex: 1;
 }
+
+/* ==========================================
+   RESPONSIVE - MÓVIL (sidebar overlay)
+   ========================================== */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+  }
+
+  .app-layout.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .app-layout.collapsed .sidebar {
+    width: 280px;
+  }
+
+  .main-wrapper {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .page-content {
+    padding: 1.25rem 1rem;
+  }
+
+  .top-header {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .btn-mobile-menu {
+    display: inline-flex !important;
+  }
+}
+
+@media (min-width: 901px) {
+  .btn-mobile-menu {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .page-content {
+    padding: 1rem 0.75rem;
+  }
+
+  .status-text {
+    font-size: 0.75rem;
+  }
+}
+
+/* Overlay y botón hamburguesa */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 90;
+  backdrop-filter: blur(2px);
+}
+
+.btn-mobile-menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  margin-right: 0.75rem;
+  font-size: 1.1rem;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-mobile-menu:hover {
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+}

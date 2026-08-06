@@ -69,6 +69,10 @@ export const routes: Routes = [
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
+        path: 'revision-fichas/:id',
+        loadComponent: () => import('./features/admin/revision-detalle/revision-detalle').then(m => m.RevisionDetalleComponent)
+      },
+      {
         // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil-coordinador',
         loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
@@ -99,7 +103,7 @@ export const routes: Routes = [
         // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil',
         loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
-      }
+      },
     ]
   },
 
