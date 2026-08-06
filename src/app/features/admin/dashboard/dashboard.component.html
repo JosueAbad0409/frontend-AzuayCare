@@ -12,7 +12,7 @@
     </div>
   </header>
 
-  <!-- TARJETAS DE MÉTRICAS (KPIs) CON SKELETON -->
+  <!-- TARJETAS DE MÉTRICAS (KPIs) -->
   <section class="kpi-grid">
     <!-- KPI 1: Carreras -->
     <div class="kpi-card">
@@ -58,38 +58,48 @@
   </section>
 
   <!-- SECCIÓN DE GRÁFICOS ESTADÍSTICOS Y ANALÍTICA -->
-  <section class="charts-grid">
-    <!-- Gráfico 1: Pastel (Doughnut) -->
+  <section class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    
+    <!-- Gráfico 1: Pastel (Balance Económico) -->
     <div class="chart-card shadow-sm">
       <div class="chart-header">
-        <h4><i class="fas fa-chart-pie text-purple-600"></i> Distribución de Vulnerabilidad Socioeconómica</h4>
+        <h4><i class="fas fa-chart-pie text-purple-600"></i> Distribución Balance Económico</h4>
         <p class="text-xs text-slate-500">Clasificación por nivel de ingresos/egresos estudiantiles</p>
       </div>
       <div class="chart-container">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        }
+        @if (isLoading()) { <div class="skeleton-loader chart-skeleton"></div> }
         <canvas #pieChartCanvas [class.hidden]="isLoading()"></canvas>
       </div>
     </div>
 
-    <!-- Gráfico 2: Barras -->
+    <!-- Gráfico 2: Pastel (Vulnerabilidad / Riesgo) -->
+    <div class="chart-card shadow-sm">
+      <div class="chart-header">
+        <h4><i class="fas fa-shield-alt text-red-600"></i> Niveles de Vulnerabilidad</h4>
+        <p class="text-xs text-slate-500">Clasificación por puntaje de riesgo de Bienestar</p>
+      </div>
+      <div class="chart-container">
+        @if (isLoading()) { <div class="skeleton-loader chart-skeleton"></div> }
+        <canvas #pieChartVulnerabilidadCanvas [class.hidden]="isLoading()"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico 3: Barras -->
     <div class="chart-card shadow-sm">
       <div class="chart-header">
         <h4><i class="fas fa-chart-bar text-emerald-600"></i> Estado de Fichas por Carrera</h4>
-        <p class="text-xs text-slate-500">Comparativa de fichas enviadas vs. aprobadas por especialidad</p>
+        <p class="text-xs text-slate-500">Comparativa de fichas enviadas vs. aprobadas</p>
       </div>
       <div class="chart-container">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        }
+        @if (isLoading()) { <div class="skeleton-loader chart-skeleton"></div> }
         <canvas #barChartCanvas [class.hidden]="isLoading()"></canvas>
       </div>
     </div>
+
   </section>
 
   <!-- SECCIÓN DE ACCESO RÁPIDO -->
-  <section class="quick-access-section">
+  <section class="quick-access-section mt-8">
     <h3><i class="fas fa-rocket"></i> Acceso Rápido a Módulos</h3>
     <div class="quick-grid">
       <!-- MÓDULO CRÍTICO -->

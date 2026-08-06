@@ -580,7 +580,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   esPreguntaDependiente(preguntaId: string): boolean {
-    return this.dependencias().some(d => d.pregunta_dependiente_id === preguntaId);
+    return this.dependencias().some(d => d.pregunta_id === preguntaId);
   }
 
   cargarEstructuraMatriz(pregunta: Pregunta): void {
@@ -635,7 +635,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   esPreguntaVisible(preguntaId: string): boolean {
-    const dep = this.dependencias().find(d => d.pregunta_dependiente_id === preguntaId);
+    const dep = this.dependencias().find(d => d.pregunta_id === preguntaId);
     if (!dep) return true;
 
     const valorDisparadorActual = this.valormap()[dep.pregunta_disparadora_id];
@@ -647,9 +647,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       return valorDisparadorActual === dep.opcion_disparadora_id;
     }
 
-    const valorDisparador = (dep as any).valor_disparador;
-    if (valorDisparador !== undefined && valorDisparador !== null) {
-      return String(valorDisparadorActual).toLowerCase() === String(valorDisparador).toLowerCase();
+    if (dep.valor_disparador !== undefined && dep.valor_disparador !== null) {
+      return String(valorDisparadorActual).toLowerCase() === String(dep.valor_disparador).toLowerCase();
     }
 
     return true;
@@ -659,8 +658,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     if (!this.esEditable()) return;
 
     this.dependencias().forEach(dep => {
-      if (!this.esPreguntaVisible(dep.pregunta_dependiente_id)) {
-        const ctrl = this.respuestasGroup.get(dep.pregunta_dependiente_id);
+      if (!this.esPreguntaVisible(dep.pregunta_id)) {
+        const ctrl = this.respuestasGroup.get(dep.pregunta_id);
         if (ctrl) {
           if (ctrl instanceof FormArray) {
             if (ctrl.length > 0) ctrl.clear({ emitEvent: false });
@@ -668,7 +667,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
             ctrl.setValue('', { emitEvent: false });
           }
         }
-        const matCtrl = this.matricesGroup.get(dep.pregunta_dependiente_id);
+        const matCtrl = this.matricesGroup.get(dep.pregunta_id);
         if (matCtrl) matCtrl.reset({}, { emitEvent: false });
       }
     });

@@ -69,18 +69,22 @@ export const routes: Routes = [
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
+        // 🔥 NUEVA RUTA DE PRIORIDAD
+        path: 'prioridad-atencion',
+        loadComponent: () => import('./features/admin/prioridad-atencion/prioridad-atencion').then(m => m.PrioridadAtencionComponent),
+        canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
+      },
+      {
         path: 'revision-fichas/:id',
         loadComponent: () => import('./features/admin/revision-detalle/revision-detalle').then(m => m.RevisionDetalleComponent)
       },
       {
-        // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil-coordinador',
         loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
       }
     ]
   },
 
-  /* Módulo Estudiante con Layout y Menú Colapsable */
   {
     path: 'estudiante',
     loadComponent: () => import('./features/estudiante/layout/estudiante-layout.component').then(m => m.EstudianteLayoutComponent),
@@ -100,7 +104,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/estudiante/documentos/estudiante-documentos.component').then(m => m.EstudianteDocumentosComponent)
       },
       {
-        // ✅ CORRECCIÓN: Ruta exacta a la carpeta shared en src/app
         path: 'perfil',
         loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
       },

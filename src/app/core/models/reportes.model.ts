@@ -48,3 +48,15 @@ export interface AgregadoPorPregunta {
     porcentaje: number;
   }>;
 }
+
+export interface DashboardResumenBackend {
+  totalCarreras: number;
+  totalFormularios: number;
+  totalFichasEvaluadas: number;
+  periodoActivo: any;
+  graficos: {
+    nivelesEconomicos: { labels: string[]; data: number[] };
+    nivelesVulnerabilidad: { labels: string[]; data: number[] }; // 🔥 El nuevo gráfico
+    fichasPorCarrera: { labels: string[]; enviadas: number[]; validadas: number[] };
+  };
+}
