@@ -74,7 +74,8 @@ export interface Seccion {
   nombre: string;
   descripcion?: string | null;
   orden: number;
-  tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA';
+  // 🔥 SE AGREGA 'NEE_SALUD'
+  tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA' | 'NEE_SALUD';
   subcategoria_financiera?: 'INGRESOS' | 'GASTOS' | 'AMBOS' | 'NINGUNO';
   preguntas?: Pregunta[];
 }
@@ -84,7 +85,8 @@ export interface CreateSeccionDto {
   nombre: string;
   descripcion?: string;
   orden?: number;
-  tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA';
+  // 🔥 SE AGREGA 'NEE_SALUD'
+  tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA' | 'NEE_SALUD';
   subcategoria_financiera?: 'INGRESOS' | 'GASTOS' | 'AMBOS' | 'NINGUNO';
 }
 

@@ -128,15 +128,31 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return this.secciones().length > 0 && this.seccionActualIndex() === this.secciones().length;
   });
 
+  totalIngresos = signal(0);
+  totalEgresos = signal(0);
+  balance = computed(() => this.totalIngresos() - this.totalEgresos());
+
+  /** true si la sección actual (o alguna del form) es financiera */
+  seccionActualEsFinanciera = computed(() => {
+    const sec = this.secciones()[this.seccionActualIndex()];
+    return sec?.tipo_seccion === 'FINANCIERA';
+  });
+
+  haySeccionFinanciera = computed(() =>
+    this.secciones().some(s => s.tipo_seccion === 'FINANCIERA')
+  );
+
   private autosaveData: any = null;
   private respuestasBDCache: any[] = [];
   private readonly AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
   respuestasForm: FormGroup = this.fb.group({
     respuestas: this.fb.group({}),
-    matrices: this.fb.group({})
+    matrices: this.fb.group({}),
+    evidencias: this.fb.group({})
   });
 
+  
   valormap = signal<Record<string, any>>({});
 
   ngOnInit(): void {
@@ -144,7 +160,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.cargarPerfilUsuario();
     this.cargarDatosEstudiante();
 
-    this.respuestasForm.valueChanges
+        this.respuestasForm.valueChanges
       .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(val => {
         if (!this.esEditable()) return;
@@ -152,10 +168,13 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         this.isSavingLocal.set(true);
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
+        this.recalcularTotalesFinancieros(); // ← NUEVO
         const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
         localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
         setTimeout(() => this.isSavingLocal.set(false), 800);
       });
+
+
   }
 
   private recuperarAutosaveValido(): void {
@@ -187,6 +206,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   get respuestasGroup(): FormGroup { return this.respuestasForm.get('respuestas') as FormGroup; }
   get matricesGroup(): FormGroup { return this.respuestasForm.get('matrices') as FormGroup; }
+  get evidenciasGroup(): FormGroup { return this.respuestasForm.get('evidencias') as FormGroup; }
 
   irAPaso(index: number): void {
     if (index <= this.seccionActualIndex() || this.validarSeccionActual()) {
@@ -324,9 +344,11 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
 
+    // 🔥 SOLUCIÓN: Agregar 'evidencias' aquí también para que no sea null
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
-      matrices: this.fb.group({})
+      matrices: this.fb.group({}),
+      evidencias: this.fb.group({}) 
     });
 
     this.recuperarAutosaveValido();
@@ -394,90 +416,157 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       });
   }
 
-  cargarEstructuraFormulario(formularioId: string): void {
+    cargarEstructuraFormulario(formularioId: string): void {
+    const fichaActual = this.fichaActiva();
+
     forkJoin({
-      dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
       formulario: this.formularioService.getFormularioById(formularioId),
-      secciones: this.formularioService.getSeccionesByFormulario(formularioId)
+      dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
+      respuestas: fichaActual
+        ? this.http
+            .get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
+            .pipe(
+              catchError(() => {
+                this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
+                return of([] as any[]);
+              })
+            )
+        : of([] as any[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ dependencias, formulario, secciones }) => {
+        next: ({ formulario, dependencias, respuestas }) => {
           this.dependencias.set(dependencias);
           this.formularioActivo.set(formulario);
-          this.secciones.set(secciones);
+          this.respuestasBDCache = respuestas || [];
 
-          const preguntasReqs = secciones.map((s: Seccion) =>
-            this.formularioService.getPreguntasBySeccion(s.id)
-          );
+          const secsDelForm = (formulario as any).secciones as Seccion[] | undefined;
 
-          if (preguntasReqs.length === 0) {
-            this.isLoading.set(false);
+          if (secsDelForm && secsDelForm.length > 0 && secsDelForm[0]?.preguntas) {
+            this.aplicarEstructuraYControles(secsDelForm);
             return;
           }
 
-          forkJoin(preguntasReqs)
+          this.formularioService
+            .getSeccionesByFormulario(formularioId)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-              next: (preguntasPorSeccion: Pregunta[][]) => {
-                const seccionesActualizadas = secciones.map((s: Seccion, index: number) => ({
-                  ...s,
-                  preguntas: preguntasPorSeccion[index]
-                }));
-                this.secciones.set(seccionesActualizadas);
-
-                const preguntasTodas = preguntasPorSeccion.flat();
-                const idsPreguntasExistentes = new Set(preguntasTodas.map(p => p.id));
-                this.sanitizarAutosave(idsPreguntasExistentes);
-
-                const fichaActual = this.fichaActiva();
-
-                const construirTodo = () => {
-                  preguntasTodas.forEach((p: Pregunta) => this.construirControlesPreguntas(p));
-
-                  if (fichaActual) {
-                    this.aplicarRespuestasGuardadas(this.respuestasBDCache);
-
-                    if (!this.esEditable()) {
-                      this.seccionActualIndex.set(this.secciones().length);
-                    } else if (this.autosaveData?.seccionIndex !== undefined) {
-                      const savedStep = this.autosaveData.seccionIndex;
-                      const maxStep = this.secciones().length;
-                      this.seccionActualIndex.set(savedStep <= maxStep ? savedStep : 0);
-                    }
-                  }
+              next: (secciones) => {
+                if (!secciones.length) {
+                  this.secciones.set([]);
                   this.isLoading.set(false);
-                };
-
-                if (fichaActual) {
-                  this.http.get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
-                    .pipe(takeUntilDestroyed(this.destroyRef))
-                    .subscribe({
-                      next: (respuestasBD) => {
-                        this.respuestasBDCache = respuestasBD || [];
-                        construirTodo();
-                      },
-                      error: () => {
-                        this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
-                        this.respuestasBDCache = [];
-                        construirTodo();
-                      }
-                    });
-                } else {
-                  construirTodo();
+                  return;
                 }
+
+                forkJoin(
+                  secciones.map((s) =>
+                    this.formularioService.getPreguntasBySeccion(s.id).pipe(
+                      catchError(() => of([] as Pregunta[]))
+                    )
+                  )
+                )
+                  .pipe(takeUntilDestroyed(this.destroyRef))
+                  .subscribe({
+                    next: (preguntasPorSeccion) => {
+                      const seccionesConPreguntas = secciones.map((s, i) => ({
+                        ...s,
+                        preguntas: preguntasPorSeccion[i] || [],
+                      }));
+                      this.aplicarEstructuraYControles(seccionesConPreguntas);
+                    },
+                    error: () => {
+                      this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
+                      this.isLoading.set(false);
+                    },
+                  });
               },
               error: () => {
-                this.toastService.show('Error al cargar preguntas de la ficha.', 'error');
+                this.toastService.show('Error al cargar secciones.', 'error');
                 this.isLoading.set(false);
-              }
+              },
             });
         },
         error: () => {
           this.toastService.show('Error de conexión con el formulario.', 'error');
           this.isLoading.set(false);
-        }
+        },
       });
+  }
+
+    private aplicarEstructuraYControles(secciones: Seccion[]): void {
+    this.secciones.set(secciones);
+
+    const preguntasTodas = secciones.flatMap((s) => s.preguntas || []);
+    const idsExistentes = new Set(preguntasTodas.map((p) => p.id));
+    this.sanitizarAutosave(idsExistentes);
+
+    preguntasTodas.forEach((p) => this.construirControlesPreguntas(p));
+    this.aplicarRespuestasGuardadas(this.respuestasBDCache);
+    this.recalcularTotalesFinancieros();
+
+    if (!this.esEditable()) {
+      this.seccionActualIndex.set(this.secciones().length);
+    } else if (this.autosaveData?.seccionIndex !== undefined) {
+      const maxStep = this.secciones().length;
+      const saved = this.autosaveData.seccionIndex;
+      this.seccionActualIndex.set(saved <= maxStep ? saved : 0);
+    }
+
+    // UI lista sin esperar opciones
+    this.isLoading.set(false);
+
+    this.cargarOpcionesEnBackground(preguntasTodas);
+  }
+
+  private cargarOpcionesEnBackground(preguntas: Pregunta[]): void {
+    const deSeleccion = preguntas.filter(
+      (p) =>
+        (!p.opciones || p.opciones.length === 0) &&
+        (p.tipoCampo?.nombre === 'SELECCION_UNICA' || p.tipoCampo?.nombre === 'SELECCION_MULTIPLE')
+    );
+
+    if (deSeleccion.length === 0) return;
+
+    const chunkSize = 8;
+    const chunks: Pregunta[][] = [];
+    for (let i = 0; i < deSeleccion.length; i += chunkSize) {
+      chunks.push(deSeleccion.slice(i, i + chunkSize));
+    }
+
+    const procesarChunk = (idx: number) => {
+      if (idx >= chunks.length) return;
+      const chunk = chunks[idx];
+
+      forkJoin(
+        chunk.map((p) =>
+          this.formularioService.getOpcionesByPregunta(p.id).pipe(
+            catchError(() => of([] as any[]))
+          )
+        )
+      )
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (opcionesList) => {
+            chunk.forEach((p, i) => {
+              p.opciones = opcionesList[i] || [];
+            });
+
+            this.secciones.update((secs) =>
+              secs.map((s) => ({
+                ...s,
+                preguntas: (s.preguntas || []).map((pr) => {
+                  const found = chunk.find((x) => x.id === pr.id);
+                  return found ? { ...pr, opciones: found.opciones } : pr;
+                }),
+              }))
+            );
+
+            procesarChunk(idx + 1);
+          },
+        });
+    };
+
+    procesarChunk(0);
   }
 
   private sanitizarAutosave(idsPreguntasExistentes: Set<string>): void {
@@ -518,6 +607,12 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         const savedVal = this.autosaveData?.respuestas?.[p.id] ?? '';
         this.respuestasGroup.addControl(p.id, this.fb.control(savedVal, validators));
       }
+    }
+
+    // 🔥 INICIALIZAR EL CONTROL FANTASMA PARA LA EVIDENCIA
+    if (!this.evidenciasGroup.contains(p.id)) {
+      const savedEvidencia = this.autosaveData?.evidencias?.[p.id] ?? '';
+      this.evidenciasGroup.addControl(p.id, this.fb.control(savedEvidencia));
     }
 
     this.valormap.set(this.respuestasGroup.getRawValue());
@@ -581,6 +676,19 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   esPreguntaDependiente(preguntaId: string): boolean {
     return this.dependencias().some(d => d.pregunta_id === preguntaId);
+  }
+
+    /** Subpreguntas que dispara una pregunta padre (vía dependencias). */
+  getSubpreguntas(preguntaPadreId: string): Pregunta[] {
+    const deps = this.dependencias().filter(d => d.pregunta_disparadora_id === preguntaPadreId);
+    const resultado: Pregunta[] = [];
+    for (const dep of deps) {
+      for (const s of this.secciones()) {
+        const p = s.preguntas?.find(x => x.id === dep.pregunta_id);
+        if (p) resultado.push(p);
+      }
+    }
+    return resultado;
   }
 
   cargarEstructuraMatriz(pregunta: Pregunta): void {
@@ -673,7 +781,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     });
   }
 
-  obtenerTextoRespuesta(pregunta: Pregunta): string {
+    obtenerTextoRespuesta(pregunta: Pregunta): string {
     if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
       const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
       if (!matrizValores) return 'Sin responder';
@@ -704,9 +812,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     if (Array.isArray(val)) {
       if (val.length === 0) return 'Sin responder';
-      const textos = val.map(opcId => {
+      const textos = val.map((opcId: string) => {
         const opc = pregunta.opciones?.find(o => o.id === opcId);
-        return opc ? opc.texto_opcion : opcId;
+        return opc ? opc.texto_opcion : 'Opción seleccionada';
       });
       return textos.join(', ');
     }
@@ -716,16 +824,70 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       if (opc) return opc.texto_opcion;
     }
 
+    const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
+    if (esUuid) return 'Opción seleccionada';
+
     return String(val);
+  }
+
+    /** Suma ingresos y egresos de todas las preguntas NUMÉRICAS visibles con categoria_financiera. */
+  recalcularTotalesFinancieros(): void {
+    let ingresos = 0;
+    let egresos = 0;
+    const valores = this.respuestasGroup.getRawValue();
+
+    for (const sec of this.secciones()) {
+      if (sec.tipo_seccion !== 'FINANCIERA') continue;
+
+      for (const p of sec.preguntas || []) {
+        if (!this.esPreguntaVisible(p.id)) continue;
+        // Solo montos numéricos
+        if (p.tipoCampo?.nombre !== 'NUMERICO') continue;
+
+        const raw = valores[p.id];
+        const monto = Number(raw);
+        if (Number.isNaN(monto)) continue;
+
+        if (p.categoria_financiera === 'INGRESO') {
+          ingresos += monto;
+        } else if (p.categoria_financiera === 'EGRESO') {
+          egresos += monto;
+        }
+      }
+    }
+
+    this.totalIngresos.set(ingresos);
+    this.totalEgresos.set(egresos);
   }
 
   aplicarRespuestasGuardadas(respuestasBD: any[]): void {
     if (!respuestasBD || respuestasBD.length === 0) return;
 
     const valoresParaElFormulario: any = {};
+    const evidenciasParaElFormulario: any = {}; // 🔥
 
     respuestasBD.forEach(resp => {
       if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
+
+      // 🔥 Separar la URL del archivo y el texto del estudiante
+      let textoReal = resp.valor_texto;
+      let evidenciaExtraida = '';
+      if (textoReal && typeof textoReal === 'string' && textoReal.includes('[EVIDENCIA_URL:')) {
+          const match = textoReal.match(/\[EVIDENCIA_URL:(.*?)\]/);
+          if (match && match[1]) {
+              evidenciaExtraida = match[1];
+              textoReal = textoReal.replace(match[0], '').trim();
+          }
+      }
+
+      // Compatibilidad por si en el pasado se usó la estructura normal de documentos
+      if (!evidenciaExtraida && resp.documentos && resp.documentos.length > 0) {
+          evidenciaExtraida = resp.documentos[0].ruta_archivo;
+      }
+
+      if (evidenciaExtraida) {
+          evidenciasParaElFormulario[resp.pregunta_id] = evidenciaExtraida;
+      }
 
       const controlArray = this.respuestasGroup.get(resp.pregunta_id);
 
@@ -738,21 +900,26 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         }
       } else if (resp.opcionesSeleccionadas && resp.opcionesSeleccionadas.length > 0) {
         valoresParaElFormulario[resp.pregunta_id] = resp.opcionesSeleccionadas[0].opcion_id;
-      } else if (resp.documentos && resp.documentos.length > 0) {
-        valoresParaElFormulario[resp.pregunta_id] = resp.documentos[0].ruta_archivo;
       } else {
-        valoresParaElFormulario[resp.pregunta_id] = resp.valor_texto !== null ? resp.valor_texto : resp.valor_numerico;
+        valoresParaElFormulario[resp.pregunta_id] = textoReal !== null && textoReal !== '' ? textoReal : resp.valor_numerico;
       }
     });
 
     this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
+    this.evidenciasGroup.patchValue(evidenciasParaElFormulario, { emitEvent: false });
     this.valormap.set(this.respuestasGroup.getRawValue());
+    this.recalcularTotalesFinancieros(); // ← NUEVO
+    
+
+
 
     if (!this.esEditable()) {
       this.respuestasGroup.disable({ emitEvent: false });
+      this.evidenciasGroup.disable({ emitEvent: false });
       this.matricesGroup.disable({ emitEvent: false });
     } else {
       this.respuestasGroup.enable({ emitEvent: false });
+      this.evidenciasGroup.enable({ emitEvent: false });
       this.matricesGroup.enable({ emitEvent: false });
     }
   }
@@ -775,26 +942,39 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       this.enviando.set(true);
 
       const respuestasValores = this.respuestasGroup.getRawValue();
+      const evidenciasValores = this.evidenciasGroup.getRawValue(); // 🔥 Capturar evidencias fantasma
       const payloadRespuestas: any[] = [];
 
       Object.keys(respuestasValores).forEach(preguntaId => {
         if (this.esPreguntaVisible(preguntaId)) {
-          const val = respuestasValores[preguntaId];
-          if (val === null || val === undefined || val === '') return;
+          let val = respuestasValores[preguntaId];
+          const evidenciaUrl = evidenciasValores[preguntaId];
+
+          // Función para unir el archivo al texto de forma oculta para el backend
+          const appendEvidencia = (baseText: string | null) => {
+              if (!evidenciaUrl) return baseText;
+              return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
+          };
+
+          // Validamos que haya texto O que haya subido un archivo
+          if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
 
           if (Array.isArray(val) && val.length > 0) {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val });
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val, valor_texto: appendEvidencia(null) });
           } else if (typeof val === 'number') {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val });
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val, valor_texto: appendEvidencia(null) });
           } else if (typeof val === 'boolean') {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: val ? 'SI' : 'NO' });
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val ? 'SI' : 'NO') });
           } else if (typeof val === 'string' && val.trim() !== '') {
             const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
-            payloadRespuestas.push({
-              ficha_id: ficha.id,
-              pregunta_id: preguntaId,
-              ...(esUuid ? { opciones_seleccionadas: [val] } : { valor_texto: val })
-            });
+            if (esUuid) {
+                payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
+            } else {
+                payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
+            }
+          } else if (evidenciaUrl) {
+            // Caso donde solo subió archivo y dejó el texto vacío
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
           }
         }
       });
@@ -889,13 +1069,27 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     const element = event.currentTarget as HTMLInputElement;
     const fileList: FileList | null = element.files;
+    
     if (fileList && fileList.length > 0) {
       const file = fileList[0];
-      this.documentosService.subirDocumentoDeRespuesta(preguntaId, file)
+      const fichaId = this.fichaActiva()?.id;
+
+      if (!fichaId) return;
+
+      this.toastService.show('Subiendo evidencia, por favor espera...', 'info');
+
+      this.documentosService.subirDocumentoGeneral(fichaId, file)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (docRes: any) => {
-            this.respuestasGroup.get(preguntaId)?.setValue(docRes.url || file.name);
+            const urlFinal = docRes.ruta_archivo;
+            
+            // 🔥 Guardamos en el cajón fantasma, dejando libre tu campo de texto
+            this.evidenciasGroup.get(preguntaId)?.setValue(urlFinal);
+            
+            // Forzamos el autoguardado (autosave)
+            this.respuestasForm.updateValueAndValidity(); 
+            
             this.toastService.show('Documento adjuntado correctamente.', 'success');
           },
           error: () => this.toastService.show('Error al subir el archivo.', 'error')
@@ -907,7 +1101,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const n = nombre.toLowerCase();
     if (n.includes('consentimiento')) return 'far fa-user';
     if (n.includes('personales') || n.includes('identificativos')) return 'far fa-address-card';
-    if (n.includes('salud') || n.includes('discapacidad')) return 'far fa-heart';
+    // 🔥 Aseguramos que detecte salud, discapacidad o NEE
+    if (n.includes('salud') || n.includes('discapacidad') || n.includes('nee')) return 'fas fa-notes-medical text-rose-500';
     if (n.includes('familiar') || n.includes('hijos')) return 'fas fa-users';
     if (n.includes('econom')) return 'fas fa-coins';
     return 'far fa-folder';
