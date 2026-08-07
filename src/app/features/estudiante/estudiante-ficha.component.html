@@ -227,16 +227,15 @@
           </div>
           }
 
-                    @if (haySeccionFinanciera() && esEditable() && !esPasoResumen()) {
+          @if (haySeccionFinanciera() && esEditable() && !esPasoResumen()) {
           <div class="bg-amber-50 rounded-2xl border border-amber-200 p-4 mb-4">
             <h4 class="text-[10px] font-black text-amber-900 uppercase mb-2">
               <i class="fas fa-coins"></i> Balance en vivo
             </h4>
             <p class="text-xs text-emerald-700 font-bold">Ingresos: ${{ totalIngresos() | number:'1.2-2' }}</p>
             <p class="text-xs text-rose-700 font-bold">Egresos: ${{ totalEgresos() | number:'1.2-2' }}</p>
-            <p class="text-sm font-black mt-1"
-               [class.text-emerald-700]="balance() >= 0"
-               [class.text-rose-700]="balance() < 0">
+            <p class="text-sm font-black mt-1" [class.text-emerald-700]="balance() >= 0"
+              [class.text-rose-700]="balance() < 0">
               Balance: ${{ balance() | number:'1.2-2' }}
             </p>
           </div>
@@ -377,6 +376,12 @@
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none disabled:opacity-70 disabled:bg-slate-100"
                       [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                   </div>
+                  } @else if (p.tipoCampo?.nombre === 'FECHA') {
+                  <div [formGroup]="respuestasGroup">
+                    <input type="date" [formControlName]="p.id"
+                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none disabled:opacity-70 disabled:bg-slate-100"
+                      [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
+                  </div>
                   } @else {
                   <div [formGroup]="respuestasGroup">
                     <input type="text" [formControlName]="p.id" placeholder="Escribe tu respuesta..."
@@ -460,6 +465,11 @@
                     <input type="number" [formControlName]="sub.id" placeholder="0"
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-70 disabled:bg-slate-100">
                   </div>
+                  } @else if (sub.tipoCampo?.nombre === 'FECHA') {
+                  <div [formGroup]="respuestasGroup">
+                    <input type="date" [formControlName]="sub.id"
+                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-70 disabled:bg-slate-100">
+                  </div>
                   } @else {
                   <div [formGroup]="respuestasGroup">
                     <input type="text" [formControlName]="sub.id" placeholder="Escribe tu respuesta..."
@@ -480,10 +490,9 @@
                 }
               </div>
 
-                            <!-- PANEL BALANCE EN TIEMPO REAL (solo sección financiera) -->
+              <!-- PANEL BALANCE EN TIEMPO REAL (solo sección financiera) -->
               @if (seccionActualEsFinanciera() && esEditable()) {
-              <div
-                class="mt-6 p-4 rounded-2xl border border-amber-200 bg-amber-50/80 shadow-sm animate-fade-in">
+              <div class="mt-6 p-4 rounded-2xl border border-amber-200 bg-amber-50/80 shadow-sm animate-fade-in">
                 <h4 class="text-xs font-black uppercase tracking-wider text-amber-900 mb-3 flex items-center gap-2">
                   <i class="fas fa-calculator"></i> Resumen económico (en vivo)
                 </h4>
@@ -502,15 +511,15 @@
                   </div>
                   <div class="bg-white rounded-xl border border-blue-100 p-3 text-center">
                     <p class="text-[10px] font-bold text-slate-500 uppercase">Balance</p>
-                    <p class="text-lg font-black"
-                       [class.text-emerald-700]="balance() >= 0"
-                       [class.text-rose-700]="balance() < 0">
+                    <p class="text-lg font-black" [class.text-emerald-700]="balance() >= 0"
+                      [class.text-rose-700]="balance() < 0">
                       ${{ balance() | number:'1.2-2' }}
                     </p>
                   </div>
                 </div>
                 <p class="text-[10px] text-amber-800/80 mt-2">
-                  Se actualiza solo mientras escribís los montos. El cálculo oficial lo confirma el sistema al enviar la ficha.
+                  Se actualiza solo mientras escribís los montos. El cálculo oficial lo confirma el sistema al enviar la
+                  ficha.
                 </p>
               </div>
               }
@@ -575,7 +584,7 @@
                     {{ numeroRomano(idx + 1) }}. {{ sec.nombre }}
                   </h3>
 
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 px-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 px-2">
                     @for (preg of sec.preguntas; track preg.id) {
                     @if (!esPreguntaDependiente(preg.id) && esPreguntaVisible(preg.id)) {
 
@@ -599,7 +608,8 @@
                               @for (col of preg.columnasMatriz; track col.id) {
                               <td class="p-3 text-center">
                                 @if (esColumnaMatrizSeleccionada(preg.id, fila.id, col.id)) {
-                                <div class="w-5 h-5 bg-blue-600 rounded shadow-sm mx-auto flex items-center justify-center">
+                                <div
+                                  class="w-5 h-5 bg-blue-600 rounded shadow-sm mx-auto flex items-center justify-center">
                                   <i class="fas fa-check text-[10px] text-white"></i>
                                 </div>
                                 } @else {

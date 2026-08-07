@@ -783,53 +783,59 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
     obtenerTextoRespuesta(pregunta: Pregunta): string {
-    if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
-      const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
-      if (!matrizValores) return 'Sin responder';
+  if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
+    const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
+    if (!matrizValores) return 'Sin responder';
 
-      const resumenFilas: string[] = [];
+    const resumenFilas: string[] = [];
 
-      Object.keys(matrizValores).forEach(filaId => {
-        const columnasSeleccionadas = matrizValores[filaId];
+    Object.keys(matrizValores).forEach(filaId => {
+      const columnasSeleccionadas = matrizValores[filaId];
 
-        if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-          const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
-          const textoFila = fila ? fila.texto_fila : 'Fila';
+      if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+        const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
+        const textoFila = fila ? fila.texto_fila : 'Fila';
 
-          const textosColumnas = columnasSeleccionadas.map((colId: string) => {
-            const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
-            return col ? col.texto_columna : colId;
-          });
+        const textosColumnas = columnasSeleccionadas.map((colId: string) => {
+          const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
+          return col ? col.texto_columna : colId;
+        });
 
-          resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
-        }
-      });
+        resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
+      }
+    });
 
-      return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
-    }
-
-    const val = this.respuestasGroup.getRawValue()[pregunta.id];
-    if (val === null || val === undefined || val === '') return 'Sin responder';
-
-    if (Array.isArray(val)) {
-      if (val.length === 0) return 'Sin responder';
-      const textos = val.map((opcId: string) => {
-        const opc = pregunta.opciones?.find(o => o.id === opcId);
-        return opc ? opc.texto_opcion : 'Opción seleccionada';
-      });
-      return textos.join(', ');
-    }
-
-    if (pregunta.opciones && pregunta.opciones.length > 0) {
-      const opc = pregunta.opciones.find(o => o.id === val);
-      if (opc) return opc.texto_opcion;
-    }
-
-    const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
-    if (esUuid) return 'Opción seleccionada';
-
-    return String(val);
+    return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
   }
+
+  const val = this.respuestasGroup.getRawValue()[pregunta.id];
+  if (val === null || val === undefined || val === '') return 'Sin responder';
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return 'Sin responder';
+    const textos = val.map((opcId: string) => {
+      const opc = pregunta.opciones?.find(o => o.id === opcId);
+      return opc ? opc.texto_opcion : 'Opción seleccionada';
+    });
+    return textos.join(', ');
+  }
+
+  if (pregunta.opciones && pregunta.opciones.length > 0) {
+    const opc = pregunta.opciones.find(o => o.id === val);
+    if (opc) return opc.texto_opcion;
+  }
+
+  const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
+  if (esUuid) return 'Opción seleccionada';
+
+  // Formateo amigable para fechas (tipo FECHA)
+  if (pregunta.tipoCampo?.nombre === 'FECHA' && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    const [year, month, day] = val.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  return String(val);
+}
 
     /** Suma ingresos y egresos de todas las preguntas NUMÉRICAS visibles con categoria_financiera. */
   recalcularTotalesFinancieros(): void {
@@ -1110,9 +1116,36 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   numeroRomano(num: number): string {
-    const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-    return romanos[num - 1] || num.toString();
+  if (!num || num <= 0) return String(num);
+
+  const valores = [
+    { valor: 1000, simbolo: 'M' },
+    { valor: 900,  simbolo: 'CM' },
+    { valor: 500,  simbolo: 'D' },
+    { valor: 400,  simbolo: 'CD' },
+    { valor: 100,  simbolo: 'C' },
+    { valor: 90,   simbolo: 'XC' },
+    { valor: 50,   simbolo: 'L' },
+    { valor: 40,   simbolo: 'XL' },
+    { valor: 10,   simbolo: 'X' },
+    { valor: 9,    simbolo: 'IX' },
+    { valor: 5,    simbolo: 'V' },
+    { valor: 4,    simbolo: 'IV' },
+    { valor: 1,    simbolo: 'I' }
+  ];
+
+  let resultado = '';
+  let n = num;
+
+  for (const { valor, simbolo } of valores) {
+    while (n >= valor) {
+      resultado += simbolo;
+      n -= valor;
+    }
   }
+
+  return resultado;
+}
 
   ngOnDestroy(): void {
     if (this.esEditable()) {
