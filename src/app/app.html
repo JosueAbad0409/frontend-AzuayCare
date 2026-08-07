@@ -1,7 +1,3 @@
-<div class="app-shell">
-  <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="theme() === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'">
-    <i class="fas" [class.fa-moon]="theme() === 'light'" [class.fa-sun]="theme() === 'dark'"></i>
-    <span>{{ theme() === 'light' ? 'Modo oscuro' : 'Modo claro' }}</span>
-  </button>
+<main class="app-shell">
   <router-outlet></router-outlet>
-</div>
+</main>

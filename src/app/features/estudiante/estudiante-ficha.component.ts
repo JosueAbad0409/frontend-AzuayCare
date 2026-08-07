@@ -4,6 +4,10 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { debounceTime, catchError, forkJoin, of } from 'rxjs';
+import Swal from 'sweetalert2';
+
+// Core & Environments
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { FichaService } from '../../core/services/ficha.service';
@@ -13,16 +17,15 @@ import { DocumentosService } from '../../core/services/documentos.service';
 import { DependenciasService } from '../../core/services/dependencias.service';
 import { MatricesService } from '../../core/services/matrices.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
+
+// Models
 import { Formulario, Seccion, Pregunta } from '../../core/models/formulario.model';
 import { FichaRevision, EstadoFicha } from '../../core/models/revision-ficha.model';
 import { PreguntaDependencia } from '../../core/models/dependencia.model';
 import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
-import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
-import { forkJoin, of, debounceTime, catchError } from 'rxjs';
-import Swal from 'sweetalert2';
-
 
 // Estado normalizado para la UI (unifica variantes históricas del backend: ENVIADA/ENVIADO, RECHAZADA/RECHAZADO)
 export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
@@ -30,6 +33,8 @@ export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZAD
 export interface FormularioUI extends Formulario {
   estado_ui: EstadoUI;
 }
+
+const AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
 /** Normaliza las variantes de ortografía que existen en datos históricos del backend. */
 function normalizarEstado(estado?: string | null): EstadoUI {
@@ -68,6 +73,7 @@ function requireAtLeastOneMatrixRowValidator() {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EstudianteFichaComponent implements OnInit, OnDestroy {
+  // Services
   readonly authService = inject(AuthService);
   private readonly fichaService = inject(FichaService);
   private readonly formularioService = inject(FormularioService);
@@ -82,8 +88,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly descargaService = inject(DescargaArchivosService);
 
+  // Signals
   isDescargandoPdf = this.descargaService.isDescargando;
-
   formulariosDisponibles = signal<FormularioUI[]>([]);
   vistaActual = signal<'LISTA' | 'FORMULARIO'>('LISTA');
 
@@ -104,16 +110,15 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   respuestaIdParaAdjunto = signal<string | null>(null);
 
   perfilEstudiante = signal<EstudiantePerfil | null>(null);
-
   seccionActualIndex = signal<number>(0);
 
-  /** Estado normalizado de la ficha activa (soluciona 'RECHAZADO' vs 'RECHAZADA' y 'ENVIADO' vs 'ENVIADA'). */
+  totalIngresos = signal(0);
+  totalEgresos = signal(0);
+  valormap = signal<Record<string, any>>({});
+
+  // Computed
   estadoActivoUI = computed<EstadoUI>(() => normalizarEstado(this.fichaActiva()?.estado_ficha));
 
-  /**
-   * Una ficha es editable si está en BORRADOR o si fue RECHAZADA (el estudiante debe poder
-   * corregirla y reenviarla). ENVIADA, VALIDADO y CERRADA_POR_PLAZO son de solo lectura.
-   */
   esEditable = computed(() => {
     const estado = this.estadoActivoUI();
     return estado === 'BORRADOR' || estado === 'RECHAZADA';
@@ -129,11 +134,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return this.secciones().length > 0 && this.seccionActualIndex() === this.secciones().length;
   });
 
-  totalIngresos = signal(0);
-  totalEgresos = signal(0);
   balance = computed(() => this.totalIngresos() - this.totalEgresos());
 
-  /** true si la sección actual (o alguna del form) es financiera */
   seccionActualEsFinanciera = computed(() => {
     const sec = this.secciones()[this.seccionActualIndex()];
     return sec?.tipo_seccion === 'FINANCIERA';
@@ -143,9 +145,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.secciones().some(s => s.tipo_seccion === 'FINANCIERA')
   );
 
+  // Form & Local Cache
   private autosaveData: any = null;
   private respuestasBDCache: any[] = [];
-  private readonly AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
   respuestasForm: FormGroup = this.fb.group({
     respuestas: this.fb.group({}),
@@ -153,15 +155,16 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     evidencias: this.fb.group({})
   });
 
-  
-  valormap = signal<Record<string, any>>({});
+  get respuestasGroup(): FormGroup { return this.respuestasForm.get('respuestas') as FormGroup; }
+  get matricesGroup(): FormGroup { return this.respuestasForm.get('matrices') as FormGroup; }
+  get evidenciasGroup(): FormGroup { return this.respuestasForm.get('evidencias') as FormGroup; }
 
   ngOnInit(): void {
     this.recuperarAutosaveValido();
     this.cargarPerfilUsuario();
     this.cargarDatosEstudiante();
 
-        this.respuestasForm.valueChanges
+    this.respuestasForm.valueChanges
       .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(val => {
         if (!this.esEditable()) return;
@@ -169,22 +172,21 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         this.isSavingLocal.set(true);
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
-        this.recalcularTotalesFinancieros(); // ← NUEVO
+        this.recalcularTotalesFinancieros();
+        
         const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-        localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave));
         setTimeout(() => this.isSavingLocal.set(false), 800);
       });
-
-
   }
 
   private recuperarAutosaveValido(): void {
-    const saved = localStorage.getItem(this.AUTOSAVE_KEY);
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
     if (saved) {
       try {
         this.autosaveData = JSON.parse(saved);
       } catch (e) {
-        localStorage.removeItem(this.AUTOSAVE_KEY);
+        localStorage.removeItem(AUTOSAVE_KEY);
         this.autosaveData = null;
       }
     }
@@ -204,10 +206,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       });
     }
   }
-
-  get respuestasGroup(): FormGroup { return this.respuestasForm.get('respuestas') as FormGroup; }
-  get matricesGroup(): FormGroup { return this.respuestasForm.get('matrices') as FormGroup; }
-  get evidenciasGroup(): FormGroup { return this.respuestasForm.get('evidencias') as FormGroup; }
 
   irAPaso(index: number): void {
     if (index <= this.seccionActualIndex() || this.validarSeccionActual()) {
@@ -268,9 +266,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   private guardarPasoEnLocal(): void {
     if (!this.esEditable()) return;
-    const currentData = JSON.parse(localStorage.getItem(this.AUTOSAVE_KEY) || '{}');
+    const currentData = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || '{}');
     currentData.seccionIndex = this.seccionActualIndex();
-    localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(currentData));
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(currentData));
   }
 
   cargarDatosEstudiante(): void {
@@ -288,13 +286,11 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           this.periodoActivo.set(pActivo || null);
           this.misFichas.set(fichas);
 
-          // Filtramos solo los formularios publicados para este periodo
           const formsPublicados = formularios.filter(f => {
             const fPeriodoId = f.periodo_id || (f as any).periodo?.id;
             return f.publicado === true && (!pActivo || fPeriodoId === pActivo.id);
           });
 
-          // Mapeamos para inyectar el estado visual normalizado a la tarjeta
           const formsUI = formsPublicados.map((f): FormularioUI => {
             const fichaAsociada = fichas.find(fi => fi.formulario_id === f.id && (fi.periodo_id === pActivo?.id));
             return {
@@ -345,7 +341,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
 
-    // 🔥 SOLUCIÓN: Agregar 'evidencias' aquí también para que no sea null
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
       matrices: this.fb.group({}),
@@ -356,7 +351,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
-    const tieneBorradorLleno = localStorage.getItem(this.AUTOSAVE_KEY) !== null;
+    const tieneBorradorLleno = localStorage.getItem(AUTOSAVE_KEY) !== null;
     const tieneFichasAnteriores = fichas.length > 1;
 
     if (!tieneBorradorLleno && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR') {
@@ -417,7 +412,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       });
   }
 
-    cargarEstructuraFormulario(formularioId: string): void {
+  cargarEstructuraFormulario(formularioId: string): void {
     const fichaActual = this.fichaActiva();
 
     forkJoin({
@@ -494,7 +489,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       });
   }
 
-    private aplicarEstructuraYControles(secciones: Seccion[]): void {
+  private aplicarEstructuraYControles(secciones: Seccion[]): void {
     this.secciones.set(secciones);
 
     const preguntasTodas = secciones.flatMap((s) => s.preguntas || []);
@@ -513,9 +508,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       this.seccionActualIndex.set(saved <= maxStep ? saved : 0);
     }
 
-    // UI lista sin esperar opciones
     this.isLoading.set(false);
-
     this.cargarOpcionesEnBackground(preguntasTodas);
   }
 
@@ -610,7 +603,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 🔥 INICIALIZAR EL CONTROL FANTASMA PARA LA EVIDENCIA
     if (!this.evidenciasGroup.contains(p.id)) {
       const savedEvidencia = this.autosaveData?.evidencias?.[p.id] ?? '';
       this.evidenciasGroup.addControl(p.id, this.fb.control(savedEvidencia));
@@ -679,7 +671,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return this.dependencias().some(d => d.pregunta_id === preguntaId);
   }
 
-    /** Subpreguntas que dispara una pregunta padre (vía dependencias). */
   getSubpreguntas(preguntaPadreId: string): Pregunta[] {
     const deps = this.dependencias().filter(d => d.pregunta_disparadora_id === preguntaPadreId);
     const resultado: Pregunta[] = [];
@@ -782,62 +773,60 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     });
   }
 
-    obtenerTextoRespuesta(pregunta: Pregunta): string {
-  if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
-    const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
-    if (!matrizValores) return 'Sin responder';
+  obtenerTextoRespuesta(pregunta: Pregunta): string {
+    if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
+      const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
+      if (!matrizValores) return 'Sin responder';
 
-    const resumenFilas: string[] = [];
+      const resumenFilas: string[] = [];
 
-    Object.keys(matrizValores).forEach(filaId => {
-      const columnasSeleccionadas = matrizValores[filaId];
+      Object.keys(matrizValores).forEach(filaId => {
+        const columnasSeleccionadas = matrizValores[filaId];
 
-      if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-        const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
-        const textoFila = fila ? fila.texto_fila : 'Fila';
+        if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+          const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
+          const textoFila = fila ? fila.texto_fila : 'Fila';
 
-        const textosColumnas = columnasSeleccionadas.map((colId: string) => {
-          const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
-          return col ? col.texto_columna : colId;
-        });
+          const textosColumnas = columnasSeleccionadas.map((colId: string) => {
+            const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
+            return col ? col.texto_columna : colId;
+          });
 
-        resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
-      }
-    });
+          resumenFilas.push(`${textoFila}: ${textosColumnas.join(', ')}`);
+        }
+      });
 
-    return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
+      return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
+    }
+
+    const val = this.respuestasGroup.getRawValue()[pregunta.id];
+    if (val === null || val === undefined || val === '') return 'Sin responder';
+
+    if (Array.isArray(val)) {
+      if (val.length === 0) return 'Sin responder';
+      const textos = val.map((opcId: string) => {
+        const opc = pregunta.opciones?.find(o => o.id === opcId);
+        return opc ? opc.texto_opcion : 'Opción seleccionada';
+      });
+      return textos.join(', ');
+    }
+
+    if (pregunta.opciones && pregunta.opciones.length > 0) {
+      const opc = pregunta.opciones.find(o => o.id === val);
+      if (opc) return opc.texto_opcion;
+    }
+
+    const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
+    if (esUuid) return 'Opción seleccionada';
+
+    if (pregunta.tipoCampo?.nombre === 'FECHA' && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [year, month, day] = val.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    return String(val);
   }
 
-  const val = this.respuestasGroup.getRawValue()[pregunta.id];
-  if (val === null || val === undefined || val === '') return 'Sin responder';
-
-  if (Array.isArray(val)) {
-    if (val.length === 0) return 'Sin responder';
-    const textos = val.map((opcId: string) => {
-      const opc = pregunta.opciones?.find(o => o.id === opcId);
-      return opc ? opc.texto_opcion : 'Opción seleccionada';
-    });
-    return textos.join(', ');
-  }
-
-  if (pregunta.opciones && pregunta.opciones.length > 0) {
-    const opc = pregunta.opciones.find(o => o.id === val);
-    if (opc) return opc.texto_opcion;
-  }
-
-  const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
-  if (esUuid) return 'Opción seleccionada';
-
-  // Formateo amigable para fechas (tipo FECHA)
-  if (pregunta.tipoCampo?.nombre === 'FECHA' && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    const [year, month, day] = val.split('-');
-    return `${day}/${month}/${year}`;
-  }
-
-  return String(val);
-}
-
-    /** Suma ingresos y egresos de todas las preguntas NUMÉRICAS visibles con categoria_financiera. */
   recalcularTotalesFinancieros(): void {
     let ingresos = 0;
     let egresos = 0;
@@ -848,7 +837,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
       for (const p of sec.preguntas || []) {
         if (!this.esPreguntaVisible(p.id)) continue;
-        // Solo montos numéricos
         if (p.tipoCampo?.nombre !== 'NUMERICO') continue;
 
         const raw = valores[p.id];
@@ -871,29 +859,27 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     if (!respuestasBD || respuestasBD.length === 0) return;
 
     const valoresParaElFormulario: any = {};
-    const evidenciasParaElFormulario: any = {}; // 🔥
+    const evidenciasParaElFormulario: any = {};
 
     respuestasBD.forEach(resp => {
       if (resp.respuestasMatriz && resp.respuestasMatriz.length > 0) return;
 
-      // 🔥 Separar la URL del archivo y el texto del estudiante
       let textoReal = resp.valor_texto;
       let evidenciaExtraida = '';
       if (textoReal && typeof textoReal === 'string' && textoReal.includes('[EVIDENCIA_URL:')) {
-          const match = textoReal.match(/\[EVIDENCIA_URL:(.*?)\]/);
-          if (match && match[1]) {
-              evidenciaExtraida = match[1];
-              textoReal = textoReal.replace(match[0], '').trim();
-          }
+        const match = textoReal.match(/\[EVIDENCIA_URL:(.*?)\]/);
+        if (match && match[1]) {
+          evidenciaExtraida = match[1];
+          textoReal = textoReal.replace(match[0], '').trim();
+        }
       }
 
-      // Compatibilidad por si en el pasado se usó la estructura normal de documentos
       if (!evidenciaExtraida && resp.documentos && resp.documentos.length > 0) {
-          evidenciaExtraida = resp.documentos[0].ruta_archivo;
+        evidenciaExtraida = resp.documentos[0].ruta_archivo;
       }
 
       if (evidenciaExtraida) {
-          evidenciasParaElFormulario[resp.pregunta_id] = evidenciaExtraida;
+        evidenciasParaElFormulario[resp.pregunta_id] = evidenciaExtraida;
       }
 
       const controlArray = this.respuestasGroup.get(resp.pregunta_id);
@@ -915,10 +901,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.respuestasGroup.patchValue(valoresParaElFormulario, { emitEvent: false });
     this.evidenciasGroup.patchValue(evidenciasParaElFormulario, { emitEvent: false });
     this.valormap.set(this.respuestasGroup.getRawValue());
-    this.recalcularTotalesFinancieros(); // ← NUEVO
-    
-
-
+    this.recalcularTotalesFinancieros();
 
     if (!this.esEditable()) {
       this.respuestasGroup.disable({ emitEvent: false });
@@ -949,7 +932,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       this.enviando.set(true);
 
       const respuestasValores = this.respuestasGroup.getRawValue();
-      const evidenciasValores = this.evidenciasGroup.getRawValue(); // 🔥 Capturar evidencias fantasma
+      const evidenciasValores = this.evidenciasGroup.getRawValue();
       const payloadRespuestas: any[] = [];
 
       Object.keys(respuestasValores).forEach(preguntaId => {
@@ -957,13 +940,11 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           let val = respuestasValores[preguntaId];
           const evidenciaUrl = evidenciasValores[preguntaId];
 
-          // Función para unir el archivo al texto de forma oculta para el backend
           const appendEvidencia = (baseText: string | null) => {
-              if (!evidenciaUrl) return baseText;
-              return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
+            if (!evidenciaUrl) return baseText;
+            return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
           };
 
-          // Validamos que haya texto O que haya subido un archivo
           if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
 
           if (Array.isArray(val) && val.length > 0) {
@@ -975,12 +956,11 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           } else if (typeof val === 'string' && val.trim() !== '') {
             const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
             if (esUuid) {
-                payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
+              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
             } else {
-                payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
+              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
             }
           } else if (evidenciaUrl) {
-            // Caso donde solo subió archivo y dejó el texto vacío
             payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
           }
         }
@@ -1065,10 +1045,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
-    localStorage.removeItem(this.AUTOSAVE_KEY);
+    localStorage.removeItem(AUTOSAVE_KEY);
     this.toastService.show('¡Ficha socioeconómica enviada exitosamente a Bienestar!', 'success');
     this.volverALista();
-    this.cargarDatosEstudiante(); // Recarga para actualizar el estado UI de las tarjetas
+    this.cargarDatosEstudiante();
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
@@ -1076,7 +1056,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     const element = event.currentTarget as HTMLInputElement;
     const fileList: FileList | null = element.files;
-    
+
     if (fileList && fileList.length > 0) {
       const file = fileList[0];
       const fichaId = this.fichaActiva()?.id;
@@ -1090,13 +1070,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (docRes: any) => {
             const urlFinal = docRes.ruta_archivo;
-            
-            // 🔥 Guardamos en el cajón fantasma, dejando libre tu campo de texto
             this.evidenciasGroup.get(preguntaId)?.setValue(urlFinal);
-            
-            // Forzamos el autoguardado (autosave)
-            this.respuestasForm.updateValueAndValidity(); 
-            
+            this.respuestasForm.updateValueAndValidity();
             this.toastService.show('Documento adjuntado correctamente.', 'success');
           },
           error: () => this.toastService.show('Error al subir el archivo.', 'error')
@@ -1108,7 +1083,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const n = nombre.toLowerCase();
     if (n.includes('consentimiento')) return 'far fa-user';
     if (n.includes('personales') || n.includes('identificativos')) return 'far fa-address-card';
-    // 🔥 Aseguramos que detecte salud, discapacidad o NEE
     if (n.includes('salud') || n.includes('discapacidad') || n.includes('nee')) return 'fas fa-notes-medical text-rose-500';
     if (n.includes('familiar') || n.includes('hijos')) return 'fas fa-users';
     if (n.includes('econom')) return 'fas fa-coins';
@@ -1116,42 +1090,42 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   numeroRomano(num: number): string {
-  if (!num || num <= 0) return String(num);
+    if (!num || num <= 0) return String(num);
 
-  const valores = [
-    { valor: 1000, simbolo: 'M' },
-    { valor: 900,  simbolo: 'CM' },
-    { valor: 500,  simbolo: 'D' },
-    { valor: 400,  simbolo: 'CD' },
-    { valor: 100,  simbolo: 'C' },
-    { valor: 90,   simbolo: 'XC' },
-    { valor: 50,   simbolo: 'L' },
-    { valor: 40,   simbolo: 'XL' },
-    { valor: 10,   simbolo: 'X' },
-    { valor: 9,    simbolo: 'IX' },
-    { valor: 5,    simbolo: 'V' },
-    { valor: 4,    simbolo: 'IV' },
-    { valor: 1,    simbolo: 'I' }
-  ];
+    const valores = [
+      { valor: 1000, simbolo: 'M' },
+      { valor: 900,  simbolo: 'CM' },
+      { valor: 500,  simbolo: 'D' },
+      { valor: 400,  simbolo: 'CD' },
+      { valor: 100,  simbolo: 'C' },
+      { valor: 90,   simbolo: 'XC' },
+      { valor: 50,   simbolo: 'L' },
+      { valor: 40,   simbolo: 'XL' },
+      { valor: 10,   simbolo: 'X' },
+      { valor: 9,    simbolo: 'IX' },
+      { valor: 5,    simbolo: 'V' },
+      { valor: 4,    simbolo: 'IV' },
+      { valor: 1,    simbolo: 'I' }
+    ];
 
-  let resultado = '';
-  let n = num;
+    let resultado = '';
+    let n = num;
 
-  for (const { valor, simbolo } of valores) {
-    while (n >= valor) {
-      resultado += simbolo;
-      n -= valor;
+    for (const { valor, simbolo } of valores) {
+      while (n >= valor) {
+        resultado += simbolo;
+        n -= valor;
+      }
     }
-  }
 
-  return resultado;
-}
+    return resultado;
+  }
 
   ngOnDestroy(): void {
     if (this.esEditable()) {
       const val = this.respuestasForm.getRawValue();
       const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-      localStorage.setItem(this.AUTOSAVE_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave));
     }
   }
 }

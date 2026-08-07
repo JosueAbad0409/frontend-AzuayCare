@@ -4,15 +4,17 @@
     
     <!-- Lado Izquierdo: Logo y Marca -->
     <div class="brand">
-      <div class="brand-logo"><i class="fas fa-heartbeat"></i></div>
+      <div class="brand-logo" aria-hidden="true">
+        <i class="fas fa-heartbeat"></i>
+      </div>
       <div class="brand-info">
-        <h2>AzuayCare</h2>
+        <h1>AzuayCare</h1>
         <span>Portal Estudiantil</span>
       </div>
     </div>
 
     <!-- Centro: Navegación para pantallas grandes -->
-    <nav class="desktop-nav">
+    <nav class="desktop-nav" aria-label="Navegación principal">
       <a routerLink="/estudiante/inicio" routerLinkActive="active" class="nav-link">
         <i class="fas fa-home"></i> Inicio
       </a>
@@ -30,9 +32,9 @@
     <!-- Lado Derecho: Usuario y Botón Salir -->
     <div class="header-actions">
       <div class="user-greeting">
-        Hola, <span>{{ usuarioNombre() }}</span>
+        Hola, <strong>{{ usuarioNombre() }}</strong>
       </div>
-      <button class="btn-logout" (click)="logout()">
+      <button class="btn-logout" (click)="logout()" aria-label="Cerrar sesión">
         <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Salir</span>
       </button>
     </div>
@@ -46,7 +48,7 @@
   </main>
 
   <!-- NAVEGACIÓN INFERIOR (SÓLO PARA MÓVILES) -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" aria-label="Navegación móvil">
     <a routerLink="/estudiante/inicio" routerLinkActive="active" class="bottom-nav-item">
       <i class="fas fa-home"></i>
       <span>Inicio</span>

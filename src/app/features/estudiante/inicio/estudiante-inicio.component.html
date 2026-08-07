@@ -1,73 +1,127 @@
-<div class="dashboard-container animate-fade-in">
-    <!-- Banner Principal -->
-    <div class="hero-banner">
-        <div class="hero-glow"></div>
-        <div class="relative z-10">
-            <div class="flex flex-wrap gap-3 mb-6">
-                <span class="badge-green">
-                    <i class="fas fa-university"></i> INSTITUTO SUPERIOR TECNOLÓGICO AZUAY
-                </span>
-                <span class="badge-yellow">
-                    <i class="fas fa-user"></i> {{ esEstudianteInstitucional() ? 'ESTUDIANTE INSTITUCIONAL' : 'USUARIO INVITADO' }}
-                </span>
-            </div>
+<main class="dashboard-container animate-fade-in">
+  
+  <!-- HERO BANNER PRINCIPAL -->
+  <header class="hero-banner">
+    <div class="hero-glow" aria-hidden="true"></div>
+    
+    <div class="hero-content">
+      <div class="badges-group">
+        <span class="badge badge-institution">
+          <i class="fas fa-university" aria-hidden="true"></i>
+          <span>Instituto Superior Tecnológico Azuay</span>
+        </span>
 
-            <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight">
-                Hola, <span class="text-[#34d399] drop-shadow-md uppercase">{{ usuarioNombre() || 'ESTUDIANTE' }}</span>
-            </h1>
+        <span class="badge" [ngClass]="esEstudiante() ? 'badge-primary' : 'badge-warning'">
+          <i class="fas" [ngClass]="esEstudiante() ? 'fa-user-graduate' : 'fa-user-clock'" aria-hidden="true"></i>
+          <span>{{ esEstudiante() ? 'Estudiante Institucional' : 'Usuario Invitado' }}</span>
+        </span>
+      </div>
 
-            <p class="text-slate-300 text-sm md:text-base max-w-2xl mb-8 leading-relaxed font-medium">
-                Bienvenido al portal de Bienestar Estudiantil. Completa tu ficha socioeconómica para evaluar tus requerimientos de apoyo, acceder a becas y acompañamiento integral.
-            </p>
+      <h1 class="hero-title">
+        Hola, <span class="text-highlight">{{ nombreUsuario() }}</span>
+      </h1>
 
-            <button routerLink="/estudiante/ficha" class="bg-white hover:bg-slate-100 text-slate-800 px-7 py-3 rounded-full font-black flex items-center gap-2.5 transition-all w-full md:w-auto justify-center">
-                <i class="fas fa-play-circle text-lg"></i> Ir a mi Ficha
-            </button>
-        </div>
+      <p class="hero-description">
+        Bienvenido al portal de Bienestar Estudiantil. Completa tu ficha socioeconómica para evaluar tus requerimientos de apoyo, acceder a becas y acompañamiento integral.
+      </p>
+
+      <div class="hero-actions">
+        <a routerLink="/estudiante/ficha" class="btn-main" aria-label="Ir a mi ficha socioeconómica">
+          <i class="fas fa-play-circle" aria-hidden="true"></i>
+          <span>Ir a mi Ficha</span>
+        </a>
+      </div>
     </div>
+  </header>
 
-    <!-- Tarjetas Inferiores -->
-    <div class="cards-grid">
-        <!-- Tarjeta: Estado Ficha -->
-        <div class="info-card col-span-2">
-            <h3 class="text-white font-extrabold flex items-center gap-2 text-lg">
-                <i class="fas fa-chart-line text-[#34d399]"></i> Estado Actual de tu Ficha
-            </h3>
+  <!-- SECCIÓN DE TARJETAS INFORMATIVAS -->
+  <section class="cards-grid">
+    
+    <!-- TARJETA 1: ESTADO DE LA FICHA -->
+    <article class="info-card col-span-2">
+      <header class="card-header">
+        <div class="header-icon-box">
+          <i class="fas fa-chart-line text-emerald" aria-hidden="true"></i>
+        </div>
+        <h2>Estado Actual de tu Ficha</h2>
+      </header>
+
+      <div class="status-container">
+        @if (isLoading()) {
+          <!-- Estado de Carga (Skeleton Loader) -->
+          <div class="skeleton-loader" role="status" aria-label="Cargando información socioeconómica">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-text">
+              <div class="skeleton-line title"></div>
+              <div class="skeleton-line subtitle"></div>
+            </div>
+          </div>
+        } @else if (fichaActiva()) {
+          <!-- Estado con Ficha Activa -->
+          <div class="status-content">
+            <div class="icon-box" [ngClass]="{
+              'bg-warning': fichaActiva()?.estado_ficha === 'BORRADOR',
+              'bg-info': fichaActiva()?.estado_ficha === 'ENVIADA',
+              'bg-success': fichaActiva()?.estado_ficha === 'VALIDADO',
+              'bg-danger': fichaActiva()?.estado_ficha === 'RECHAZADO'
+            }">
+              <i class="fas" [ngClass]="{
+                'fa-edit': fichaActiva()?.estado_ficha === 'BORRADOR',
+                'fa-paper-plane': fichaActiva()?.estado_ficha === 'ENVIADA',
+                'fa-check-circle': fichaActiva()?.estado_ficha === 'VALIDADO',
+                'fa-times-circle': fichaActiva()?.estado_ficha === 'RECHAZADO'
+              }" aria-hidden="true"></i>
+            </div>
             
-            <div class="status-box">
-                @if (fichaActiva()?.estado_ficha && fichaActiva()?.estado_ficha !== 'BORRADOR') {
-                    <div class="icon-circle bg-[#2b323f] text-[#34d399] shadow-inner"><i class="fas fa-check-circle"></i></div>
-                    <h4 class="text-white font-black text-lg tracking-wide uppercase">{{ fichaEstadoTexto() }}</h4>
-                    <p class="text-slate-300 text-sm mt-2 mb-6 font-medium max-w-sm">{{ fichaEstadoDescripcion() }}</p>
-                    <button routerLink="/estudiante/ficha" class="btn-primary-outline">Ver mi Ficha <i class="fas fa-arrow-right"></i></button>
-                } @else if (fichaActiva()?.estado_ficha === 'BORRADOR') {
-                    <div class="icon-circle bg-[#2b323f] text-[#fbbf24] shadow-inner"><i class="fas fa-edit"></i></div>
-                    <h4 class="text-white font-black text-lg tracking-wide uppercase">{{ fichaEstadoTexto() }}</h4>
-                    <p class="text-slate-300 text-sm mt-2 mb-6 font-medium max-w-sm">Tienes un progreso guardado. Termina de llenarla y envíala.</p>
-                    <button routerLink="/estudiante/ficha" class="btn-primary-outline">Continuar Ficha <i class="fas fa-arrow-right"></i></button>
-                } @else {
-                    <div class="icon-circle bg-[#2b323f] text-slate-400 shadow-inner"><i class="fas fa-file-alt"></i></div>
-                    <p class="text-white font-bold mb-6 mt-2 text-sm md:text-base">No has iniciado tu ficha aún.</p>
-                    <button routerLink="/estudiante/ficha" class="btn-primary-outline">Comenzar ahora <i class="fas fa-arrow-right"></i></button>
+            <div class="status-details">
+              <h3 class="status-title">{{ fichaActiva()?.estado_ficha }}</h3>
+              <p class="status-desc">
+                @switch (fichaActiva()?.estado_ficha) {
+                  @case ('BORRADOR') { Tienes un progreso guardado. Termina de llenarla y envíala. }
+                  @case ('ENVIADA') { Tu ficha está en revisión por el departamento de Bienestar. }
+                  @case ('VALIDADO') { ¡Felicidades! Tu ficha ha sido auditada y aprobada. }
+                  @case ('RECHAZADO') { Existen inconsistencias. Revisa las observaciones. }
                 }
+              </p>
             </div>
-        </div>
 
-        <!-- Tarjeta: Documentos -->
-        <div class="info-card hover:bg-[#969ba7] group justify-between">
-            <div>
-                <div class="icon-circle bg-[#757d8a] text-[#818cf8] mb-4 shadow-inner group-hover:scale-105 transition-transform">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <h3 class="text-white font-extrabold mb-2 text-xl tracking-tight">Mis Documentos</h3>
-                <p class="text-slate-200 text-xs md:text-sm leading-relaxed font-medium">Sube tu cédula, planillas y comprobantes de forma segura.</p>
+            <a routerLink="/estudiante/ficha" class="btn-icon-only" aria-label="Ver detalles de la ficha socioeconómica">
+              <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        } @else {
+          <!-- Estado sin Ficha (Vacío) -->
+          <div class="status-empty">
+            <div class="icon-box bg-neutral text-muted" aria-hidden="true">
+              <i class="fas fa-file-alt"></i>
             </div>
-            <button routerLink="/estudiante/documentos" class="mt-6 text-[#818cf8] hover:text-[#a5b4fc] text-sm font-bold flex items-center justify-between transition-colors w-full">
-                Gestionar Archivos 
-                <div class="w-8 h-8 rounded-full bg-[#757d8a] flex items-center justify-center text-white group-hover:bg-[#818cf8] transition-colors shadow-inner">
-                    <i class="fas fa-arrow-right text-xs"></i>
-                </div>
-            </button>
+            <p class="empty-text">No has iniciado tu ficha aún.</p>
+            <a routerLink="/estudiante/ficha" class="btn-outline-primary">
+              <span>Comenzar ahora</span>
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        }
+      </div>
+    </article>
+
+    <!-- TARJETA 2: MIS DOCUMENTOS -->
+    <article class="info-card interactive-card" tabindex="0" routerLink="/estudiante/documentos" aria-label="Ir a la sección de mis documentos">
+      <div class="card-body">
+        <div class="icon-box bg-indigo text-indigo-light">
+          <i class="fas fa-folder-open" aria-hidden="true"></i>
         </div>
-    </div>
-</div>
+        <h2>Mis Documentos</h2>
+        <p>Sube tu cédula, planillas de servicios básicos y comprobantes de ingresos de forma segura.</p>
+      </div>
+
+      <footer class="card-footer text-indigo">
+        <span>Gestionar Archivos</span>
+        <div class="action-btn" aria-hidden="true">
+          <i class="fas fa-arrow-right"></i>
+        </div>
+      </footer>
+    </article>
+
+  </section>
+</main>

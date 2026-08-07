@@ -1,6 +1,15 @@
 /* ==========================================
-   ESTUDIANTE LAYOUT - RESPONSIVE DESIGN
+   ESTUDIANTE LAYOUT - VARIABLES Y BASE
    ========================================== */
+:host {
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --primary-light: rgba(139, 92, 246, 0.1);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --nav-bottom-height: 64px;
+}
+
 .student-layout {
   display: flex;
   flex-direction: column;
@@ -8,24 +17,21 @@
   background-color: transparent;
 }
 
-/* --- HEADER SUPERIOR (DESKTOP) --- */
+/* ==========================================
+   HEADER SUPERIOR (DESKTOP)
+   ========================================== */
 .top-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr; /* Divide en 3 partes para centrado perfecto */
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 1rem 2rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   position: sticky;
   top: 0;
   z-index: 50;
-}
-
-:root[data-theme='dark'] .top-header {
-  background: rgba(15, 23, 42, 0.85);
-  border-bottom-color: rgba(148, 163, 184, 0.15);
 }
 
 /* --- LADO IZQUIERDO (MARCA) --- */
@@ -33,44 +39,39 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  justify-self: start;
 }
 
 .brand-logo {
-  background: linear-gradient(135deg, #10b981 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #10b981 0%, var(--primary) 100%);
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   font-size: 1.2rem;
   color: white;
   box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
 }
 
-.brand-info h2 {
+.brand-info h1 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--text-main, #0f172a);
+  color: var(--text-main);
 }
-
-:root[data-theme='dark'] .brand-info h2 { color: #f8fafc; }
 
 .brand-info span {
   font-size: 0.7rem;
-  color: #8b5cf6;
-  font-weight: 700;
+  color: var(--primary);
+  font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-/* --- CENTRO (NAVEGACIÓN) --- */
+/* --- CENTRO (NAVEGACIÓN DESKTOP) --- */
 .desktop-nav {
   display: flex;
-  gap: 1.5rem;
-  justify-self: center;
+  gap: 0.5rem;
 }
 
 .nav-link {
@@ -80,45 +81,42 @@
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
-  color: #64748b;
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
+  color: var(--text-muted);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
-:root[data-theme='dark'] .nav-link { color: #94a3b8; }
-
-.nav-link:hover {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+.nav-link:hover, 
+.nav-link:focus-visible {
+  background: var(--primary-light);
+  color: var(--primary);
+  outline: none;
 }
 
 .nav-link.active {
-  background: #8b5cf6;
+  background: var(--primary);
   color: white;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
-/* --- LADO DERECHO (ACCIONES Y SALIR) --- */
+/* --- LADO DERECHO (ACCIONES) --- */
 .header-actions {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  justify-self: end;
 }
 
 .user-greeting {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
-.user-greeting span {
+.user-greeting strong {
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-main);
 }
-
-:root[data-theme='dark'] .user-greeting span { color: #f8fafc; }
 
 .btn-logout {
   display: flex;
@@ -128,26 +126,29 @@
   background: #fef2f2;
   color: #ef4444;
   border: 1px solid #fee2e2;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-logout:hover {
+.btn-logout:hover,
+.btn-logout:focus-visible {
   background: #ef4444;
   color: white;
   border-color: #ef4444;
+  outline: none;
 }
 
-/* --- CONTENEDOR PRINCIPAL --- */
+/* ==========================================
+   CONTENEDOR PRINCIPAL
+   ========================================== */
 .main-content {
   flex: 1;
   display: flex;
   justify-content: center;
   padding: 2rem;
-  padding-bottom: calc(2rem + var(--nav-bottom-height)); /* Espacio para barra móvil */
 }
 
 .content-wrapper {
@@ -155,7 +156,9 @@
   max-width: 1200px; 
 }
 
-/* --- NAVEGACIÓN INFERIOR (MÓVIL) --- */
+/* ==========================================
+   NAVEGACIÓN INFERIOR (MÓVIL)
+   ========================================== */
 .bottom-nav {
   display: none; 
   position: fixed;
@@ -163,19 +166,14 @@
   left: 0;
   width: 100%;
   height: var(--nav-bottom-height);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid rgba(226, 232, 240, 0.9);
   justify-content: space-around;
   align-items: center;
   z-index: 9999;
   padding-bottom: env(safe-area-inset-bottom);
-}
-
-:root[data-theme='dark'] .bottom-nav {
-  background: rgba(15, 23, 42, 0.95);
-  border-top-color: rgba(148, 163, 184, 0.15);
 }
 
 .bottom-nav-item {
@@ -185,11 +183,13 @@
   justify-content: center;
   gap: 0.25rem;
   text-decoration: none;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 1.25rem;
   width: 100%;
   height: 100%;
   transition: color 0.2s;
+  /* Área de toque mínima de 44px para accesibilidad móvil */
+  min-width: 44px;
 }
 
 .bottom-nav-item span {
@@ -198,29 +198,28 @@
 }
 
 .bottom-nav-item.active {
-  color: #8b5cf6;
+  color: var(--primary);
 }
 
 /* ==========================================
-   MEDIA QUERIES
+   MEDIA QUERIES (MOBILE FIRST)
    ========================================== */
 @media (max-width: 768px) {
   .top-header {
-    display: flex;
-    justify-content: space-between;
     padding: 0.75rem 1.25rem;
+    justify-content: center; 
   }
   
-  .desktop-nav, .user-greeting {
+  .desktop-nav, 
+  .user-greeting,
+  .logout-text {
     display: none; 
   }
 
-  .logout-text {
-    display: none; /* Oculta la palabra 'Salir' en móviles, deja solo el ícono */
-  }
-  
   .btn-logout {
-    padding: 0.5rem 0.6rem;
+    position: absolute;
+    right: 1.25rem;
+    padding: 0.5rem;
   }
 
   .bottom-nav {
@@ -229,6 +228,6 @@
 
   .main-content {
     padding: 1rem; 
-    padding-bottom: calc(1rem + var(--nav-bottom-height) + env(safe-area-inset-bottom));
+    padding-bottom: calc(1.5rem + var(--nav-bottom-height) + env(safe-area-inset-bottom));
   }
 }

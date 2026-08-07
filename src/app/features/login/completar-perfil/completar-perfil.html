@@ -1,75 +1,165 @@
-<div class="perfil-card">
-    <div class="brand-badge">
-        <i class="fas fa-user-graduate"></i> COMPLETA TU REGISTRO
-    </div>
+<main class="onboarding-layout">
+  <article class="bento-card">
 
-    <h1 class="title">¡Bienvenido/a!</h1>
-    <p class="subtitle">
-        Antes de continuar, confirma tus datos académicos. Solo lo pedimos una vez.
-    </p>
-
-    <!-- Datos de Google -->
-    <div class="datos-google">
-        <div class="avatar-inicial">{{ nombreCompleto().charAt(0) }}</div>
-        <div class="datos-google-texto">
-            <span class="nombre">{{ nombreCompleto() }}</span>
-            <span class="correo">{{ correo() }}</span>
+    <header class="bento-header">
+      <div class="user-badge">
+        <div class="avatar" aria-hidden="true">
+          {{ perfil().nombre.charAt(0) | uppercase }}
         </div>
-    </div>
+        <div class="user-info">
+          <h2>{{ perfil().nombre }}</h2>
+          <p>{{ perfil().email }}</p>
+        </div>
+      </div>
+
+      <div class="header-text">
+        <span class="eyebrow">Registro · Paso final</span>
+        <h1>Completemos tu ficha</h1>
+        <p>Esta información permite activar tu acceso académico y la ficha de bienestar estudiantil del ITSA.</p>
+      </div>
+    </header>
 
     @if (error()) {
-    <div class="error-alert">
-        <i class="fas fa-exclamation-circle"></i>
+      <div class="alert error-alert" role="alert" aria-live="assertive">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
         <span>{{ error() }}</span>
-    </div>
+      </div>
     }
 
-    <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="form">
-        <div class="form-group">
-            <label for="cedula">Cédula</label>
-            <input id="cedula" type="text" inputmode="numeric" maxlength="10" formControlName="cedula"
-                placeholder="10 dígitos, sin guiones" class="form-control" />
-            @if (perfilForm.get('cedula')?.invalid && perfilForm.get('cedula')?.touched) {
-            <span class="hint-error">La cédula debe tener exactamente 10 dígitos numéricos.</span>
-            }
-        </div>
+    <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="bento-form" novalidate>
 
-        @if (authService.user()?.rol === 'ESTUDIANTE') {
-        <div class="form-group">
-            <label for="carrera">Carrera</label>
-            <select id="carrera" formControlName="carrera_id" class="form-control">
-                <option value="" disabled>Selecciona tu carrera</option>
-                @for (carrera of carreras(); track carrera.id) {
-                <option [value]="carrera.id">{{ carrera.nombre }}</option>
-                }
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="ciclo">Ciclo</label>
-            <select id="ciclo" formControlName="ciclo_id" class="form-control">
-                <option value="" disabled>
-                    {{ perfilForm.get('carrera_id')?.value ? 'Selecciona tu ciclo' : 'Primero elige una carrera' }}
-                </option>
-                @for (ciclo of ciclosDisponibles(); track ciclo.id) {
-                <option [value]="ciclo.id">{{ ciclo.nombre }}</option>
-                }
-            </select>
-        </div>
+      <!-- Campo Cédula -->
+      <div class="input-group full-width">
+        <label for="cedula">Cédula de identidad</label>
+        <input
+          id="cedula"
+          type="text"
+          formControlName="cedula"
+          class="input-clean"
+          [class.has-error]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched"
+          placeholder="Ingresa tus 10 dígitos"
+          maxlength="10"
+          inputmode="numeric"
+          autocomplete="off"
+          [attr.aria-invalid]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched"
+          [attr.aria-describedby]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched ? 'cedula-error' : null"
+        >
+        @if (perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched) {
+          <span class="error-text" id="cedula-error">
+            Formato de cédula incorrecto (debe contener 10 dígitos numéricos).
+          </span>
         }
+      </div>
 
-        <!-- Grupo de botones responsivo -->
-        <div class="button-group">
-            <button type="button" class="btn-cancelar" (click)="cancelarOVolver()">
-                Cancelar
-            </button>
-            <button type="submit" class="btn-guardar" [disabled]="loading() || cargandoCatalogos()">
-                @if (loading()) {
-                <span>Guardando...</span>
-                } @else {
-                <span>Guardar y continuar</span>
+      <!-- Sección de Carrera y Ciclo con Filtro Integrado -->
+      @if (authService.user()?.rol === 'ESTUDIANTE') {
+        <div class="academic-section">
+          
+          <!-- Filtro rápido de Carrera -->
+          <div class="input-group full-width">
+            <div class="label-with-hint">
+              <label for="buscarCarrera">Carrera o Especialidad</label>
+              <span class="field-hint">Filtra para encontrar tu carrera rápido</span>
+            </div>
+            
+            <div class="search-input-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                <path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <input
+                id="buscarCarrera"
+                type="text"
+                class="input-clean search-field"
+                placeholder="Escribe el nombre de tu carrera..."
+                [formControl]="filtroCarreraControl"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="select-clean-wrapper">
+              <select 
+                id="carrera" 
+                formControlName="carrera_id" 
+                class="select-clean"
+                [class.has-error]="perfilForm.controls.carrera_id?.invalid && perfilForm.controls.carrera_id?.touched"
+              >
+                <option value="" disabled selected>
+                  {{ carrerasFiltradas().length ? 'Selecciona tu carrera de la lista...' : 'No se encontraron carreras' }}
+                </option>
+                @for (c of carrerasFiltradas(); track c.id) {
+                  <option [value]="c.id">{{ c.nombre }}</option>
                 }
-            </button>
+              </select>
+              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            
+            @if (perfilForm.controls.carrera_id?.invalid && perfilForm.controls.carrera_id?.touched) {
+              <span class="error-text">Debes seleccionar una carrera para continuar.</span>
+            }
+          </div>
+
+          <!-- Seleccionar Ciclo -->
+          <div class="input-group full-width">
+            <label for="ciclo">Ciclo académico</label>
+            <div class="select-clean-wrapper">
+              <select 
+                id="ciclo" 
+                formControlName="ciclo_id" 
+                class="select-clean"
+                [class.has-error]="perfilForm.controls.ciclo_id?.invalid && perfilForm.controls.ciclo_id?.touched"
+              >
+                <option value="" disabled selected>
+                  {{ perfilForm.get('carrera_id')?.value ? 'Seleccionar ciclo académico...' : 'Primero selecciona una carrera' }}
+                </option>
+                @for (c of ciclosDisponibles(); track c.id) {
+                  <option [value]="c.id">{{ c.nombre }}</option>
+                }
+              </select>
+              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            @if (perfilForm.controls.ciclo_id?.invalid && perfilForm.controls.ciclo_id?.touched) {
+              <span class="error-text">Selecciona el ciclo al que perteneces.</span>
+            }
+          </div>
+
         </div>
+      }
+
+      <!-- Acciones de Formulario -->
+      <footer class="actions">
+        <button 
+          type="button" 
+          class="btn-outline" 
+          (click)="cancelar()" 
+          [disabled]="loading()"
+        >
+          Cancelar
+        </button>
+        <button 
+          type="submit" 
+          class="btn-solid" 
+          [disabled]="loading() || cargandoCatalogos() || perfilForm.invalid"
+        >
+          @if (loading()) {
+            <span class="spinner-small" aria-hidden="true"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>Completar registro</span>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          }
+        </button>
+      </footer>
+
     </form>
-</div>
+  </article>
+</main>

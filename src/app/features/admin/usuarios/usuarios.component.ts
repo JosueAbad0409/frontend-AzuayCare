@@ -253,4 +253,4 @@ export class UsuariosComponent implements OnInit {
     if (!msg) return fallback;
     return Array.isArray(msg) ? msg.join(', ') : msg;
   }
-} 
+}
