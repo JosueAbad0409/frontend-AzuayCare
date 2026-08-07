@@ -1,208 +1,263 @@
-<div class="reportes-container animate-fade-in page-shell">
-  <header class="page-header">
-    <div class="header-info">
-      <h2><i class="fas fa-chart-line text-purple-600"></i> Módulo de Reportes Analíticos</h2>
-      <p class="subtitle">Consolidado general de datos socioeconómicos, filtros por carrera/ciclo/formulario y exportación a Excel/PDF.</p>
+<div class="reportes-page animate-fade-in">
+
+  <!-- ========== HEADER ========== -->
+  <header class="rep-header">
+    <div>
+      <p class="rep-eyebrow">BIENESTAR ESTUDIANTIL · ISTA</p>
+      <h1>Reportes Socioeconómicos</h1>
+      <p class="rep-sub">
+        Consolidados institucionales · Periodo
+        <strong>{{ periodoSeleccionadoNombre() }}</strong>
+      </p>
+    </div>
+    <div class="rep-header-actions">
+      <button type="button" class="btn-ghost" (click)="descargarMatrizExcel()"
+        [disabled]="!filterForm.get('periodo_id')?.value">
+        <i class="fas fa-file-excel"></i> Excel base
+      </button>
+      <button type="button" class="btn-primary" (click)="exportarExcelFiltrado()"
+        [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+        <i class="fas fa-download"></i> Exportar Excel
+      </button>
+      <button type="button" class="btn-dark" (click)="exportarPdfFiltrado()"
+        [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+        <i class="fas fa-file-pdf"></i> Exportar PDF
+      </button>
     </div>
   </header>
 
-  <app-ui-card title="Filtros de análisis" subtitle="Selecciona periodo, carrera, ciclo, estado y formulario para construir tus reportes." [elevated]="true">
-    <form [formGroup]="filterForm" class="form-grid md:grid-cols-2 xl:grid-cols-4 items-end">
-      <div class="form-group">
-        <label class="form-label font-semibold text-xs text-slate-700">Periodo Académico *</label>
-        <select formControlName="periodo_id" class="form-control">
-          <option value="" disabled>-- Seleccione Periodo --</option>
-          @for (periodo of periodos(); track periodo.id) {
-            <option [value]="periodo.id">
-              {{ periodo.nombre }} {{ periodo.activo ? '(Activo)' : '' }}
-            </option>
+  <!-- ========== KPIs ========== -->
+  <section class="rep-kpis">
+    @if (isLoadingStats()) {
+    <div class="rep-kpi skeleton"></div>
+    <div class="rep-kpi skeleton"></div>
+    <div class="rep-kpi skeleton"></div>
+    <div class="rep-kpi skeleton"></div>
+    } @else {
+    <div class="rep-kpi">
+      <span class="rep-kpi-label">Total fichas</span>
+      <span class="rep-kpi-value">{{ estadisticas()?.total_fichas || 0 }}</span>
+      <span class="rep-kpi-hint">En el periodo</span>
+    </div>
+    <div class="rep-kpi accent-blue">
+      <span class="rep-kpi-label">Enviadas</span>
+      <span class="rep-kpi-value">{{ estadisticas()?.fichas_enviadas || 0 }}</span>
+      <span class="rep-kpi-hint">Pendientes de revisión</span>
+    </div>
+    <div class="rep-kpi accent-green">
+      <span class="rep-kpi-label">Validadas</span>
+      <span class="rep-kpi-value">{{ estadisticas()?.fichas_validadas || 0 }}</span>
+      <span class="rep-kpi-hint">Aprobadas</span>
+    </div>
+    <div class="rep-kpi accent-red">
+      <span class="rep-kpi-label">Rechazadas</span>
+      <span class="rep-kpi-value">{{ estadisticas()?.fichas_rechazadas || 0 }}</span>
+      <span class="rep-kpi-hint">Por corregir</span>
+    </div>
+    }
+  </section>
+
+  <!-- ========== FILTROS GENERALES ========== -->
+  <section class="rep-card">
+    <div class="rep-card-head">
+      <div>
+        <h2>Filtros generales</h2>
+        <p>Define el universo de análisis. Luego aplica para ver el dataset.</p>
+      </div>
+      <button type="button" class="btn-primary" (click)="aplicarFiltros()"
+        [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
+        @if (isAplicandoFiltros()) {
+        <i class="fas fa-spinner fa-spin"></i> Procesando...
+        } @else {
+        <i class="fas fa-search"></i> Consultar
+        }
+      </button>
+    </div>
+
+    <form [formGroup]="filterForm" class="rep-filters">
+      <div class="rep-field">
+        <label>Periodo académico *</label>
+        <select formControlName="periodo_id">
+          <option value="" disabled>Seleccione periodo</option>
+          @for (p of periodos(); track p.id) {
+          <option [value]="p.id">{{ p.nombre }}{{ p.activo ? ' · Activo' : '' }}</option>
           }
         </select>
       </div>
 
-      <div class="form-group">
-        <label class="form-label font-semibold text-xs text-slate-700">Carrera</label>
-        <select formControlName="carrera_id" class="form-control">
-          <option value="">Todas las Carreras</option>
-          @for (carrera of carreras(); track carrera.id) {
-            <option [value]="carrera.id">{{ carrera.nombre }}</option>
+      <div class="rep-field">
+        <label>Carrera</label>
+        <select formControlName="carrera_id">
+          <option value="">Todas</option>
+          @for (c of carreras(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
           }
         </select>
       </div>
 
-      <div class="form-group">
-        <label class="form-label font-semibold text-xs text-slate-700">Ciclo</label>
-        <select formControlName="ciclo_id" class="form-control" [disabled]="!filterForm.get('carrera_id')?.value">
-          <option value="">Todos los Ciclos</option>
-          @for (ciclo of ciclos(); track ciclo.id) {
-            <option [value]="ciclo.id">{{ ciclo.nombre }}</option>
+      <div class="rep-field">
+        <label>Ciclo</label>
+        <select formControlName="ciclo_id" [disabled]="!filterForm.get('carrera_id')?.value">
+          <option value="">Todos</option>
+          @for (c of ciclos(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
           }
         </select>
       </div>
 
-      <div class="form-group">
-        <label class="form-label font-semibold text-xs text-slate-700">Estado de Ficha</label>
-        <select formControlName="estado_ficha" class="form-control">
-          <option value="TODOS">Todos los Estados</option>
-          <option value="ENVIADA">ENVIADA</option>
-          <option value="VALIDADO">VALIDADO</option>
-          <option value="RECHAZADO">RECHAZADO</option>
-          <option value="BORRADOR">BORRADOR</option>
+      <div class="rep-field">
+        <label>Estado</label>
+        <select formControlName="estado_ficha">
+          <option value="TODOS">Todos</option>
+          <option value="ENVIADA">Enviada</option>
+          <option value="VALIDADO">Validado</option>
+          <option value="RECHAZADO">Rechazado</option>
+          <option value="BORRADOR">Borrador</option>
         </select>
       </div>
 
-      <div class="form-group md:col-span-2 xl:col-span-4">
-        <label class="form-label font-semibold text-xs text-slate-700">Formulario</label>
-        <select formControlName="formulario_id" class="form-control">
-          <option value="">Seleccione un formulario</option>
-          @for (formulario of formularios(); track formulario.id) {
-            <option [value]="formulario.id">{{ formulario.titulo }}</option>
+      <div class="rep-field rep-field-wide">
+        <label>Formulario (opcional, habilita filtros por pregunta)</label>
+        <select formControlName="formulario_id">
+          <option value="">Sin formulario específico</option>
+          @for (f of formularios(); track f.id) {
+          <option [value]="f.id">{{ f.titulo }}</option>
           }
         </select>
       </div>
     </form>
-  </app-ui-card>
-
-  <section class="download-section">
-    <app-ui-button variant="primary" (click)="aplicarFiltros()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
-      <i class="fas fa-filter"></i> Aplicar filtros
-    </app-ui-button>
-    <app-ui-button variant="success" (click)="exportarExcelFiltrado()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
-      <i class="fas fa-file-excel"></i> Exportar Excel
-    </app-ui-button>
-    <app-ui-button variant="danger" (click)="exportarPdfFiltrado()" [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
-      <i class="fas fa-file-pdf"></i> Exportar PDF
-    </app-ui-button>
-    <app-ui-button variant="secondary" (click)="descargarMatrizExcel()" [disabled]="!filterForm.get('periodo_id')?.value">
-      <i class="fas fa-download"></i> Excel base
-    </app-ui-button>
   </section>
 
-  @if (isLoadingFilters()) {
-    <div class="loading-box">
-      <i class="fas fa-spinner fa-spin text-purple-600 text-2xl"></i>
-      <p class="text-xs text-slate-500 mt-2">Cargando filtros del formulario...</p>
-    </div>
-  }
-
+  <!-- ========== FILTROS AVANZADOS (colapsable) ========== -->
   @if (filtrosDisponibles().length) {
-    <app-ui-card title="Filtros dinámicos por pregunta" subtitle="Ajusta los criterios de cada pregunta para refinar la consulta." [elevated]="false">
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        @for (filtro of filtrosDisponibles(); track filtro.pregunta_id) {
-          <div class="form-group">
-            <label class="form-label font-semibold text-xs text-slate-700">{{ filtro.enunciado }}</label>
-            @if (filtro.tipo_campo === 'NUMERIC' || filtro.es_numerico) {
-              <div class="flex gap-2">
-                <input type="number" class="form-control" [value]="getFiltroPreguntaRango(filtro.pregunta_id).min" (input)="setFiltroPreguntaRango(filtro.pregunta_id, $any($event.target).value, getFiltroPreguntaRango(filtro.pregunta_id).max)" placeholder="Mín" />
-                <input type="number" class="form-control" [value]="getFiltroPreguntaRango(filtro.pregunta_id).max" (input)="setFiltroPreguntaRango(filtro.pregunta_id, getFiltroPreguntaRango(filtro.pregunta_id).min, $any($event.target).value)" placeholder="Máx" />
-              </div>
-            } @else if (filtro.tipo_campo === 'TEXTO' || filtro.tipo_campo === 'TEXTO_LIBRE') {
-              <input type="text" class="form-control" [value]="getFiltroPreguntaValor(filtro.pregunta_id)" (input)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)" placeholder="Texto a buscar" />
-            } @else {
-              <select class="form-control" [value]="getFiltroPreguntaValor(filtro.pregunta_id)" (change)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)">
-                <option value="">Todas las opciones</option>
-                @for (opcion of filtro.opciones || []; track opcion.opcion_id || opcion.texto_opcion) {
-                  <option [value]="opcion.opcion_id || opcion.texto_opcion">{{ opcion.texto_opcion }}</option>
-                }
-              </select>
-            }
-          </div>
+  <section class="rep-card">
+    <button type="button" class="rep-collapse-btn" (click)="toggleAvanzado()">
+      <span>
+        <i class="fas fa-sliders-h"></i>
+        Filtros avanzados por pregunta
+        <small>{{ filtrosDisponibles().length }} disponibles</small>
+      </span>
+      <i class="fas" [class.fa-chevron-down]="!mostrarAvanzado()" [class.fa-chevron-up]="mostrarAvanzado()"></i>
+    </button>
+
+    @if (mostrarAvanzado()) {
+    <div class="rep-advanced-grid">
+      @for (filtro of filtrosDisponibles(); track filtro.pregunta_id) {
+      <div class="rep-field">
+        <label>{{ filtro.enunciado }}</label>
+
+        @if (filtro.tipo_campo === 'NUMERIC' || filtro.es_numerico) {
+        <div class="rep-range">
+          <input type="number" placeholder="Mín" [value]="getFiltroPreguntaRango(filtro.pregunta_id).min"
+            (input)="setFiltroPreguntaRango(filtro.pregunta_id, $any($event.target).value, getFiltroPreguntaRango(filtro.pregunta_id).max)" />
+          <input type="number" placeholder="Máx" [value]="getFiltroPreguntaRango(filtro.pregunta_id).max"
+            (input)="setFiltroPreguntaRango(filtro.pregunta_id, getFiltroPreguntaRango(filtro.pregunta_id).min, $any($event.target).value)" />
+        </div>
+        } @else if (filtro.tipo_campo === 'TEXTO' || filtro.tipo_campo === 'TEXTO_LIBRE') {
+        <input type="text" placeholder="Buscar texto..." [value]="getFiltroPreguntaValor(filtro.pregunta_id)"
+          (input)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)" />
+        } @else {
+        <select [value]="getFiltroPreguntaValor(filtro.pregunta_id)"
+          (change)="setFiltroPreguntaValor(filtro.pregunta_id, $any($event.target).value)">
+          <option value="">Todas</option>
+          @for (op of filtro.opciones || []; track op.opcion_id || op.texto_opcion) {
+          <option [value]="op.opcion_id || op.texto_opcion">{{ op.texto_opcion }}</option>
+          }
+        </select>
         }
       </div>
-    </app-ui-card>
-  }
-
-  <section class="stats-section">
-    <h3 class="section-title"><i class="fas fa-chart-pie"></i> Métricas Socioeconómicas del Periodo</h3>
-
-    @if (isLoadingStats()) {
-      <div class="loading-box">
-        <i class="fas fa-spinner fa-spin text-purple-600 text-2xl"></i>
-        <p class="text-xs text-slate-500 mt-2">Cargando métricas consolidadas...</p>
-      </div>
-    } @else if (estadisticas()) {
-      <div class="kpi-grid">
-        <div class="kpi-card border-l-4 border-l-blue-500">
-          <div class="kpi-info">
-            <span class="kpi-title">Total de Fichas</span>
-            <span class="kpi-value text-blue-900">{{ estadisticas()?.total_fichas || 0 }}</span>
-          </div>
-          <i class="fas fa-folder-open kpi-icon text-blue-500"></i>
-        </div>
-
-        <div class="kpi-card border-l-4 border-l-amber-500">
-          <div class="kpi-info">
-            <span class="kpi-title">Enviadas / Por Revisar</span>
-            <span class="kpi-value text-amber-900">{{ estadisticas()?.fichas_enviadas || 0 }}</span>
-          </div>
-          <i class="fas fa-clock kpi-icon text-amber-500"></i>
-        </div>
-
-        <div class="kpi-card border-l-4 border-l-emerald-500">
-          <div class="kpi-info">
-            <span class="kpi-title">Validadas / Aprobadas</span>
-            <span class="kpi-value text-emerald-900">{{ estadisticas()?.fichas_validadas || 0 }}</span>
-          </div>
-          <i class="fas fa-check-circle kpi-icon text-emerald-500"></i>
-        </div>
-
-        <div class="kpi-card border-l-4 border-l-red-500">
-          <div class="kpi-info">
-            <span class="kpi-title">Rechazadas / Deueltas</span>
-            <span class="kpi-value text-red-900">{{ estadisticas()?.fichas_rechazadas || 0 }}</span>
-          </div>
-          <i class="fas fa-times-circle kpi-icon text-red-500"></i>
-        </div>
-      </div>
-
-      @if (estadisticas()?.distribucion_rangos?.length) {
-        <div class="ranges-card">
-          <h4 class="font-bold text-sm text-slate-800 mb-3"><i class="fas fa-layer-group"></i> Distribución de Estudiantes por Rango / Resultado</h4>
-          <div class="ranges-grid">
-            @for (rango of estadisticas()?.distribucion_rangos; track $index) {
-              <div class="range-item">
-                <span class="range-name">{{ rango.rango_nombre }}</span>
-                <span class="range-count">{{ rango.total }} estudiante(s)</span>
-              </div>
-            }
-          </div>
-        </div>
       }
-    } @else {
-      <div class="empty-state">
-        <i class="fas fa-exclamation-circle text-gray-400 text-3xl"></i>
-        <p class="text-sm text-gray-500 mt-2">Seleccione un periodo para ver su resumen estadístico.</p>
-      </div>
+    </div>
+    <div class="rep-advanced-foot">
+      <button type="button" class="btn-primary" (click)="aplicarFiltros()" [disabled]="isAplicandoFiltros()">
+        <i class="fas fa-filter"></i> Aplicar filtros avanzados
+      </button>
+    </div>
     }
   </section>
-
-  @if (datasetFiltrado()) {
-    <app-ui-card title="Resultado del dataset filtrado" [subtitle]="'Registros encontrados: ' + (datasetFiltrado()?.total_registros || 0)" [elevated]="false">
-      @if ((datasetFiltrado()?.registros || []).length) {
-        <app-ui-table [headers]="datasetFiltrado()?.columnas || []" [rows]="datasetFiltrado()?.registros || []"></app-ui-table>
-      } @else {
-        <p class="section-subtitle">No hay registros para la combinación seleccionada.</p>
-      }
-    </app-ui-card>
   }
 
-  @if (agregadosPorPregunta().length) {
-    <app-ui-card title="Resumen por pregunta" subtitle="Vista consolidada de respuestas y distribución por categoría." [elevated]="false">
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        @for (agregado of agregadosPorPregunta(); track agregado.pregunta_id) {
-          <div class="rounded-lg border border-slate-200 p-4">
-            <h4 class="font-semibold text-sm text-slate-800">{{ agregado.enunciado }}</h4>
-            <ul class="mt-2 text-sm text-slate-600">
-              @for (item of agregado.agregados; track item.etiqueta) {
-                <li class="flex justify-between py-1 border-b border-slate-100">
-                  <span>{{ item.etiqueta }}</span>
-                  <span>{{ item.total }} ({{ item.porcentaje }}%)</span>
-                </li>
-              }
-            </ul>
-          </div>
-        }
+  <!-- ========== RANGOS (si existen) ========== -->
+  @if (estadisticas()?.distribucion_rangos?.length) {
+  <section class="rep-card">
+    <h2>Distribución por rango socioeconómico</h2>
+    <div class="rep-ranges">
+      @for (r of estadisticas()!.distribucion_rangos; track $index) {
+      <div class="rep-range-chip">
+        <span class="name">{{ r.rango_nombre }}</span>
+        <span class="count">{{ r.total }}</span>
       </div>
-    </app-ui-card>
+      }
+    </div>
+  </section>
+  }
+
+  <!-- ========== RESULTADOS ========== -->
+  @if (datasetFiltrado()) {
+  <section class="rep-card">
+    <div class="rep-card-head">
+      <div>
+        <h2>Resultado del reporte</h2>
+        <p>{{ datasetFiltrado()?.total_registros || 0 }} registro(s) encontrados</p>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" class="btn-primary" (click)="exportarExcelFiltrado()"
+          [disabled]="!filterForm.get('periodo_id')?.value">
+          <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button type="button" class="btn-dark" (click)="exportarPdfResultado()"
+          [disabled]="!(datasetFiltrado()?.registros || []).length">
+          <i class="fas fa-file-pdf"></i> PDF del resultado
+        </button>
+      </div>
+    </div>
+
+    @if ((datasetFiltrado()?.registros || []).length) {
+    <div class="rep-table-wrap">
+      <app-ui-table [headers]="datasetFiltrado()?.columnas || []" [rows]="datasetFiltrado()?.registros || []">
+      </app-ui-table>
+    </div>
+    } @else {
+    <div class="rep-empty">
+      <i class="fas fa-inbox"></i>
+      <p>No hay registros para la combinación seleccionada.</p>
+    </div>
+    }
+  </section>
+  }
+
+  <!-- ========== AGREGADOS ========== -->
+  @if (agregadosPorPregunta().length) {
+  <section class="rep-card">
+    <h2>Resumen por pregunta</h2>
+    <p class="rep-card-desc">Distribución de respuestas en el universo filtrado.</p>
+
+    <div class="rep-agregados">
+      @for (ag of agregadosPorPregunta(); track ag.pregunta_id) {
+      <article class="rep-ag-card">
+        <h3>{{ ag.enunciado }}</h3>
+        <ul>
+          @for (item of ag.agregados; track item.etiqueta) {
+          <li>
+            <span class="label">{{ item.etiqueta }}</span>
+            <span class="bar-wrap">
+              <span class="bar" [style.width.%]="item.porcentaje"></span>
+            </span>
+            <span class="meta">{{ item.total }} · {{ item.porcentaje }}%</span>
+          </li>
+          }
+        </ul>
+      </article>
+      }
+    </div>
+  </section>
+  }
+
+  @if (!datasetFiltrado() && !isAplicandoFiltros() && !isLoadingStats()) {
+  <section class="rep-empty-hero">
+    <i class="fas fa-chart-bar"></i>
+    <h2>Genera un reporte institucional</h2>
+    <p>Selecciona periodo (y opcionalmente carrera, estado o formulario) y pulsa <strong>Generar reporte</strong>.</p>
+  </section>
   }
 </div>
