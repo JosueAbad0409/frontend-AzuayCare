@@ -12,11 +12,23 @@ export class RangosVariableService {
   private readonly apiUrl = `${environment.apiUrl}/rangos-variable-calculada`;
 
   getByFormulario(formularioId: string): Observable<RangoVariableCalculada[]> {
-    return this.http.get<RangoVariableCalculada[]>(`${this.apiUrl}/formulario/${formularioId}`);
+    return this.http.get<RangoVariableCalculada[]>(
+      `${this.apiUrl}/formulario/${formularioId}`
+    );
   }
 
   createRango(dto: CreateRangoVariableDto): Observable<RangoVariableCalculada> {
     return this.http.post<RangoVariableCalculada>(this.apiUrl, dto);
+  }
+
+  updateRango(
+    id: string,
+    payload: Partial<RangoVariableCalculada>
+  ): Observable<RangoVariableCalculada> {
+    return this.http.patch<RangoVariableCalculada>(
+      `${this.apiUrl}/${id}`,  // ← sin /rangos-variable
+      payload
+    );
   }
 
   deleteRango(id: string): Observable<void> {

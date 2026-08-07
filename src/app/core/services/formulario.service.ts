@@ -60,6 +60,10 @@ export class FormularioService {
     );
   }
 
+  updateSeccion(id: string, data: Partial<Seccion>): Observable<Seccion> {
+    return this.http.patch<Seccion>(`${this.apiUrl}/secciones/${id}`, data);
+  }
+
   clonarFormulario(id: string, periodoDestinoId: string): Observable<Formulario> {
     return this.http.post<Formulario>(`${this.apiUrl}/${id}/clonar`, {
       periodo_destino_id: periodoDestinoId

@@ -1,4 +1,3 @@
-// src/app/features/admin/formularios/builder/formulario-builder.component.ts
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
@@ -34,6 +33,15 @@ export class FormularioBuilderComponent implements OnInit {
   private readonly rangosVariableService = inject(RangosVariableService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  /** Rangos predeterminados de estatus económico según BALANCE (ingresos − egresos) */
+  private readonly RANGOS_BALANCE_PREDETERMINADOS = [
+    { variable_calculo: 'BALANCE', nombre: 'Crítico / Déficit', valor_min: 0, valor_max: 0, orden: 1 },
+    { variable_calculo: 'BALANCE', nombre: 'Vulnerable', valor_min: 1, valor_max: 200, orden: 2 },
+    { variable_calculo: 'BALANCE', nombre: 'Medio bajo', valor_min: 201, valor_max: 500, orden: 3 },
+    { variable_calculo: 'BALANCE', nombre: 'Medio', valor_min: 501, valor_max: 1000, orden: 4 },
+    { variable_calculo: 'BALANCE', nombre: 'Medio alto', valor_min: 1001, valor_max: 2000, orden: 5 },
+    { variable_calculo: 'BALANCE', nombre: 'Alto / Holgado', valor_min: 2001, valor_max: 999999, orden: 6 },
+  ];
 
   formulario = signal<Formulario | null>(null);
   secciones = signal<Seccion[]>([]);
@@ -53,11 +61,11 @@ export class FormularioBuilderComponent implements OnInit {
 
   // Formulario de Rangos
   rangoForm: FormGroup = this.fb.group({
-    variable_calculo: ['BALANCE', Validators.required],
+    variable_calculo: [{ value: 'BALANCE', disabled: true }, Validators.required], // solo BALANCE
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
-    valor_min: [0, [Validators.required, Validators.min(0)]],
+    valor_min: [null],   // puede ser negativo o null
     valor_max: [null],
-    orden: [1]
+    orden: [1],
   });
 
   showSeccionModal = signal<boolean>(false);
@@ -78,6 +86,7 @@ export class FormularioBuilderComponent implements OnInit {
     categoria_financiera: ['NINGUNO', Validators.required],
     es_obligatorio: [true],
     requiere_evidencia: [false],
+    revision_manual_obligatoria: [false],
     opcionesTemp: this.fb.array([]),
     filasTemp: this.fb.array([]),
     columnasTemp: this.fb.array([])
@@ -111,6 +120,62 @@ export class FormularioBuilderComponent implements OnInit {
     return this.preguntaForm.get('columnasTemp') as FormArray;
   }
 
+  getSubOpciones(opcionIndex: number): FormArray {
+    return this.opcionesTempArray.at(opcionIndex).get('subpregunta_opciones') as FormArray;
+  }
+
+  getSubFilas(opcionIndex: number): FormArray {
+    return this.opcionesTempArray.at(opcionIndex).get('subpregunta_filas') as FormArray;
+  }
+
+  getSubColumnas(opcionIndex: number): FormArray {
+    return this.opcionesTempArray.at(opcionIndex).get('subpregunta_columnas') as FormArray;
+  }
+
+  agregarSubOpcion(opcionIndex: number, texto = ''): void {
+    this.getSubOpciones(opcionIndex).push(this.fb.group({
+      texto_opcion: [texto, Validators.required],
+      valor_ponderado: [0],
+      es_correcta: [false],
+      permite_texto_libre: [false]
+    }));
+  }
+
+  eliminarSubOpcion(opcionIndex: number, subIndex: number): void {
+    this.getSubOpciones(opcionIndex).removeAt(subIndex);
+  }
+
+  agregarSubFila(opcionIndex: number, texto = ''): void {
+    this.getSubFilas(opcionIndex).push(this.fb.group({
+      texto_fila: [texto, Validators.required]
+    }));
+  }
+
+  eliminarSubFila(opcionIndex: number, filaIndex: number): void {
+    this.getSubFilas(opcionIndex).removeAt(filaIndex);
+  }
+
+  agregarSubColumna(opcionIndex: number, texto = ''): void {
+    this.getSubColumnas(opcionIndex).push(this.fb.group({
+      texto_columna: [texto, Validators.required]
+    }));
+  }
+
+  eliminarSubColumna(opcionIndex: number, colIndex: number): void {
+    this.getSubColumnas(opcionIndex).removeAt(colIndex);
+  }
+
+  /** Helper para saber si el tipo de la subpregunta es matriz o selección */
+  esSubTipoMatriz(opcionIndex: number): boolean {
+    const tipoId = this.opcionesTempArray.at(opcionIndex).get('subpregunta_tipo_id')?.value;
+    return this.esTipoMatriz(tipoId);
+  }
+
+  esSubTipoSeleccion(opcionIndex: number): boolean {
+    const tipoId = this.opcionesTempArray.at(opcionIndex).get('subpregunta_tipo_id')?.value;
+    return this.esTipoSeleccion(tipoId);
+  }
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -135,14 +200,14 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   abrirModalNuevaSeccion(): void {
-  if (this.esSoloLectura()) {
-    this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
-    return;
-  }
+    if (this.esSoloLectura()) {
+      this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
+      return;
+    }
 
-  Swal.fire({
-    title: 'Nueva Sección',
-    html: `
+    Swal.fire({
+      title: 'Nueva Sección',
+      html: `
       <div class="text-left space-y-4" style="text-align:left">
         <div>
           <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Nombre de Sección *</label>
@@ -169,82 +234,85 @@ export class FormularioBuilderComponent implements OnInit {
         </div>
       </div>
     `,
-    showCancelButton: true,
-    focusConfirm: false,
-    confirmButtonText: 'Guardar Sección',
-    cancelButtonText: 'Cancelar',
-    confirmButtonColor: '#8b5cf6',
-    cancelButtonColor: '#64748b',
-    width: '520px',
-    customClass: {
-      popup: 'rounded-2xl',
-      confirmButton: 'rounded-xl',
-      cancelButton: 'rounded-xl',
-      htmlContainer: 'swal-html-container-custom'
-    },
-    didOpen: () => {
-      const tipoEl = document.getElementById('swal-tipo') as HTMLSelectElement | null;
-      const subcatCont = document.getElementById('swal-subcat-container');
-      tipoEl?.addEventListener('change', () => {
-        if (subcatCont) {
-          subcatCont.style.display = tipoEl.value === 'FINANCIERA' ? 'block' : 'none';
+      showCancelButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Guardar Sección',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#64748b',
+      width: '520px',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl',
+        htmlContainer: 'swal-html-container-custom'
+      },
+      didOpen: () => {
+        const tipoEl = document.getElementById('swal-tipo') as HTMLSelectElement | null;
+        const subcatCont = document.getElementById('swal-subcat-container');
+        tipoEl?.addEventListener('change', () => {
+          if (subcatCont) {
+            subcatCont.style.display = tipoEl.value === 'FINANCIERA' ? 'block' : 'none';
+          }
+        });
+        (document.getElementById('swal-nombre') as HTMLInputElement | null)?.focus();
+      },
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement)?.value?.trim() || '';
+        const descripcion = (document.getElementById('swal-descripcion') as HTMLInputElement)?.value?.trim() || '';
+        const tipo_seccion = (document.getElementById('swal-tipo') as HTMLSelectElement)?.value || 'INFORMACION_GENERAL';
+        let subcategoria_financiera = (document.getElementById('swal-subcat') as HTMLSelectElement)?.value || 'NINGUNO';
+
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre de la sección es obligatorio');
+          return false;
         }
-      });
-      (document.getElementById('swal-nombre') as HTMLInputElement | null)?.focus();
-    },
-    preConfirm: () => {
-      const nombre = (document.getElementById('swal-nombre') as HTMLInputElement)?.value?.trim() || '';
-      const descripcion = (document.getElementById('swal-descripcion') as HTMLInputElement)?.value?.trim() || '';
-      const tipo_seccion = (document.getElementById('swal-tipo') as HTMLSelectElement)?.value || 'INFORMACION_GENERAL';
-      let subcategoria_financiera = (document.getElementById('swal-subcat') as HTMLSelectElement)?.value || 'NINGUNO';
 
-      if (!nombre) {
-        Swal.showValidationMessage('El nombre de la sección es obligatorio');
-        return false;
+        if (tipo_seccion !== 'FINANCIERA') {
+          subcategoria_financiera = 'NINGUNO';
+        }
+
+        return { nombre, descripcion, tipo_seccion, subcategoria_financiera };
       }
-
-      if (tipo_seccion !== 'FINANCIERA') {
-        subcategoria_financiera = 'NINGUNO';
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.guardarSeccionDesdeSwal(result.value);
       }
+    });
+  }
 
-      return { nombre, descripcion, tipo_seccion, subcategoria_financiera };
-    }
-  }).then((result) => {
-    if (result.isConfirmed && result.value) {
-      this.guardarSeccionDesdeSwal(result.value);
-    }
-  });
-}
-private guardarSeccionDesdeSwal(data: {
-  nombre: string;
-  descripcion: string;
-  tipo_seccion: string;
-  subcategoria_financiera: string;
-}): void {
-  if (this.esSoloLectura() || !this.formulario()) return;
-  this.isSavingSeccion.set(true);
+  private guardarSeccionDesdeSwal(data: {
+    nombre: string;
+    descripcion: string;
+    tipo_seccion: string;
+    subcategoria_financiera: string;
+  }): void {
+    if (this.esSoloLectura() || !this.formulario()) return;
+    this.isSavingSeccion.set(true);
 
-  const payload = {
-    formulario_id: this.formulario()!.id,
-    nombre: data.nombre,
-    descripcion: data.descripcion || '',
-    tipo_seccion: data.tipo_seccion as 'INFORMACION_GENERAL' | 'FINANCIERA',
-    subcategoria_financiera: data.subcategoria_financiera as 'NINGUNO' | 'INGRESOS' | 'GASTOS' | 'AMBOS',
-    orden: this.secciones().length + 1
-  };
+    // Actualiza el payload para aceptar el nuevo tipo:
+    const payload = {
+      formulario_id: this.formulario()!.id,
+      nombre: data.nombre,
+      descripcion: data.descripcion || '',
+      // 🔥 SE EXPANDE EL TIPO AQUÍ
+      tipo_seccion: data.tipo_seccion as 'INFORMACION_GENERAL' | 'FINANCIERA',
+      subcategoria_financiera: data.subcategoria_financiera as 'NINGUNO' | 'INGRESOS' | 'GASTOS' | 'AMBOS',
+      orden: this.secciones().length + 1
+    };
 
-  this.formularioService.createSeccion(payload).subscribe({
-    next: () => {
-      this.isSavingSeccion.set(false);
-      this.toastService.show('Sección creada exitosamente.', 'success');
-      this.cargarSecciones(this.formulario()!.id);
-    },
-    error: (err: HttpErrorResponse) => {
-      this.isSavingSeccion.set(false);
-      this.toastService.show(this.extraerMensajeError(err, 'Ocurrió un error al crear la sección.'), 'error');
-    }
-  });
-}
+    this.formularioService.createSeccion(payload).subscribe({
+      next: () => {
+        this.isSavingSeccion.set(false);
+        this.toastService.show('Sección creada exitosamente.', 'success');
+        this.cargarSecciones(this.formulario()!.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isSavingSeccion.set(false);
+        this.toastService.show(this.extraerMensajeError(err, 'Ocurrió un error al crear la sección.'), 'error');
+      }
+    });
+  }
 
   cargarTodo(formularioId: string): void {
     this.isLoading.set(true);
@@ -292,29 +360,169 @@ private guardarSeccionDesdeSwal(data: {
   }
 
   guardarRangoVariable(): void {
-    if (this.esSoloLectura()) return;
-    if (this.rangoForm.invalid || !this.formulario()) return;
+  if (this.esSoloLectura()) return;
+  if (this.rangoForm.invalid || !this.formulario()) return;
 
-    const payload = {
-      ...this.rangoForm.value,
-      formulario_id: this.formulario()!.id,
-      orden: this.rangosVariable().length + 1
+  const raw = this.rangoForm.getRawValue();
+  const idEdit = this.editingRangoId();
+
+  // Números seguros (la entity exige valor_min / valor_max NOT NULL)
+  const valorMin = raw.valor_min != null && raw.valor_min !== '' ? Number(raw.valor_min) : 0;
+  const valorMax = raw.valor_max != null && raw.valor_max !== '' ? Number(raw.valor_max) : 999999;
+
+  const errorLocal = this.validarRangoLocal(valorMin, valorMax, String(raw.nombre).trim(), idEdit);
+if (errorLocal) {
+  this.toastService.show(errorLocal, 'warning');
+  return;
+}
+
+  if (idEdit) {
+    // Solo campos editables (sin formulario_id)
+    const payloadUpdate = {
+      variable_calculo: 'BALANCE',
+      nombre: String(raw.nombre).trim(),
+      valor_min: valorMin,
+      valor_max: valorMax,
+      orden: raw.orden != null ? Number(raw.orden) : 1,
     };
+    
 
-    this.rangosVariableService.createRango(payload).subscribe({
+
+    this.rangosVariableService.updateRango(idEdit, payloadUpdate).subscribe({
       next: () => {
-        this.toastService.show('Rango de variable agregado correctamente.', 'success');
-        this.rangoForm.reset({
-          variable_calculo: 'BALANCE',
-          valor_min: 0,
-          valor_max: null
-        });
+        this.toastService.show('Rango actualizado.', 'success');
+        this.cancelarEdicionRango();
         this.cargarRangosVariable(this.formulario()!.id);
       },
       error: (err: HttpErrorResponse) => {
-        this.toastService.show(this.extraerMensajeError(err, 'Error al guardar el rango.'), 'error');
-      }
+        this.toastService.show(
+          this.extraerMensajeError(err, 'Error al actualizar el rango.'),
+          'error'
+        );
+      },
     });
+    return;
+  }
+
+  // Crear nuevo
+  const payloadCreate = {
+    variable_calculo: 'BALANCE',
+    nombre: String(raw.nombre).trim(),
+    valor_min: valorMin,
+    valor_max: valorMax,
+    orden: this.rangosVariable().length + 1,
+    formulario_id: this.formulario()!.id,
+  };
+
+  this.rangosVariableService.createRango(payloadCreate).subscribe({
+    next: () => {
+      this.toastService.show('Rango agregado.', 'success');
+      this.cancelarEdicionRango();
+      this.cargarRangosVariable(this.formulario()!.id);
+    },
+    error: (err: HttpErrorResponse) => {
+      this.toastService.show(
+        this.extraerMensajeError(err, 'Error al guardar el rango.'),
+        'error'
+      );
+    },
+  });
+}
+
+private validarRangoLocal(valorMin: number, valorMax: number, nombre: string, excludeId?: string | null): string | null {
+  if (valorMin > valorMax) {
+    return 'El mínimo no puede ser mayor que el máximo.';
+  }
+
+  const nombreNorm = nombre.trim().toLowerCase();
+  const otros = this.rangosVariable().filter(r => r.id !== excludeId);
+
+  for (const r of otros) {
+    if (r.nombre.trim().toLowerCase() === nombreNorm) {
+      return `Ya existe un rango llamado "${r.nombre}".`;
+    }
+    const rMin = Number(r.valor_min);
+    const rMax = Number(r.valor_max);
+    if (valorMin <= rMax && valorMax >= rMin) {
+      return `Se solapa con "${r.nombre}" [${rMin} – ${rMax}].`;
+    }
+  }
+  return null;
+}
+
+  cargarRangosBalancePredeterminados(): void {
+    if (this.esSoloLectura() || !this.formulario()) return;
+
+    if (this.rangosVariable().length > 0) {
+      const ok = confirm(
+        'Ya existen rangos. ¿Deseas agregar los predeterminados de BALANCE de todas formas? (Puedes borrar o editar después.)'
+      );
+      if (!ok) return;
+    }
+
+    const formularioId = this.formulario()!.id;
+    let pendientes = this.RANGOS_BALANCE_PREDETERMINADOS.length;
+    let errores = 0;
+
+    this.RANGOS_BALANCE_PREDETERMINADOS.forEach((rango, index) => {
+      const payload = {
+        variable_calculo: rango.variable_calculo,
+        nombre: rango.nombre,
+        valor_min: rango.valor_min,
+        valor_max: rango.valor_max,
+        orden: this.rangosVariable().length + index + 1,
+        formulario_id: formularioId,
+      };
+
+      this.rangosVariableService.createRango(payload).subscribe({
+        next: () => {
+          pendientes--;
+          if (pendientes === 0) {
+            this.cargarRangosVariable(formularioId);
+            if (errores === 0) {
+              this.toastService.show('Rangos de estatus económico cargados. Puedes editarlos antes de publicar.', 'success');
+            } else {
+              this.toastService.show(`Rangos cargados con ${errores} error(es). Revisa la lista.`, 'warning');
+            }
+          }
+        },
+        error: () => {
+          errores++;
+          pendientes--;
+          if (pendientes === 0) {
+            this.cargarRangosVariable(formularioId);
+            this.toastService.show('Algunos rangos no se pudieron crear.', 'error');
+          }
+        },
+      });
+    });
+  }
+
+  editingRangoId = signal<string | null>(null);
+
+  abrirEditarRango(rango: RangoVariableCalculada): void {
+    if (this.esSoloLectura()) return;
+    this.editingRangoId.set(rango.id);
+    this.rangoForm.patchValue({
+      variable_calculo: 'BALANCE',
+      nombre: rango.nombre,
+      valor_min: rango.valor_min,
+      valor_max: rango.valor_max ?? null,
+      orden: rango.orden ?? 1,
+    });
+    this.rangoForm.get('variable_calculo')?.disable();
+  }
+
+  cancelarEdicionRango(): void {
+    this.editingRangoId.set(null);
+    this.rangoForm.reset({
+      variable_calculo: 'BALANCE',
+      nombre: '',
+      valor_min: null,
+      valor_max: null,
+      orden: 1,
+    });
+    this.rangoForm.get('variable_calculo')?.disable();
   }
 
   eliminarRangoVariable(id: string): void {
@@ -389,17 +597,28 @@ private guardarSeccionDesdeSwal(data: {
 
   agregarOpcionTemp(texto = '', valorPonderado: number | null = null): void {
     const tipoTexto = this.tiposCampo().find(t => t.nombre.toUpperCase().includes('TEXTO')) || this.tiposCampo()[0];
-    
+
     this.opcionesTempArray.push(this.fb.group({
       texto_opcion: [texto, Validators.required],
       permite_texto_libre: [false],
       valor_ponderado: [valorPonderado],
       es_correcta: [false],
       dispara_dependencia: [false],
+
+      // ===== Datos de la subpregunta =====
       subpregunta_enunciado: [''],
       subpregunta_tipo_id: [tipoTexto ? tipoTexto.id : ''],
       subpregunta_categoria_financiera: ['NINGUNO'],
-      subpregunta_requiere_evidencia: [false]
+      subpregunta_requiere_evidencia: [false],
+      subpregunta_es_obligatorio: [false],
+      subpregunta_revision_manual: [false],
+
+      // Opciones de la subpregunta (si es SELECCION_*)
+      subpregunta_opciones: this.fb.array([]),
+
+      // Filas y columnas de la subpregunta (si es MATRIZ)
+      subpregunta_filas: this.fb.array([]),
+      subpregunta_columnas: this.fb.array([])
     }));
   }
 
@@ -599,7 +818,7 @@ private guardarSeccionDesdeSwal(data: {
 
     const rawValue = this.seccionForm.value;
     let subcategoriaFinanciera: 'NINGUNO' | 'INGRESOS' | 'GASTOS' | 'AMBOS' = 'NINGUNO';
-    
+
     if (rawValue.tipo_seccion === 'FINANCIERA') {
       subcategoriaFinanciera = rawValue.subcategoria_financiera || 'INGRESOS';
     }
@@ -654,12 +873,12 @@ private guardarSeccionDesdeSwal(data: {
 
     this.activeSeccionIdForQuestion.set(seccionId);
     this.editingPreguntaId.set(null);
-    
+
     const seccionPadre = this.secciones().find(s => s.id === seccionId);
     const esFinanciera = seccionPadre?.tipo_seccion === 'FINANCIERA';
     this.esSeccionFinancieraActiva.set(esFinanciera);
 
-    const tipoNumerico = this.tiposCampo().find(t => 
+    const tipoNumerico = this.tiposCampo().find(t =>
       t.nombre.toUpperCase().includes('NUMER')
     ) || this.tiposCampo()[0];
 
@@ -674,12 +893,13 @@ private guardarSeccionDesdeSwal(data: {
       }
     }
 
-    this.preguntaForm.reset({ 
+    this.preguntaForm.reset({
       enunciado: '',
       tipo_campo_id: initialTipoId,
-      categoria_financiera: categoriaInicial, 
-      es_obligatorio: true, 
-      requiere_evidencia: false 
+      categoria_financiera: categoriaInicial,
+      es_obligatorio: true,
+      requiere_evidencia: false,
+      revision_manual_obligatoria: false, // ← AGREGAR
     });
 
     if (esFinanciera) {
@@ -716,7 +936,8 @@ private guardarSeccionDesdeSwal(data: {
       tipo_campo_id: pregunta.tipo_campo_id,
       categoria_financiera: pregunta.categoria_financiera || 'NINGUNO',
       es_obligatorio: pregunta.es_obligatorio,
-      requiere_evidencia: pregunta.requiere_evidencia
+      requiere_evidencia: pregunta.requiere_evidencia,
+      revision_manual_obligatoria: Boolean(pregunta.revision_manual_obligatoria), // ← AGREGAR
     });
 
     if (esFinanciera) {
@@ -772,7 +993,8 @@ private guardarSeccionDesdeSwal(data: {
         tipo_campo_id: tipoCampoIdFinal,
         categoria_financiera: categoriaFinancieraFinal,
         es_obligatorio: Boolean(formValue.es_obligatorio),
-        requiere_evidencia: Boolean(formValue.requiere_evidencia)
+        requiere_evidencia: Boolean(formValue.requiere_evidencia),
+        revision_manual_obligatoria: Boolean(formValue.revision_manual_obligatoria), // ← AGREGAR
       };
 
       this.formularioService.updatePregunta(this.editingPreguntaId()!, payloadUpdate).subscribe({
@@ -801,7 +1023,8 @@ private guardarSeccionDesdeSwal(data: {
       tipo_campo_id: tipoCampoIdFinal,
       categoria_financiera: categoriaFinancieraFinal,
       es_obligatorio: Boolean(formValue.es_obligatorio),
-      requiere_evidencia: Boolean(formValue.requiere_evidencia)
+      requiere_evidencia: Boolean(formValue.requiere_evidencia),
+      revision_manual_obligatoria: Boolean(formValue.revision_manual_obligatoria), // ← AGREGAR
     };
 
     this.formularioService.createPregunta(payloadPreguntaPadre).subscribe({
@@ -818,35 +1041,97 @@ private guardarSeccionDesdeSwal(data: {
                   orden: i + 1,
                   permite_texto_libre: Boolean(opc.permite_texto_libre),
                   valor_ponderado: opc.valor_ponderado ? Number(opc.valor_ponderado) : 0,
-                  es_correcta: Boolean(opc.es_correcta)
+                  es_correcta: Boolean(opc.es_correcta),
                 })
               );
 
-              const subTipoId = (opc.subpregunta_tipo_id && opc.subpregunta_tipo_id.trim() !== '') 
-                ? opc.subpregunta_tipo_id 
-                : tipoCampoIdFinal;
+              if (!opcionGuardada?.id) {
+                throw new Error(`La opción "${opc.texto_opcion}" no devolvió id del backend.`);
+              }
 
-              if (opc.dispara_dependencia && opc.subpregunta_enunciado?.trim() && opcionGuardada?.id) {
+              if (opc.dispara_dependencia && opc.subpregunta_enunciado?.trim()) {
+                const subTipoId =
+                  opc.subpregunta_tipo_id && String(opc.subpregunta_tipo_id).trim() !== ''
+                    ? opc.subpregunta_tipo_id
+                    : tipoCampoIdFinal;
+
+                if (!subTipoId) {
+                  throw new Error('Falta el tipo de campo de la subpregunta.');
+                }
+
+                // 1. Crear la subpregunta
                 const subpreguntaGuardada = await firstValueFrom(
                   this.formularioService.createPregunta({
                     seccion_id: seccionId,
                     orden: orden + i + 1,
                     enunciado: opc.subpregunta_enunciado.trim(),
                     tipo_campo_id: subTipoId,
-                    categoria_financiera: 'NINGUNO',
-                    es_obligatorio: false,
-                    requiere_evidencia: Boolean(opc.subpregunta_requiere_evidencia)
+                    categoria_financiera: opc.subpregunta_categoria_financiera || 'NINGUNO',
+                    es_obligatorio: Boolean(opc.subpregunta_es_obligatorio),
+                    requiere_evidencia: Boolean(opc.subpregunta_requiere_evidencia),
+                    revision_manual_obligatoria: Boolean(opc.subpregunta_revision_manual),
                   })
                 );
 
-                if (subpreguntaGuardada?.id) {
-                  await firstValueFrom(
-                    this.dependenciasService.createDependencia({
-                      pregunta_disparadora_id: preguntaCreada.id,
-                      opcion_disparadora_id: opcionGuardada.id,
-                      pregunta_id: subpreguntaGuardada.id
-                    })
-                  );
+                if (!subpreguntaGuardada?.id) {
+                  throw new Error('La subpregunta no se creó (el backend no devolvió id).');
+                }
+
+                // 2. Crear la dependencia
+                await firstValueFrom(
+                  this.dependenciasService.createDependencia({
+                    pregunta_disparadora_id: preguntaCreada.id,
+                    opcion_disparadora_id: opcionGuardada.id,
+                    pregunta_id: subpreguntaGuardada.id,
+                  })
+                );
+
+                // 3. Si la subpregunta es de SELECCIÓN → crear sus opciones
+                if (this.esTipoSeleccion(subTipoId) && opc.subpregunta_opciones?.length > 0) {
+                  for (let j = 0; j < opc.subpregunta_opciones.length; j++) {
+                    const subOpc = opc.subpregunta_opciones[j];
+                    if (!subOpc.texto_opcion?.trim()) continue;
+
+                    await firstValueFrom(
+                      this.formularioService.createOpcion({
+                        pregunta_id: subpreguntaGuardada.id,
+                        texto_opcion: subOpc.texto_opcion.trim(),
+                        orden: j + 1,
+                        valor_ponderado: subOpc.valor_ponderado ? Number(subOpc.valor_ponderado) : 0,
+                        es_correcta: Boolean(subOpc.es_correcta),
+                        permite_texto_libre: Boolean(subOpc.permite_texto_libre),
+                      })
+                    );
+                  }
+                }
+
+                // 4. Si la subpregunta es MATRIZ → crear filas y columnas
+                if (this.esTipoMatriz(subTipoId)) {
+                  // Filas
+                  for (let j = 0; j < (opc.subpregunta_filas || []).length; j++) {
+                    const fila = opc.subpregunta_filas[j];
+                    if (fila?.texto_fila?.trim()) {
+                      await firstValueFrom(
+                        this.matricesService.createFila({
+                          pregunta_id: subpreguntaGuardada.id,
+                          texto_fila: fila.texto_fila.trim(),
+                        })
+                      );
+                    }
+                  }
+
+                  // Columnas
+                  for (let j = 0; j < (opc.subpregunta_columnas || []).length; j++) {
+                    const col = opc.subpregunta_columnas[j];
+                    if (col?.texto_columna?.trim()) {
+                      await firstValueFrom(
+                        this.matricesService.createColumna({
+                          pregunta_id: subpreguntaGuardada.id,
+                          texto_columna: col.texto_columna.trim(),
+                        })
+                      );
+                    }
+                  }
                 }
               }
             }
@@ -858,7 +1143,7 @@ private guardarSeccionDesdeSwal(data: {
                 await firstValueFrom(
                   this.matricesService.createFila({
                     pregunta_id: preguntaCreada.id,
-                    texto_fila: formValue.filasTemp[i].texto_fila.trim()
+                    texto_fila: formValue.filasTemp[i].texto_fila.trim(),
                   })
                 );
               }
@@ -869,7 +1154,7 @@ private guardarSeccionDesdeSwal(data: {
                 await firstValueFrom(
                   this.matricesService.createColumna({
                     pregunta_id: preguntaCreada.id,
-                    texto_columna: formValue.columnasTemp[i].texto_columna.trim()
+                    texto_columna: formValue.columnasTemp[i].texto_columna.trim(),
                   })
                 );
               }
@@ -879,16 +1164,31 @@ private guardarSeccionDesdeSwal(data: {
           this.isSavingQuestion.set(false);
           this.toastService.show('Pregunta guardada con éxito.', 'success');
           this.cancelarPregunta();
+
+          // Recargar preguntas de la sección
           this.cargarPreguntasDeSeccion(seccionId);
+
+          // Recargar dependencias (sin esto la subpregunta no se ve bajo la opción)
           if (this.formulario()?.id) {
-            this.cargarTodo(this.formulario()!.id);
+            this.dependenciasService.getDependenciasByFormulario(this.formulario()!.id).subscribe({
+              next: (deps) => this.dependencias.set(deps),
+              error: (e) => console.error('Error recargando dependencias', e),
+            });
           }
-        } catch (error) {
-          console.error('Error al guardar componentes hijos de la pregunta:', error);
+        } catch (error: any) {
+          console.error('Error al guardar opciones/subpreguntas:', error);
           this.isSavingQuestion.set(false);
-          this.toastService.show('Pregunta guardada con advertencias en opciones o subpreguntas.', 'warning');
+          this.toastService.show(
+            error?.message || 'La pregunta se creó, pero falló una opción o subpregunta.',
+            'error'
+          );
           this.cancelarPregunta();
           this.cargarPreguntasDeSeccion(seccionId);
+          if (this.formulario()?.id) {
+            this.dependenciasService.getDependenciasByFormulario(this.formulario()!.id).subscribe({
+              next: (deps) => this.dependencias.set(deps),
+            });
+          }
         }
       },
       error: (err: HttpErrorResponse) => {
@@ -896,7 +1196,7 @@ private guardarSeccionDesdeSwal(data: {
         console.error('Fallo de validación devuelto por NestJS:', err.error);
         const msj = this.extraerMensajeError(err, 'Error de validación al guardar la pregunta principal.');
         this.toastService.show(msj, 'error');
-      }
+      },
     });
   }
 
@@ -960,8 +1260,8 @@ private guardarSeccionDesdeSwal(data: {
     if (this.esSoloLectura()) return;
 
     if (
-      this.draggedSeccionIndex === null || 
-      this.draggedPreguntaIndex === null || 
+      this.draggedSeccionIndex === null ||
+      this.draggedPreguntaIndex === null ||
       this.draggedSeccionIndex !== targetSeccionIndex
     ) {
       return;
@@ -998,6 +1298,64 @@ private guardarSeccionDesdeSwal(data: {
 
     this.formularioService.reordenarPreguntas(targetSeccion.id, payloadOrdenes).subscribe({
       error: (err) => console.error('Error al persistir el reordenamiento:', err)
+    });
+  }
+
+  abrirModalEditarSeccion(seccion: Seccion): void {
+    if (this.esSoloLectura()) return;
+
+    Swal.fire({
+      title: 'Editar Sección',
+      html: `
+      <div class="text-left space-y-4" style="text-align:left">
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Nombre de Sección *</label>
+          <input id="swal-edit-nombre" class="swal2-input" value="${seccion.nombre}" style="margin:0;width:100%;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción</label>
+          <input id="swal-edit-descripcion" class="swal2-input" value="${seccion.descripcion || ''}" style="margin:0;width:100%;box-sizing:border-box">
+        </div>
+      </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Actualizar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#64748b',
+      width: '500px',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl'
+      },
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-edit-nombre') as HTMLInputElement).value.trim();
+        const descripcion = (document.getElementById('swal-edit-descripcion') as HTMLInputElement).value.trim();
+
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre de la sección es obligatorio');
+          return false;
+        }
+        return { nombre, descripcion };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.actualizarSeccion(seccion.id, result.value);
+      }
+    });
+  }
+
+  private actualizarSeccion(seccionId: string, data: { nombre: string, descripcion: string }): void {
+    // Se consume el método PATCH del backend
+    this.formularioService.updateSeccion(seccionId, data).subscribe({
+      next: () => {
+        this.toastService.show('Sección actualizada con éxito.', 'success');
+        this.cargarSecciones(this.formulario()!.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar la sección.'), 'error');
+      }
     });
   }
 

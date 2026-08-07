@@ -2,8 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { PrioridadAtencionService } from '../../../core/services/prioridad-atencion.service';
-import { FichaRevision } from '../../../core/models/revision-ficha.model';
+import { PrioridadAtencionService, ReporteNeeSalud } from '../../../core/services/prioridad-atencion.service';
+import { PeriodoService } from '../../../core/services/periodo.service'; 
 
 @Component({
   selector: 'app-prioridad-atencion',
@@ -13,55 +13,51 @@ import { FichaRevision } from '../../../core/models/revision-ficha.model';
 })
 export class PrioridadAtencionComponent implements OnInit {
   private readonly prioridadService = inject(PrioridadAtencionService);
+  private readonly periodoService = inject(PeriodoService);
   private readonly router = inject(Router);
 
-  fichas = signal<FichaRevision[]>([]);
+  reporteNee = signal<ReporteNeeSalud[]>([]);
   isLoading = signal<boolean>(true);
-  
-  paginaActual = signal<number>(1);
-  totalRegistros = signal<number>(0);
-  take = 50;
-
-  nivelFiltro = signal<string>('TODOS');
-  nivelesPosibles = ['TODOS', 'Alto', 'Medio', 'Bajo']; 
 
   ngOnInit(): void {
-    this.cargarFichas();
+    this.cargarReporteEspecializado();
   }
 
-  cargarFichas(): void {
+  cargarReporteEspecializado(): void {
     this.isLoading.set(true);
-    const skip = (this.paginaActual() - 1) * this.take;
-
-    this.prioridadService.getFichasPorPrioridad(skip, this.take, this.nivelFiltro()).subscribe({
-      next: (res) => {
-        this.fichas.set(res.data);
-        this.totalRegistros.set(res.total);
-        this.isLoading.set(false);
+    
+    this.periodoService.getPeriodos().subscribe({
+      next: (periodos) => {
+        const periodoActivo = periodos.find(p => p.activo);
+        if (periodoActivo) {
+          this.prioridadService.getReporteNee(periodoActivo.id).subscribe({
+            next: (data) => {
+              this.reporteNee.set(data);
+              this.isLoading.set(false);
+            },
+            error: (err) => {
+              console.error('Error al cargar reporte NEE', err);
+              this.isLoading.set(false);
+            }
+          });
+        } else {
+          this.isLoading.set(false);
+        }
       },
-      error: (err) => {
-        console.error('Error al cargar prioridad', err);
-        this.isLoading.set(false);
-      }
+      error: () => this.isLoading.set(false)
     });
   }
 
-  cambiarNivel(nivel: string): void {
-    this.nivelFiltro.set(nivel);
-    this.paginaActual.set(1);
-    this.cargarFichas();
-  }
-
-  cambiarPagina(nuevaPagina: number): void {
-    this.paginaActual.set(nuevaPagina);
-    this.cargarFichas();
-  }
-
-  get totalPaginas(): number {
-    return Math.ceil(this.totalRegistros() / this.take) || 1;
+  // 🔥 FUNCIÓN AUXILIAR PARA ITERAR EL JSON DINÁMICO EN EL HTML
+  obtenerLlavesVulnerabilidad(detalles: Record<string, any>): string[] {
+    return detalles ? Object.keys(detalles) : [];
   }
 
   verFicha(fichaId: string): void {
     this.router.navigate(['/admin/revision-fichas'], { queryParams: { search: fichaId }});
+  }
+
+  exportarReporte(): void {
+    console.log('Exportando reporte...');
   }
 }
