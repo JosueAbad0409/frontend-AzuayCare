@@ -23,6 +23,7 @@ import { DescargaArchivosService } from '../../core/services/descarga-archivos.s
 import { forkJoin, of, debounceTime, catchError } from 'rxjs';
 import Swal from 'sweetalert2';
 
+
 // Estado normalizado para la UI (unifica variantes históricas del backend: ENVIADA/ENVIADO, RECHAZADA/RECHAZADO)
 export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
 

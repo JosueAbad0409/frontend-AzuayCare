@@ -70,22 +70,56 @@
             </div>
         </div>
 
-        <!-- Respuestas -->
+        <!-- Respuestas organizadas por secciones -->
         <h3 class="section-title">Respuestas Registradas</h3>
-        <div class="respuestas-list">
-            @for (resp of respuestas(); track resp.id) {
-            <div class="respuesta-card">
-                <p class="respuesta-pregunta">{{ resp.pregunta?.enunciado }}</p>
-                <p class="respuesta-valor">
-                    {{ resp.valor_texto || resp.valor_numerico || 'Opción seleccionada' }}
-                </p>
-            </div>
-            } @empty {
-            <p class="empty-text">No hay respuestas cargadas para esta ficha.</p>
-            }
-        </div>
 
-        <!-- Acciones de revisión -->
+        @if (secciones().length === 0) {
+        <p class="empty-text">Cargando estructura de la ficha...</p>
+        } @else {
+        @for (sec of secciones(); track sec.id; let idx = $index) {
+        <div class="mb-8">
+            <h4
+                class="text-sm font-bold text-blue-900 uppercase border-l-4 border-blue-600 pl-3 mb-4 py-1 bg-slate-50 rounded-r">
+                {{ numeroRomano(idx + 1) }}. {{ sec.nombre }}
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @for (preg of sec.preguntas; track preg.id) {
+                @if (!esPreguntaDependiente(preg.id)) {
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase mb-1">{{ preg.enunciado }}</p>
+                    <p class="text-sm font-semibold text-slate-800 whitespace-pre-line break-words">
+                        {{ obtenerTextoRespuesta(preg) }}
+                    </p>
+
+                    @if (tieneEvidencia(preg.id)) {
+                    <div class="mt-2 text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
+                        <i class="fas fa-paperclip"></i>
+                        <a [href]="obtenerUrlEvidencia(preg.id)" target="_blank" class="underline">
+                            Ver evidencia adjunta
+                        </a>
+                    </div>
+                    }
+
+                    @for (sub of getSubpreguntas(preg.id); track sub.id) {
+                    <div class="mt-3 ml-2 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-3">
+                        <p class="text-[10px] font-extrabold text-emerald-700 uppercase mb-1">
+                            <i class="fas fa-level-down-alt"></i> Subpregunta
+                        </p>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
+                        <p class="text-sm font-semibold text-slate-800">{{ obtenerTextoRespuesta(sub) }}</p>
+                    </div>
+                    }
+                </div>
+                }
+                }
+            </div>
+        </div>
+        }
+        }
+
+        <!-- Acciones de revisión (solo si está ENVIADA) -->
+        @if (puedeRevisar()) {
         <div class="review-panel">
             <label class="form-label">Comentario de Revisión / Justificación</label>
             <textarea class="form-control" rows="3" [value]="comentario()"
@@ -107,6 +141,20 @@
                 </button>
             </div>
         </div>
+        } @else {
+        <div class="review-panel" style="opacity: 0.85;">
+            <div style="display:flex; align-items:center; gap:12px; color:#475569;">
+                <i class="fas fa-lock" style="font-size:1.2rem;"></i>
+                <div>
+                    <p style="font-weight:700; margin:0;">Ficha ya procesada</p>
+                    <p style="font-size:0.875rem; margin:4px 0 0;">
+                        Esta ficha está en estado <strong>{{ ficha()!.estado_ficha }}</strong>.
+                        Solo se podrá volver a evaluar cuando el estudiante la reenvíe.
+                    </p>
+                </div>
+            </div>
+        </div>
+        }
         }
 
         @if (tabActiva() === 'HISTORIAL') {

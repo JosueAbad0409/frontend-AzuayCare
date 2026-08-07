@@ -54,8 +54,12 @@ export class PrioridadAtencionComponent implements OnInit {
   }
 
   verFicha(fichaId: string): void {
-    this.router.navigate(['/admin/revision-fichas'], { queryParams: { search: fichaId }});
+  if (!fichaId) {
+    console.warn('No se recibió ficha_id');
+    return;
   }
+  this.router.navigate(['/admin/revision-fichas', fichaId]);
+}
 
   exportarReporte(): void {
     console.log('Exportando reporte...');
