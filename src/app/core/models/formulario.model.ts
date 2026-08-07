@@ -93,7 +93,7 @@ export interface CreateSeccionDto {
 // --- INTERFAZ TIPO DE CAMPO ---
 export interface TipoCampoForm {
   id: string;
-  nombre: 'TEXTO' | 'NUMERICO' | 'SELECCION_UNICA' | 'SELECCION_MULTIPLE' | 'MATRIZ';
+  nombre: 'TEXTO' | 'NUMERICO' | 'SELECCION_UNICA' | 'SELECCION_MULTIPLE' | 'MATRIZ' | 'FECHA' ;
   descripcion?: string;
 }
 
