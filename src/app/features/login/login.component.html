@@ -1,38 +1,140 @@
-<div class="login-card">
-  <div class="brand-badge">
-    <i class="fas fa-shield-alt"></i> PLATAFORMA OFICIAL
-  </div>
+<main class="split-layout">
 
-  <h1 class="title">AzuayCare</h1>
-  <p class="subtitle">Acceso seguro para estudiantes y personal del Tec Azuay</p>
-
-  <!-- ALERTA DE ERROR -->
-  @if (error()) {
-    <div class="error-alert">
-      <i class="fas fa-exclamation-circle"></i>
-      <span>{{ error() }}</span>
+  <!-- PANEL INSTITUCIONAL (IZQUIERDA) -->
+  <section class="visual-pane" aria-hidden="true">
+    <div class="visual-bg-container">
+      <img 
+        src="images/tec-azuay-inicio-sesion.jpg" 
+        alt="" 
+        class="visual-bg-image"
+      />
+      <div class="visual-bg-overlay"></div>
     </div>
-  }
 
-  <!-- SPINNER ANIMADO DE CARGA (DOT SPINNER) -->
-  @if (isLoading()) {
-    <div class="spinner-container">
-      <div class="dot-spinner">
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
-        <div class="dot-spinner__dot"></div>
+    <div class="grid-texture"></div>
+
+    <div class="ficha-stack">
+      <div class="ficha-card ficha-back">
+        <span class="ficha-line ficha-line--s"></span>
+        <span class="ficha-line"></span>
+        <span class="ficha-line ficha-line--s"></span>
       </div>
-      <span style="font-size: 0.9rem; font-weight: 600; color: #15803d;">Verificando credenciales...</span>
+      <div class="ficha-card ficha-mid">
+        <span class="ficha-line ficha-line--s"></span>
+        <span class="ficha-line"></span>
+        <span class="ficha-line ficha-line--s"></span>
+      </div>
+      <div class="ficha-card ficha-front">
+        <div class="ficha-front__head">
+          <span class="ficha-tag">FICHA N.° 00124</span>
+          <span class="ficha-status">ACTIVA</span>
+        </div>
+        <span class="ficha-line ficha-line--s"></span>
+        <span class="ficha-line"></span>
+        <span class="ficha-line ficha-line--m"></span>
+        <div class="ficha-front__foot">
+          <span class="ficha-dot"></span>
+          Sincronizado con Bienestar Estudiantil
+        </div>
+      </div>
     </div>
-  }
 
-  <!-- BOTÓN DE GOOGLE -->
-  <div class="google-btn-wrapper" [style.display]="isLoading() ? 'none' : 'flex'">
-    <div id="googleBtn"></div>
-  </div>
-</div>
+    <div class="visual-content">
+      <p class="eyebrow">Instituto Superior Universitario Tecnológico del Azuay</p>
+      <h1 class="visual-title">Del papel<br><span class="highlight">al sistema.</span></h1>
+      <p class="visual-subtitle">
+        Un mismo acceso para tus trámites académicos y tu ficha de bienestar estudiantil, con el respaldo institucional del ITSA.
+      </p>
+    </div>
+  </section>
+
+  <!-- PANEL DE ACCESO AVANZADO (DERECHA) -->
+  <section class="login-pane">
+    
+    <!-- Elementos de fondo estructurales -->
+    <div class="pane-ambient-light"></div>
+    <div class="watermark-symbol" aria-hidden="true">
+      <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="20" width="160" height="160" rx="16" stroke="currentColor" stroke-width="2" stroke-dasharray="8 8"/>
+        <line x1="40" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="2"/>
+        <line x1="40" y1="90" x2="120" y2="90" stroke="currentColor" stroke-width="2"/>
+        <line x1="40" y1="120" x2="140" y2="120" stroke="currentColor" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div class="login-container">
+      
+      <!-- Status Pill Superior -->
+      <div class="status-pill">
+        <span class="pulse-dot"></span>
+        <span class="status-text">Servicio de Autenticación Activo</span>
+      </div>
+
+      <article class="login-card">
+        <div class="card-glow"></div>
+
+        <header class="login-header">
+          <div class="logo-mark" aria-hidden="true">
+            <span>A</span>
+          </div>
+          <h2 class="title">Azuay<span class="text-accent">Care</span></h2>
+          <p class="subtitle">Plataforma de Gestión Integral Estudiantil y Bienestar</p>
+        </header>
+
+        <div class="auth-box">
+          <div class="auth-instruction">
+            <span class="step-num">01</span>
+            <p>Acceso seguro mediante tu cuenta institucional <strong>@tecazuay.edu.ec</strong></p>
+          </div>
+
+          <!-- Manejo de Errores -->
+          @if (error()) {
+            <div class="alert error-alert" role="alert">
+              <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>{{ error() }}</span>
+            </div>
+          }
+
+          <!-- Indicador de Carga -->
+          @if (isLoading()) {
+            <div class="loader-wrapper" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
+              <p>Verificando credenciales con Google Workspace...</p>
+            </div>
+          }
+
+          <!-- Botón de Google -->
+          <div class="action-area" [class.is-hidden]="isLoading()">
+            <div id="googleBtn" class="google-wrapper"></div>
+          </div>
+        </div>
+
+        <!-- Garantías de Seguridad Integradas -->
+        <div class="security-grid">
+          <div class="security-item">
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <span>Google SSL</span>
+          </div>
+          <div class="security-item">
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <span>Datos Encriptados</span>
+          </div>
+          <div class="security-item">
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1" stroke="currentColor" stroke-width="1.6"/></svg>
+            <span>Red ITSA</span>
+          </div>
+        </div>
+
+        <footer class="login-footer">
+          <a href="https://tecazuay.edu.ec" target="_blank" rel="noopener" class="help-link">
+            ¿Tienes problemas para ingresar? Contacta a Soporte
+          </a>
+        </footer>
+
+      </article>
+
+    </div>
+  </section>
+</main>

@@ -1,267 +1,369 @@
-<div class="dashboard-wrapper page-shell">
+<main class="dashboard-shell animate-fade-in">
 
-  <!-- HEADER -->
-  <header class="hero-banner" style="margin-bottom:1.5rem;">
-    <div class="hero-text">
-      <span class="hero-tag">BIENESTAR ESTUDIANTIL · ISTA</span>
-      <h1>Tablero de Control Socioeconómico</h1>
-      <p>
-        Periodo:
-        <strong>{{ periodoActivo()?.nombre || 'Sin periodo activo' }}</strong>
+  <!-- CABECERA HERO PRINCIPAL CON GLASSMORPHISM -->
+  <header class="hero-card">
+    <div class="hero-content">
+      <div class="hero-badge-group">
+        <span class="hero-badge">
+          <span class="live-dot" aria-hidden="true"></span>
+          Bienestar Estudiantil · ISTA
+        </span>
+        <span class="hero-period-pill" role="status">
+          <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+          <span>Periodo Activo: <strong>{{ periodoActivo()?.nombre || 'Sin periodo' }}</strong></span>
+        </span>
+      </div>
+      <h1 class="hero-title">Tablero de Control Socioeconómico</h1>
+      <p class="hero-description">
+        Monitoreo analítico integral de vulnerabilidad, atenciones prioritarias y seguimiento cualitativo de fichas institucionales.
       </p>
     </div>
-    <div class="hero-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-      <a routerLink="/admin/reportes" class="btn btn-outline-light">
-        <i class="fas fa-file-excel"></i> Reportes
+
+    <nav class="hero-actions" aria-label="Navegación directa">
+      <a routerLink="/admin/reportes" class="btn btn-hero-outline">
+        <i class="fas fa-file-excel" aria-hidden="true"></i>
+        <span>Reportes</span>
       </a>
-      <a routerLink="/admin/prioridad-atencion" class="btn btn-outline-light">
-        <i class="fas fa-heartbeat"></i> Prioridad Atención
+      <a routerLink="/admin/prioridad-atencion" class="btn btn-hero-outline">
+        <i class="fas fa-heartbeat" aria-hidden="true"></i>
+        <span>Prioridad Atención</span>
       </a>
-      <a routerLink="/admin/revision-fichas" class="btn btn-outline-light">
-        <i class="fas fa-clipboard-check"></i> Revisar Fichas
+      <a routerLink="/admin/revision-fichas" class="btn btn-hero-primary">
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        <span>Revisar Fichas</span>
       </a>
-    </div>
+    </nav>
   </header>
 
-  <!-- KPIs PRINCIPALES (estilo referencia) -->
-  <section class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-icon icon-blue"><i class="fas fa-users"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Total Registradas</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalFichas() || totalFichasEvaluadas() }}</h3>
-        }
-        <span class="kpi-sub">Fichas en el sistema</span>
-      </div>
-    </div>
+  <!-- SECCIÓN 1: METRICAS CLAVE (KPIs PRINCIPALES) -->
+  <section class="kpi-section" aria-label="Resumen de métricas principales">
+    <div class="kpi-grid">
+      
+      <article class="kpi-card kpi-card-blue">
+        <div class="kpi-icon-wrapper icon-blue">
+          <i class="fas fa-users" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Total Registradas</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value">{{ totalFichas() || totalFichasEvaluadas() }}</h2>
+          }
+          <span class="kpi-caption">Fichas en el sistema</span>
+        </div>
+      </article>
 
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-wheelchair"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Prioridad / NEE</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalNee() }}</h3>
-        }
-        <span class="kpi-sub">Casos con vulnerabilidad</span>
-      </div>
-    </div>
+      <article class="kpi-card kpi-card-rose">
+        <div class="kpi-icon-wrapper icon-rose">
+          <i class="fas fa-wheelchair" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Prioridad / NEE</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value text-rose">{{ totalNee() }}</h2>
+          }
+          <span class="kpi-caption">Casos con vulnerabilidad</span>
+        </div>
+      </article>
 
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fff7ed;color:#ea580c"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Con Riesgo</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalConRiesgo() }}</h3>
-        }
-        <span class="kpi-sub">Riesgo total &gt; 0</span>
-      </div>
-    </div>
+      <article class="kpi-card kpi-card-amber">
+        <div class="kpi-icon-wrapper icon-amber">
+          <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Con Riesgo</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value text-amber">{{ totalConRiesgo() }}</h2>
+          }
+          <span class="kpi-caption">Riesgo acumulado &gt; 0</span>
+        </div>
+      </article>
 
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-paper-plane"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Enviadas</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ fichasEnviadas() }}</h3>
-        }
-        <span class="kpi-sub">Pendientes de revisión</span>
-      </div>
-    </div>
+      <article class="kpi-card kpi-card-indigo">
+        <div class="kpi-icon-wrapper icon-indigo">
+          <i class="fas fa-paper-plane" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Enviadas</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value text-indigo">{{ fichasEnviadas() }}</h2>
+          }
+          <span class="kpi-caption">Pendientes de revisión</span>
+        </div>
+      </article>
 
-    <div class="kpi-card">
-      <div class="kpi-icon icon-emerald"><i class="fas fa-check-circle"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Validadas</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ fichasValidadas() }}</h3>
-        }
-        <span class="kpi-sub">Aprobadas por Bienestar</span>
-      </div>
-    </div>
+      <article class="kpi-card kpi-card-emerald">
+        <div class="kpi-icon-wrapper icon-emerald">
+          <i class="fas fa-check-circle" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Validadas</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value text-emerald">{{ fichasValidadas() }}</h2>
+          }
+          <span class="kpi-caption">Aprobadas por Bienestar</span>
+        </div>
+      </article>
 
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-times-circle"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Rechazadas</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ fichasRechazadas() }}</h3>
-        }
-        <span class="kpi-sub">Requieren corrección</span>
-      </div>
-    </div>
-  </section>
+      <article class="kpi-card kpi-card-red">
+        <div class="kpi-icon-wrapper icon-red">
+          <i class="fas fa-times-circle" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Rechazadas</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value text-red">{{ fichasRechazadas() }}</h2>
+          }
+          <span class="kpi-caption">Requieren corrección</span>
+        </div>
+      </article>
 
-  <!-- SEGUNDA FILA: estados + extra -->
-  <section class="kpi-grid" style="margin-top:1rem;">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fffbeb;color:#d97706"><i class="fas fa-edit"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Borradores</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ fichasBorrador() }}</h3>
-        }
-        <span class="kpi-sub">Aún no enviadas</span>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon icon-green"><i class="fas fa-graduation-cap"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Carreras</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalCarreras() }}</h3>
-        }
-        <span class="kpi-sub">Especialidades activas</span>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon icon-purple"><i class="fas fa-file-alt"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Formularios</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalFormularios() }}</h3>
-        }
-        <span class="kpi-sub">Fichas configuradas</span>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-clipboard-list"></i></div>
-      <div class="kpi-details">
-        <span class="kpi-title">Evaluadas</span>
-        @if (isLoading()) {
-          <div class="skeleton-loader kpi-skeleton"></div>
-        } @else {
-          <h3 class="kpi-value">{{ totalFichasEvaluadas() }}</h3>
-        }
-        <span class="kpi-sub">Procesadas en el periodo</span>
-      </div>
     </div>
   </section>
 
-  <!-- BLOQUES ANALÍTICOS -->
-  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem;margin-top:1.5rem;">
+  <!-- SECCIÓN 2: METRICAS SECUNDARIAS -->
+  <section class="kpi-section" aria-label="Resumen de configuración">
+    <div class="kpi-grid kpi-grid-sub">
 
-    <!-- Distribución por carrera -->
-    <div class="chart-card shadow-sm">
-      <div class="chart-header">
-        <h4><i class="fas fa-university" style="color:#7c3aed"></i> Distribución por Carrera</h4>
-        <p class="text-xs text-slate-500">Enviadas vs Validadas</p>
-      </div>
-      <div class="chart-container" style="height:280px;position:relative;">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        }
-        <canvas #carreraChartCanvas [class.hidden]="isLoading()"></canvas>
-      </div>
+      <article class="kpi-card">
+        <div class="kpi-icon-wrapper icon-orange">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Borradores</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value">{{ fichasBorrador() }}</h2>
+          }
+          <span class="kpi-caption">Aún no enviadas</span>
+        </div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-icon-wrapper icon-teal">
+          <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Carreras</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value">{{ totalCarreras() }}</h2>
+          }
+          <span class="kpi-caption">Especialidades activas</span>
+        </div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-icon-wrapper icon-purple">
+          <i class="fas fa-file-alt" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Formularios</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value">{{ totalFormularios() }}</h2>
+          }
+          <span class="kpi-caption">Fichas configuradas</span>
+        </div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-icon-wrapper icon-violet">
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Evaluadas</span>
+          @if (isLoading()) {
+            <div class="skeleton-loader kpi-skeleton" aria-hidden="true"></div>
+          } @else {
+            <h2 class="kpi-value">{{ totalFichasEvaluadas() }}</h2>
+          }
+          <span class="kpi-caption">Procesadas en el periodo</span>
+        </div>
+      </article>
+
     </div>
+  </section>
 
-    <!-- Estado de fichas -->
-    <div class="chart-card shadow-sm">
-      <div class="chart-header">
-        <h4><i class="fas fa-tasks" style="color:#2563eb"></i> Estado de Fichas</h4>
-        <p class="text-xs text-slate-500">Borrador · Enviadas · Validadas · Rechazadas</p>
-      </div>
-      <div class="chart-container" style="height:280px;position:relative;">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        }
-        <canvas #estadoChartCanvas [class.hidden]="isLoading()"></canvas>
-      </div>
-    </div>
+  <!-- SECCIÓN 3: ANALÍTICA Y GRÁFICOS REORGANIZADOS -->
+  <section class="analytics-section" aria-label="Análisis visual">
+    <div class="analytics-grid">
 
-    <!-- Balance económico -->
-    <div class="chart-card shadow-sm">
-      <div class="chart-header">
-        <h4><i class="fas fa-coins" style="color:#059669"></i> Nivel Socioeconómico</h4>
-        <p class="text-xs text-slate-500">Según balance ingresos/egresos</p>
-      </div>
-      <div class="chart-container" style="height:280px;position:relative;">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        }
-        <canvas #economiaChartCanvas [class.hidden]="isLoading()"></canvas>
-      </div>
-    </div>
+      <!-- 1. Distribución por Carrera (Ocupa 2 columnas para dar amplio espacio horizontal) -->
+      <article class="chart-card card-wide">
+        <header class="chart-card-header">
+          <div class="chart-header-title">
+            <div class="icon-chart icon-purple">
+              <i class="fas fa-university" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3>Distribución por Carrera</h3>
+              <p>Relación cualitativa entre fichas Enviadas vs Validadas</p>
+            </div>
+          </div>
+        </header>
+        <div class="chart-canvas-container">
+          <div class="skeleton-loader chart-skeleton" [class.hidden]="!isLoading()"></div>
+          <canvas #carreraChartCanvas [class.hidden]="isLoading()"></canvas>
+        </div>
+      </article>
 
-    <!-- Condiciones de vulnerabilidad (lista real) -->
-    <div class="chart-card shadow-sm">
-      <div class="chart-header">
-        <h4><i class="fas fa-heartbeat" style="color:#e11d48"></i> Condiciones Detectadas</h4>
-        <p class="text-xs text-slate-500">Desde reporte de prioridad / NEE</p>
-      </div>
-      <div style="padding:1rem 1.25rem;max-height:280px;overflow-y:auto;">
-        @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
-        } @else if (condiciones().length === 0) {
-          <p class="text-sm text-slate-400 text-center py-8">
-            No hay casos de prioridad registrados en este periodo.
-          </p>
-        } @else {
-          @for (c of condiciones(); track c.nombre) {
-            <div style="margin-bottom:0.85rem;">
-              <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem;">
-                <span style="font-weight:600;color:#334155;">{{ c.nombre }}</span>
-                <span style="font-weight:700;color:#0f172a;">{{ c.total }} <span style="color:#94a3b8;font-weight:500;">({{ pctCondicion(c.total) }}%)</span></span>
+      <!-- 2. Estado General de Fichas (1 Columna) -->
+      <article class="chart-card">
+        <header class="chart-card-header">
+          <div class="chart-header-title">
+            <div class="icon-chart icon-blue">
+              <i class="fas fa-chart-pie" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3>Estado de Fichas</h3>
+              <p>Desglose porcentual del flujo de fichas</p>
+            </div>
+          </div>
+        </header>
+        <div class="chart-canvas-container">
+          <div class="skeleton-loader chart-skeleton" [class.hidden]="!isLoading()"></div>
+          <canvas #estadoChartCanvas [class.hidden]="isLoading()"></canvas>
+        </div>
+      </article>
+
+      <!-- 3. Balance Socioeconómico (1 Columna) -->
+      <article class="chart-card">
+        <header class="chart-card-header">
+          <div class="chart-header-title">
+            <div class="icon-chart icon-emerald">
+              <i class="fas fa-coins" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3>Nivel Socioeconómico</h3>
+              <p>Segregación según relación ingreso / egreso</p>
+            </div>
+          </div>
+        </header>
+        <div class="chart-canvas-container">
+          <div class="skeleton-loader chart-skeleton" [class.hidden]="!isLoading()"></div>
+          <canvas #economiaChartCanvas [class.hidden]="isLoading()"></canvas>
+        </div>
+      </article>
+
+      <!-- 4. Condiciones Detectadas (Ocupa 2 columnas con diseño de alto impacto) -->
+      <article class="chart-card card-wide">
+        <header class="chart-card-header">
+          <div class="chart-header-title">
+            <div class="icon-chart icon-rose">
+              <i class="fas fa-heartbeat" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3>Condiciones Vulnerables Detectadas</h3>
+              <p>Métricas acumuladas del reporte oficial de prioridad / NEE</p>
+            </div>
+          </div>
+        </header>
+        
+        <div class="conditions-scroll-container">
+          @if (isLoading()) {
+            <div class="skeleton-loader chart-skeleton" aria-hidden="true"></div>
+          } @else if (condiciones().length === 0) {
+            <div class="empty-state-box">
+              <div class="empty-icon-circle">
+                <i class="fas fa-check" aria-hidden="true"></i>
               </div>
-              <div style="height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden;">
-                <div
-                  style="height:100%;border-radius:999px;background:linear-gradient(90deg,#e11d48,#f97316);"
-                  [style.width.%]="pctCondicion(c.total)">
+              <p class="empty-state-title">Sin casos pendientes</p>
+              <p class="empty-state-text">No existen condiciones de vulnerabilidad o prioridad registradas en este periodo.</p>
+            </div>
+          } @else {
+            <div class="conditions-list">
+              @for (c of condiciones(); track c.nombre) {
+                <div class="condition-item">
+                  <div class="condition-meta">
+                    <span class="condition-name">{{ c.nombre }}</span>
+                    <div class="condition-badge-group">
+                      <span class="condition-count-badge">{{ c.total }} caso(s)</span>
+                      <span class="condition-pct-badge">{{ pctCondicion(c.total) }}%</span>
+                    </div>
+                  </div>
+                  <div class="progress-bar-track" role="progressbar" [attr.aria-valuenow]="pctCondicion(c.total)" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar-fill" [style.width.%]="pctCondicion(c.total)"></div>
+                  </div>
                 </div>
-              </div>
+              }
             </div>
           }
-        }
-      </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
-  <!-- ACCESO RÁPIDO -->
-  <section class="quick-access-section" style="margin-top:2rem;">
-    <h3><i class="fas fa-rocket"></i> Acceso Rápido</h3>
+  <!-- SECCIÓN 4: ACCESO RÁPIDO MÓDULOS -->
+  <section class="quick-access-section" aria-label="Módulos clave">
+    <div class="section-title-group">
+      <h2 class="section-heading">
+        <i class="fas fa-rocket heading-icon" aria-hidden="true"></i> Módulos Administrativos
+      </h2>
+      <p class="section-subheading">Gestión directa y operaciones frecuentes</p>
+    </div>
+
     <div class="quick-grid">
-      <a routerLink="/admin/revision-fichas" class="quick-card featured-card">
-        <div class="badge-featured">Crítico</div>
-        <i class="fas fa-clipboard-check card-icon featured-icon"></i>
-        <h4>Revisión de Fichas</h4>
-        <p>Validar o rechazar fichas enviadas.</p>
+      <a routerLink="/admin/revision-fichas" class="quick-card card-critical">
+        <span class="badge-critical">Acción Requerida</span>
+        <div class="quick-icon-wrapper icon-critical">
+          <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        </div>
+        <h3 class="quick-title">Revisión de Fichas</h3>
+        <p class="quick-desc">Validación, aprobación o rechazo de expedientes enviados por estudiantes.</p>
+        <span class="quick-link-action">
+          <span>Ir a Revisión</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
+
       <a routerLink="/admin/prioridad-atencion" class="quick-card">
-        <i class="fas fa-heartbeat card-icon" style="color:#e11d48"></i>
-        <h4>Prioridad de Atención</h4>
-        <p>NEE, discapacidad, embarazo y más.</p>
+        <div class="quick-icon-wrapper icon-rose">
+          <i class="fas fa-heartbeat" aria-hidden="true"></i>
+        </div>
+        <h3 class="quick-title">Prioridad de Atención</h3>
+        <p class="quick-desc">Supervisión de casos NEE, embarazos, enfermedades y vulnerabilidades.</p>
+        <span class="quick-link-action">
+          <span>Ver Casos</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
+
       <a routerLink="/admin/reportes" class="quick-card">
-        <i class="fas fa-chart-bar card-icon" style="color:#059669"></i>
-        <h4>Reportes</h4>
-        <p>Excel, PDF y filtros avanzados.</p>
+        <div class="quick-icon-wrapper icon-emerald">
+          <i class="fas fa-file-invoice" aria-hidden="true"></i>
+        </div>
+        <h3 class="quick-title">Reportes Consolidados</h3>
+        <p class="quick-desc">Generación de archivos Excel, PDF y métricas institucionales.</p>
+        <span class="quick-link-action">
+          <span>Generar Reportes</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
+
       <a routerLink="/admin/formularios" class="quick-card">
-        <i class="fas fa-tasks card-icon"></i>
-        <h4>Constructor de Fichas</h4>
-        <p>Preguntas, secciones y dependencias.</p>
+        <div class="quick-icon-wrapper icon-purple">
+          <i class="fas fa-cogs" aria-hidden="true"></i>
+        </div>
+        <h3 class="quick-title">Constructor de Fichas</h3>
+        <p class="quick-desc">Edición de preguntas, secciones, ponderaciones y campos dinámicos.</p>
+        <span class="quick-link-action">
+          <span>Gestionar Formulario</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
     </div>
   </section>
-</div>
+
+</main>

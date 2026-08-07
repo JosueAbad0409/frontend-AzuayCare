@@ -38,4 +38,87 @@ select, textarea {
         width: 100% !important;
         margin-bottom: 1.5rem;
     }
+}a/* ==========================================
+   ESTILOS Y MEJORAS UI/UX: FICHA ESTUDIANTE
+   ========================================== */
+
+/* 1. SCROLLBAR MODERNO (Para tablas y matrices en móviles) */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 transparent; /* Slate-400 */
+    width: 100%;
+    display: block;
+    padding-bottom: 0.5rem; /* Evita que el scroll pise el contenido inferior */
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+    height: 8px; /* Tamaño accesible para interacciones táctiles */
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;
+    border-radius: 9999px; /* Bordes totalmente redondeados */
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b; /* Slate-500 al hacer hover */
+}
+
+/* 2. PREVENCIÓN DE AUTO-ZOOM EN DISPOSITIVOS MÓVILES (iOS Safari) */
+@media screen and (max-width: 768px) {
+    input[type="text"], 
+    input[type="number"], 
+    input[type="date"],
+    select, 
+    textarea {
+        font-size: 16px !important; /* Fuerza mínimo 16px para evitar zoom automático */
+    }
+}
+
+/* 3. RED DE SEGURIDAD PARA SIDEBAR Y CONTENEDORES RESPONSIVOS */
+@media (max-width: 1024px) {
+    aside {
+        position: relative !important;
+        width: 100% !important;
+        margin-bottom: 1.5rem;
+        z-index: 10;
+    }
+}
+
+/* 4. ANIMACIONES SUAVES Y TRANSICIONES UI */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. MEJORAS DE ACCESIBILIDAD Y FOCO (WCAG A11y) */
+*:focus-visible {
+    outline: 2px solid #2563eb !important; /* Blue-600 */
+    outline-offset: 2px !important;
+}
+
+/* Estilo para recortar texto con puntos suspensivos */
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3; 
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }

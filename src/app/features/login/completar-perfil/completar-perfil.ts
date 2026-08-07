@@ -1,7 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+
 import { AuthService } from '../../../core/services/auth.service';
 import { UsuarioService } from '../../../core/services/usuario.service';
 import { CarreraService } from '../../../core/services/carrera.service';
@@ -10,15 +12,19 @@ import { Carrera } from '../../../core/models/carrera.model';
 import { Ciclo } from '../../../core/models/ciclo.model';
 import { cedulaEcuatorianaValidator } from '../../../core/validators/cedula.validator';
 
+interface PerfilForm {
+  cedula: FormControl<string>;
+  carrera_id: FormControl<string>;
+  ciclo_id: FormControl<string>;
+}
+
 @Component({
   selector: 'app-completar-perfil',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './completar-perfil.html',
   styleUrls: ['./completar-perfil.css'],
-  host: {
-    style: "--bg-image: url('/images/tec-azuay-inicio-sesion.jpg');"
-  }
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CompletarPerfilComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -27,31 +33,80 @@ export class CompletarPerfilComponent implements OnInit {
   private readonly carreraService = inject(CarreraService);
   private readonly ciclosService = inject(CiclosService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  loading = signal<boolean>(false);
-  cargandoCatalogos = signal<boolean>(true);
-  error = signal<string>('');
+  // Estados
+  loading = signal(false);
+  cargandoCatalogos = signal(true);
+  error = signal('');
 
+  // Catálogos base
   carreras = signal<Carrera[]>([]);
   private todosLosCiclos = signal<Ciclo[]>([]);
-  private carreraSeleccionada = signal<string>('');
 
-  // Casteos seguros en caso de que user() retorne unknown
-  nombreCompleto = computed(() => (this.authService.user() as any)?.nombre ?? 'Estudiante');
-  correo = computed(() => (this.authService.user() as any)?.email ?? '');
+  // Control e integración para filtro de carrera
+  filtroCarreraControl = new FormControl('', { nonNullable: true });
+  filtroCarrera = signal<string>('');
 
-  // Declaración inicial sin requerimientos en carrera y ciclo por defecto
-  perfilForm: FormGroup = this.fb.group({
+  // Formulario Reactivo
+  perfilForm: FormGroup<PerfilForm> = this.fb.group({
     cedula: ['', [Validators.required, cedulaEcuatorianaValidator()]],
     carrera_id: [''],
     ciclo_id: [{ value: '', disabled: true }],
+  }) as FormGroup<PerfilForm>;
+
+  // Signal proveniente de los cambios del control 'carrera_id'
+  private carreraIdSeleccionada = toSignal(
+    this.perfilForm.controls.carrera_id.valueChanges, 
+    { initialValue: '' }
+  );
+
+  // Datos del Usuario
+  perfil = computed(() => {
+    const user = this.authService.user();
+    return {
+      nombre: user?.nombre ?? 'Estudiante',
+      email: user?.email ?? ''
+    };
   });
 
-  ciclosDisponibles = computed(() => {
-    const carreraId = this.carreraSeleccionada();
-    if (!carreraId) return [];
-    return this.todosLosCiclos().filter((ciclo) => ciclo.carrera_id === carreraId);
+  // Signal computada: Filtra las carreras por texto
+  carrerasFiltradas = computed(() => {
+    const termino = this.filtroCarrera();
+    const lista = this.carreras();
+    if (!termino) return lista;
+    return lista.filter(c => c.nombre.toLowerCase().includes(termino));
   });
+
+  // Signal computada: Filtra los ciclos de acuerdo a la carrera elegida
+  ciclosDisponibles = computed(() => {
+    const carreraId = this.carreraIdSeleccionada();
+    if (!carreraId) return [];
+    return this.todosLosCiclos().filter(c => c.carrera_id === carreraId);
+  });
+
+  constructor() {
+    // Escuchar el input de filtro para actualizar la signal del término
+    this.filtroCarreraControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(value => {
+        this.filtroCarrera.set(value.toLowerCase().trim());
+      });
+
+    // Resetear y habilitar/deshabilitar el control de ciclo según la selección de carrera
+    this.perfilForm.controls.carrera_id.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const cicloControl = this.perfilForm.controls.ciclo_id;
+        cicloControl.setValue('');
+        
+        if (this.ciclosDisponibles().length > 0) {
+          cicloControl.enable();
+        } else {
+          cicloControl.disable();
+        }
+      });
+  }
 
   ngOnInit(): void {
     if (this.authService.perfilCompleto()) {
@@ -59,86 +114,72 @@ export class CompletarPerfilComponent implements OnInit {
       return;
     }
 
-    // Si el usuario es de rol ESTUDIANTE, exigimos de forma obligatoria carrera y ciclo
-    const usuario = this.authService.user() as any;
+    const usuario = this.authService.user();
     if (usuario?.rol === 'ESTUDIANTE') {
-      this.perfilForm.get('carrera_id')!.setValidators([Validators.required]);
-      this.perfilForm.get('ciclo_id')!.setValidators([Validators.required]);
-      this.perfilForm.get('carrera_id')!.updateValueAndValidity();
-      this.perfilForm.get('ciclo_id')!.updateValueAndValidity();
+      this.perfilForm.controls.carrera_id.setValidators([Validators.required]);
+      this.perfilForm.controls.ciclo_id.setValidators([Validators.required]);
+      this.perfilForm.controls.carrera_id.updateValueAndValidity();
+      this.perfilForm.controls.ciclo_id.updateValueAndValidity();
     }
 
     this.cargarCatalogos();
-
-    this.perfilForm.get('carrera_id')!.valueChanges.subscribe((carreraId: string) => {
-      this.carreraSeleccionada.set(carreraId ?? '');
-
-      const cicloControl = this.perfilForm.get('ciclo_id')!;
-      cicloControl.setValue('');
-      if (this.ciclosDisponibles().length > 0) {
-        cicloControl.enable();
-      } else {
-        cicloControl.disable();
-      }
-    });
   }
 
   private cargarCatalogos(): void {
     this.cargandoCatalogos.set(true);
 
-    this.carreraService.getCarreras().subscribe({
-      next: (carreras) => this.carreras.set(carreras.filter((c) => !c.fecha_desactivacion)),
-      error: () => this.error.set('No se pudieron cargar las carreras. Intenta recargar la página.'),
-    });
+    this.carreraService.getCarreras()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => this.carreras.set(res.filter(c => !c.fecha_desactivacion)),
+        error: () => this.error.set('Fallo de conexión. No se pudieron cargar las carreras.')
+      });
 
-    this.ciclosService.getCiclos().subscribe({
-      next: (ciclos) => {
-        this.todosLosCiclos.set(ciclos.filter((c) => !c.fecha_desactivacion));
-        this.cargandoCatalogos.set(false);
-      },
-      error: () => {
-        this.error.set('No se pudieron cargar los ciclos. Intenta recargar la página.');
-        this.cargandoCatalogos.set(false);
-      },
-    });
+    this.ciclosService.getCiclos()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.todosLosCiclos.set(res.filter(c => !c.fecha_desactivacion));
+          this.cargandoCatalogos.set(false);
+        },
+        error: () => {
+          this.error.set('Fallo de conexión. No se pudieron cargar los ciclos.');
+          this.cargandoCatalogos.set(false);
+        }
+      });
   }
 
   guardar(): void {
     this.error.set('');
-
     if (this.perfilForm.invalid) {
       this.perfilForm.markAllAsTouched();
-      this.error.set('Por favor completa todos los campos correctamente.');
       return;
     }
 
     this.loading.set(true);
-    const { cedula, carrera_id, ciclo_id } = this.perfilForm.getRawValue();
+    const formValue = this.perfilForm.getRawValue();
 
-    // Filtramos los campos opcionales para evitar enviar strings vacíos al backend
-    const payload: { cedula: string; carrera_id?: string; ciclo_id?: string } = { cedula };
-    if (carrera_id) payload.carrera_id = carrera_id;
-    if (ciclo_id) payload.ciclo_id = ciclo_id;
+    const payload: { cedula: string; carrera_id?: string; ciclo_id?: string } = { 
+      cedula: formValue.cedula 
+    };
+    if (formValue.carrera_id) payload.carrera_id = formValue.carrera_id;
+    if (formValue.ciclo_id) payload.ciclo_id = formValue.ciclo_id;
 
-    this.usuarioService.completarPerfil(payload).subscribe({
-      next: () => {
-        this.authService.marcarPerfilCompleto(payload);
-        this.loading.set(false);
-        this.router.navigate(['/estudiante/inicio']);
-      },
-      error: (err) => {
-        this.loading.set(false);
-        this.error.set(
-          err?.error?.message ?? 'Ocurrió un error al guardar tus datos. Intenta nuevamente.'
-        );
-      },
-    });
+    this.usuarioService.completarPerfil(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.authService.marcarPerfilCompleto(payload);
+          this.router.navigate(['/estudiante/inicio']);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          this.error.set(err?.error?.message ?? 'Error del servidor al procesar la solicitud.');
+        }
+      });
   }
 
-  // Método que faltaba y era requerido en el HTML
-  cancelarOVolver(): void {
-    // Opcional: Si tienes implementado el método logout, lo puedes usar aquí
-    // this.authService.logout();
-    this.router.navigate(['/']); 
+  cancelar(): void {
+    this.router.navigate(['/']);
   }
 }

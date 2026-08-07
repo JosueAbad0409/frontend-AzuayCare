@@ -12,16 +12,12 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import {
   ReportesService,
-  DashboardResumenBackend,
-  EstadisticasPeriodo
+  DashboardResumenBackend
 } from '../../../core/services/reportes.service';
 import { PrioridadAtencionService } from '../../../core/services/prioridad-atencion.service';
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
 import { Chart, registerables } from 'chart.js';
-import { of } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
 import { RevisionService } from '../../../core/services/revision.service';
-
 
 Chart.register(...registerables);
 
@@ -53,7 +49,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   fichasValidadas = signal(0);
   fichasRechazadas = signal(0);
 
-  // NEE / vulnerabilidad (conteos reales)
+  // NEE / Vulnerabilidad
   totalNee = signal(0);
   totalConRiesgo = signal(0);
   condiciones = signal<CondicionCount[]>([]);
@@ -61,30 +57,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
   periodoActivo = signal<PeriodoMatricula | null>(null);
   isLoading = signal(true);
 
-  // Datos para lista por carrera
+  // Datos para gráficos
   carrerasLabels = signal<string[]>([]);
   carrerasEnviadas = signal<number[]>([]);
   carrerasValidadas = signal<number[]>([]);
   economiaLabels = signal<string[]>([]);
   economiaData = signal<number[]>([]);
 
-  @ViewChild('estadoChartCanvas') estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('economiaChartCanvas') economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('carreraChartCanvas') carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
+  // Referencias a los Canvas
+  @ViewChild('estadoChartCanvas', { static: false }) estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('economiaChartCanvas', { static: false }) economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('carreraChartCanvas', { static: false }) carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
 
   private estadoChart?: Chart;
   private economiaChart?: Chart;
   private carreraChart?: Chart;
-  private datosGraficos: DashboardResumenBackend['graficos'] | null = null;
 
   ngOnInit(): void {
     this.cargarTodo();
   }
 
   ngOnDestroy(): void {
-    this.estadoChart?.destroy();
-    this.economiaChart?.destroy();
-    this.carreraChart?.destroy();
+    this.destruirGraficos();
+  }
+
+  private destruirGraficos(): void {
+    if (this.estadoChart) {
+      this.estadoChart.destroy();
+      this.estadoChart = undefined;
+    }
+    if (this.economiaChart) {
+      this.economiaChart.destroy();
+      this.economiaChart = undefined;
+    }
+    if (this.carreraChart) {
+      this.carreraChart.destroy();
+      this.carreraChart = undefined;
+    }
   }
 
   cargarTodo(): void {
@@ -96,7 +105,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.totalFormularios.set(resumen.totalFormularios ?? 0);
         this.totalFichasEvaluadas.set(resumen.totalFichasEvaluadas ?? 0);
         this.periodoActivo.set(resumen.periodoActivo ?? null);
-        this.datosGraficos = resumen.graficos ?? null;
 
         const fc = resumen.graficos?.fichasPorCarrera;
         this.carrerasLabels.set(fc?.labels ?? []);
@@ -105,13 +113,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const periodoId = resumen.periodoActivo?.id;
 
-        // 🔥 Contar estados desde las fichas reales (igual que en Revisión)
+        // Carga de fichas
         this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').subscribe({
           next: (response: any) => {
             const lista: any[] = response.data || response || [];
             this.contarEstadosDesdeFichas(lista);
 
-            // NEE (si hay periodo)
             if (periodoId) {
               this.prioridadService.getReporteNee(periodoId).subscribe({
                 next: (nee) => {
@@ -139,24 +146,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Clasifica fichas por balance_final en rangos socioeconómicos */
   private calcularNivelesEconomicos(lista: any[]): void {
-    // Solo fichas que ya tienen evaluación útil (enviadas / validadas / rechazadas)
     const utiles = lista.filter((f) => {
       const e = String(f.estado_ficha || '').toUpperCase();
       return e === 'ENVIADA' || e === 'ENVIADO' || e === 'VALIDADO' ||
         e === 'RECHAZADO' || e === 'RECHAZADA';
     });
 
-    let critico = 0;   // balance < 0
-    let bajo = 0;      // 0 a 100
-    let medioBajo = 0; // 100 a 300
-    let medio = 0;     // 300 a 600
-    let alto = 0;      // > 600
+    let critico = 0;   
+    let bajo = 0;      
+    let medioBajo = 0; 
+    let medio = 0;     
+    let alto = 0;      
 
     utiles.forEach((f) => {
       const balance = Number(f.balance_final ?? 0);
-
       if (balance < 0) critico++;
       else if (balance <= 100) bajo++;
       else if (balance <= 300) medioBajo++;
@@ -168,7 +172,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.economiaData.set([critico, bajo, medioBajo, medio, alto]);
   }
 
-  /** Cuenta estados normalizando RECHAZADO/RECHAZADA y ENVIADA/ENVIADO */
   private contarEstadosDesdeFichas(lista: any[]): void {
     let borrador = 0;
     let enviadas = 0;
@@ -189,17 +192,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.fichasValidadas.set(validadas);
     this.fichasRechazadas.set(rechazadas);
 
-    // 🔥 Niveles socioeconómicos reales
     this.calcularNivelesEconomicos(lista);
   }
 
   private finalizarCarga(): void {
     this.isLoading.set(false);
-    this.cdRef.detectChanges();
-    setTimeout(() => this.dibujarGraficos(), 60);
+    this.cdRef.detectChanges(); // 1. Forza a Angular a actualizar el HTML e insertar/mostrar los canvas
+
+    // 2. Espera a que el navegador complete el layout CSS antes de dibujar Chart.js
+    setTimeout(() => {
+      this.dibujarGraficos();
+    }, 150);
   }
 
-  /** Cuenta condiciones desde el reporte NEE (detalles_vulnerabilidad) */
   private procesarNee(items: any[]): void {
     this.totalNee.set(items.length);
     this.totalConRiesgo.set(items.filter(i => (i.riesgo_total ?? 0) > 0).length);
@@ -222,11 +227,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private dibujarGraficos(): void {
-    // --- Estado de fichas ---
-    if (this.estadoChartCanvas) {
+    this.destruirGraficos();
+
+    Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+    Chart.defaults.color = '#64748b';
+
+    // 1. --- Estado de Fichas (Doughnut) ---
+    if (this.estadoChartCanvas?.nativeElement) {
       const ctx = this.estadoChartCanvas.nativeElement.getContext('2d');
       if (ctx) {
-        this.estadoChart?.destroy();
         const data = [
           this.fichasBorrador(),
           this.fichasEnviadas(),
@@ -245,16 +254,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 ? ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
                 : ['#e2e8f0'],
               borderWidth: 2,
-              borderColor: '#fff'
+              borderColor: '#ffffff',
+              hoverOffset: 6
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '70%',
             plugins: {
               legend: {
                 position: 'bottom',
-                labels: { font: { size: 11 }, usePointStyle: true, padding: 12 }
+                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 }
               }
             }
           }
@@ -262,13 +273,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     }
 
-    // --- Balance económico ---
-    // --- Nivel socioeconómico (calculado en front) ---
-    if (this.economiaChartCanvas) {
+    // 2. --- Balance Nivel Socioeconómico (Doughnut) ---
+    if (this.economiaChartCanvas?.nativeElement) {
       const ctx = this.economiaChartCanvas.nativeElement.getContext('2d');
       if (ctx) {
-        this.economiaChart?.destroy();
-
         const labels = this.economiaLabels();
         const data = this.economiaData();
         const tiene = data.some(v => v > 0);
@@ -283,16 +291,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 ? ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#10b981']
                 : ['#e2e8f0'],
               borderWidth: 2,
-              borderColor: '#fff'
+              borderColor: '#ffffff',
+              hoverOffset: 6
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '70%',
             plugins: {
               legend: {
                 position: 'bottom',
-                labels: { font: { size: 11 }, usePointStyle: true, padding: 12 }
+                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 }
               }
             }
           }
@@ -300,11 +310,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     }
 
-    // --- Por carrera (barras horizontales) ---
-    if (this.carreraChartCanvas) {
+    // 3. --- Distribución por Carrera (Barras Horizontales) ---
+    if (this.carreraChartCanvas?.nativeElement) {
       const ctx = this.carreraChartCanvas.nativeElement.getContext('2d');
       if (ctx) {
-        this.carreraChart?.destroy();
         const labels = this.carrerasLabels();
         const enviadas = this.carrerasEnviadas();
         const validadas = this.carrerasValidadas();
@@ -319,13 +328,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 label: 'Enviadas',
                 data: tiene ? enviadas : [0],
                 backgroundColor: '#8b5cf6',
-                borderRadius: 6
+                borderRadius: 6,
+                barThickness: 14
               },
               {
                 label: 'Validadas',
                 data: tiene ? validadas : [0],
                 backgroundColor: '#10b981',
-                borderRadius: 6
+                borderRadius: 6,
+                barThickness: 14
               }
             ]
           },
@@ -335,13 +346,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                position: 'bottom',
-                labels: { font: { size: 11 }, usePointStyle: true }
+                position: 'top',
+                align: 'end',
+                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 12 }
               }
             },
             scales: {
-              x: { beginAtZero: true, ticks: { precision: 0 } },
-              y: { grid: { display: false } }
+              x: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { precision: 0, font: { size: 11 } }
+              },
+              y: {
+                grid: { display: false },
+                ticks: {
+                  font: { size: 11, weight: 600 },
+                  callback: function(value) {
+                    const label = this.getLabelForValue(value as number) || '';
+                    return label.length > 24 ? label.substring(0, 24) + '…' : label;
+                  }
+                }
+              }
             }
           }
         });
@@ -349,7 +374,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Porcentaje de una condición respecto al total NEE */
   pctCondicion(total: number): number {
     const t = this.totalNee();
     if (!t) return 0;

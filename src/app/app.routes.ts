@@ -1,28 +1,38 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard'; 
+import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { perfilCompletoGuard } from './core/guards/perfil-completo.guard';
 
+/**
+ * Matriz de Configuración de Rutas Principales de AzuayCare
+ */
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' }, 
-
+  { 
+    path: '', 
+    redirectTo: 'login', 
+    pathMatch: 'full' 
+  },
   { 
     path: 'login', 
     loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent)
   },
-
   {
     path: 'completar-perfil',
     loadComponent: () => import('./features/login/completar-perfil/completar-perfil').then(m => m.CompletarPerfilComponent),
     canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])]
   },
 
+  /* RUTA RAÍZ: ADMINISTRACIÓN / COORDINACIÓN */
   { 
     path: 'admin',
     loadComponent: () => import('./features/admin/layout/admin-layout.component').then(m => m.AdminLayoutComponent),
     canActivate: [authGuard, roleGuard(['COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'])], 
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { 
+        path: '', 
+        redirectTo: 'dashboard', 
+        pathMatch: 'full' 
+      },
       { 
         path: 'dashboard', 
         loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.DashboardComponent)
@@ -60,6 +70,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/revision/revision.component').then(m => m.RevisionComponent)
       },
       {
+        path: 'revision-fichas/:id',
+        loadComponent: () => import('./features/admin/revision-detalle/revision-detalle').then(m => m.RevisionDetalleComponent)
+      },
+      {
         path: 'usuarios',
         loadComponent: () => import('./features/admin/usuarios/usuarios.component').then(m => m.UsuariosComponent)
       },
@@ -69,28 +83,33 @@ export const routes: Routes = [
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
-        // 🔥 NUEVA RUTA DE PRIORIDAD
         path: 'prioridad-atencion',
         loadComponent: () => import('./features/admin/prioridad-atencion/prioridad-atencion').then(m => m.PrioridadAtencionComponent),
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
       },
       {
-        path: 'revision-fichas/:id',
-        loadComponent: () => import('./features/admin/revision-detalle/revision-detalle').then(m => m.RevisionDetalleComponent)
+        path: 'perfil',
+        loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
       },
       {
         path: 'perfil-coordinador',
-        loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
+        redirectTo: 'perfil',
+        pathMatch: 'full'
       }
     ]
   },
 
+  /* RUTA RAÍZ: ESTUDIANTE */
   {
     path: 'estudiante',
     loadComponent: () => import('./features/estudiante/layout/estudiante-layout.component').then(m => m.EstudianteLayoutComponent),
     canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO']), perfilCompletoGuard],
     children: [
-      { path: '', redirectTo: 'inicio', pathMatch: 'full' },
+      { 
+        path: '', 
+        redirectTo: 'inicio', 
+        pathMatch: 'full' 
+      },
       {
         path: 'inicio',
         loadComponent: () => import('./features/estudiante/inicio/estudiante-inicio.component').then(m => m.EstudianteInicioComponent)
@@ -106,9 +125,13 @@ export const routes: Routes = [
       {
         path: 'perfil',
         loadComponent: () => import('./shared/perfil/perfil.component').then(m => m.PerfilComponent)
-      },
+      }
     ]
   },
 
-  { path: '**', redirectTo: 'login' }
+  /* RUTA COMODÍN (RUTAS NO EXISTENTES) */
+  { 
+    path: '**', 
+    redirectTo: 'login' 
+  }
 ];

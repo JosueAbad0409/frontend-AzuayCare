@@ -1,124 +1,261 @@
-<div class="perfil-page">
-  <section class="perfil-header">
-    <div class="avatar-wrapper">
-      @if (usuario()?.foto_url) {
-        <img [src]="usuario()?.foto_url" alt="Foto de perfil" class="avatar-img" />
-      } @else {
-        <div class="avatar-fallback">{{ iniciales() }}</div>
-      }
+<main class="perfil-layout">
+  <div class="perfil-container">
+    
+    <!-- HEADER TIPO "HERO PROFILE" CENTRADO -->
+    <header class="hero-profile">
+      <!-- Portada (Cover) -->
+      <div class="hero-cover"></div>
+      
+      <!-- Contenido del perfil centrado -->
+      <div class="hero-body">
+        <div class="avatar-wrapper">
+          @if (fotoUrl()) {
+            <img [src]="fotoUrl()" [alt]="'Foto de perfil de ' + (usuario()?.nombre || 'usuario')" class="avatar-img" />
+          } @else {
+            <div class="avatar-fallback" aria-hidden="true">{{ iniciales() }}</div>
+          }
 
-      <button type="button" class="avatar-edit-btn" (click)="abrirSelectorFoto()"
-        [disabled]="subiendoFoto()" title="Cambiar foto de perfil">
-        @if (subiendoFoto()) { <i class="fas fa-spinner fa-spin"></i> }
-        @else { <i class="fas fa-camera"></i> }
-      </button>
+          <button 
+            type="button" 
+            class="avatar-edit-btn" 
+            (click)="abrirSelectorFoto()"
+            [disabled]="subiendoFoto()" 
+            aria-label="Cambiar foto de perfil"
+            title="Cambiar foto de perfil"
+          >
+            @if (subiendoFoto()) {
+              <span class="spinner-icon" aria-hidden="true"></span>
+            } @else {
+              <svg class="icon-camera" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            }
+          </button>
+          <input #fotoInput type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" (change)="onFotoSeleccionada($event)" />
+        </div>
 
-      <input #fotoInput type="file" accept="image/png,image/jpeg,image/webp"
-        class="hidden-input" (change)="onFotoSeleccionada($event)" />
-    </div>
-
-    <div class="header-texto">
-      <h1>{{ usuario()?.nombre }}</h1>
-      <p class="correo">{{ usuario()?.email }}</p>
-      <span class="rol-chip">{{ etiquetaRol() }}</span>
-    </div>
-  </section>
-
-  @if (errorFoto()) {
-    <div class="alerta alerta-error"><i class="fas fa-exclamation-circle"></i> {{ errorFoto() }}</div>
-  }
-
-  <section class="perfil-grid">
-    <div class="perfil-card">
-      <h2><i class="fas fa-id-card"></i> Información de la cuenta</h2>
-      <div class="campo-info">
-        <span class="etiqueta">Nombre completo</span>
-        <span class="valor">{{ usuario()?.nombre }}</span>
-      </div>
-      <div class="campo-info">
-        <span class="etiqueta">Correo institucional</span>
-        <span class="valor">{{ usuario()?.email }}</span>
-      </div>
-      <div class="campo-info">
-        <span class="etiqueta">Rol</span>
-        <span class="valor">{{ etiquetaRol() }}</span>
-      </div>
-    </div>
-
-    @if (esEstudianteOInvitado()) {
-      <div class="perfil-card">
-        <h2><i class="fas fa-graduation-cap"></i> Información académica</h2>
-        @if (cargandoAcademico()) {
-          <p class="texto-carga">Cargando información académica...</p>
-        } @else {
-          <div class="campo-info">
-            <span class="etiqueta">Cédula</span>
-            <span class="valor">{{ usuario()?.cedula || 'No registrada' }}</span>
+        <div class="hero-info">
+          <div class="role-badge">
+            <span class="badge-dot" aria-hidden="true"></span>
+            <span>{{ etiquetaRol() }}</span>
           </div>
-          @if (usuario()?.rol === 'ESTUDIANTE') {
-            <div class="campo-info">
-              <span class="etiqueta">Carrera</span>
-              <span class="valor">{{ nombreCarrera() }}</span>
+          <h1 class="user-name">{{ usuario()?.nombre || 'Usuario' }}</h1>
+          <p class="user-email">{{ usuario()?.email || 'Sin correo registrado' }}</p>
+        </div>
+      </div>
+    </header>
+
+    @if (errorFoto()) {
+      <div class="alert alert-error" role="alert">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span>{{ errorFoto() }}</span>
+      </div>
+    }
+
+    <!-- STACK DE TARJETAS (1 Sola Columna Centrada) -->
+    <section class="cards-stack">
+
+      <!-- 1. Tarjeta: Información de Cuenta -->
+      <article class="perfil-card">
+        <header class="card-header">
+          <div class="header-title">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+              <circle cx="9" cy="10" r="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M15 8h2m-2 4h2m-8 4h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <h2>Información de la Cuenta</h2>
+          </div>
+        </header>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Nombre completo</span>
+            <span class="info-value">{{ usuario()?.nombre || 'No especificado' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Correo institucional</span>
+            <span class="info-value">{{ usuario()?.email || 'No especificado' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Rol asignado</span>
+            <span class="info-value">{{ etiquetaRol() }}</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2. Tarjeta: Información Académica (Estudiantes/Invitados) -->
+      @if (esEstudianteOInvitado()) {
+        <article class="perfil-card">
+          <header class="card-header">
+            <div class="header-title">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <h2>Información Académica</h2>
             </div>
-            <div class="campo-info">
-              <span class="etiqueta">Ciclo</span>
-              <span class="valor">{{ nombreCiclo() }}</span>
+          </header>
+
+          @if (cargandoAcademico()) {
+            <div class="loading-state" aria-busy="true">
+              <div class="spinner-small" aria-hidden="true"></div>
+              <span>Cargando datos académicos...</span>
+            </div>
+          } @else {
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Cédula de Identidad</span>
+                <span class="info-value">{{ usuario()?.cedula || 'No registrada' }}</span>
+              </div>
+              @if (usuario()?.rol === 'ESTUDIANTE') {
+                <div class="info-item">
+                  <span class="info-label">Carrera activa</span>
+                  <span class="info-value">{{ nombreCarrera() }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Ciclo actual</span>
+                  <span class="info-value">{{ nombreCiclo() }}</span>
+                </div>
+              }
             </div>
           }
-        }
-        <p class="nota-ayuda"><i class="fas fa-info-circle"></i> ¿Necesitas corregir estos datos? Contacta a Bienestar Estudiantil.</p>
-      </div>
-    }
 
-    @if (esCoordinador()) {
-      <div class="perfil-card perfil-card-ancho">
-        <h2><i class="fas fa-briefcase"></i> Información de coordinación</h2>
+          <footer class="card-help">
+            <svg class="help-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 16v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>¿Inconsistencias en los datos? Solicita una rectificación en Bienestar Estudiantil.</span>
+          </footer>
+        </article>
+      }
 
-        @if (cargandoPerfilCoordinador()) {
-          <p class="texto-carga">Cargando tu información...</p>
-        } @else {
-          <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador()" class="form-coordinador">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="titulo">Título profesional</label>
-                <input id="titulo" type="text" formControlName="titulo_profesional" class="form-control" placeholder="Ej. Psicóloga Clínica" />
-              </div>
-              <div class="form-group">
-                <label for="telefono">Teléfono de contacto</label>
-                <input id="telefono" type="text" formControlName="telefono_contacto" class="form-control" placeholder="Ej. 0987654321" />
-              </div>
-              <div class="form-group">
-                <label for="correo">Correo de contacto</label>
-                <input id="correo" type="email" formControlName="correo_contacto" class="form-control" placeholder="correo@azuay.edu.ec" />
-                @if (coordinadorForm.get('correo_contacto')?.invalid && coordinadorForm.get('correo_contacto')?.touched) {
-                  <span class="hint-error">Ingresa un correo válido.</span>
+      <!-- 3. Tarjeta: Gestión de Coordinación -->
+      @if (esCoordinador()) {
+        <article class="perfil-card">
+          <header class="card-header header-with-action">
+            <div class="header-title">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <h2>Información de Coordinación</h2>
+            </div>
+            
+            @if (!cargandoPerfilCoordinador()) {
+              <button 
+                type="button" 
+                class="btn-outline-small" 
+                (click)="toggleEdicionCoordinador()"
+                [attr.aria-expanded]="modoEdicionCoordinador()"
+              >
+                @if (modoEdicionCoordinador()) {
+                  <span>Cancelar edición</span>
+                } @else {
+                  <svg viewBox="0 0 24 24" fill="none" class="btn-icon-svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Editar perfil</span>
                 }
-              </div>
-              <div class="form-group">
-                <label for="ubicacion">Ubicación de oficina</label>
-                <input id="ubicacion" type="text" formControlName="ubicacion_oficina" class="form-control" placeholder="Ej. Bloque A, oficina 203" />
-              </div>
-              <div class="form-group">
-                <label for="horario">Horario de atención</label>
-                <input id="horario" type="text" formControlName="horario_atencion" class="form-control" placeholder="Ej. Lunes a viernes, 8h00-16h00" />
-              </div>
+              </button>
+            }
+          </header>
+
+          @if (cargandoPerfilCoordinador()) {
+            <div class="loading-state" aria-busy="true">
+              <div class="spinner-small" aria-hidden="true"></div>
+              <span>Cargando perfil de atención...</span>
             </div>
+          } @else {
+            
+            <!-- VISTA DE LECTURA PREMIUM -->
+            @if (!modoEdicionCoordinador()) {
+              <div class="coordinator-view-grid">
+                <div class="data-block">
+                  <span class="info-label">Título profesional</span>
+                  <span class="info-value">{{ coordinadorForm.get('titulo_profesional')?.value || 'No especificado' }}</span>
+                </div>
+                <div class="data-block">
+                  <span class="info-label">Teléfono de contacto</span>
+                  <span class="info-value">{{ coordinadorForm.get('telefono_contacto')?.value || 'No especificado' }}</span>
+                </div>
+                <div class="data-block">
+                  <span class="info-label">Ubicación de oficina</span>
+                  <span class="info-value">{{ coordinadorForm.get('ubicacion_oficina')?.value || 'No especificado' }}</span>
+                </div>
+                <div class="data-block">
+                  <span class="info-label">Horario de atención</span>
+                  <span class="info-value">{{ coordinadorForm.get('horario_atencion')?.value || 'No especificado' }}</span>
+                </div>
+                
+                <div class="data-block full-width message-box">
+                  <span class="info-label">Mensaje institucional para estudiantes</span>
+                  <p class="info-value-text">{{ coordinadorForm.get('mensaje_ayuda_estudiantes')?.value || 'Sin mensaje configurado.' }}</p>
+                </div>
+              </div>
+              
+              @if (mensajeExitoCoordinador()) {
+                <div class="alert alert-success mt-15" role="status">
+                  <span>{{ mensajeExitoCoordinador() }}</span>
+                </div>
+              }
 
-            <div class="form-group">
-              <label for="mensaje">Mensaje para estudiantes</label>
-              <textarea id="mensaje" rows="3" formControlName="mensaje_ayuda_estudiantes" class="form-control"
-                placeholder="Escribe un mensaje de bienvenida o ayuda para tus estudiantes..."></textarea>
-            </div>
+            <!-- FORMULARIO DE EDICIÓN -->
+            } @else {
+              <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador()" class="coordinator-form" novalidate>
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="titulo">Título profesional</label>
+                    <input id="titulo" type="text" formControlName="titulo_profesional" class="input-control" placeholder="Ej. Mg. Psicología Educativa" />
+                  </div>
 
-            @if (errorCoordinador()) { <div class="alerta alerta-error">{{ errorCoordinador() }}</div> }
-            @if (mensajeExitoCoordinador()) { <div class="alerta alerta-exito">{{ mensajeExitoCoordinador() }}</div> }
+                  <div class="form-field">
+                    <label for="telefono">Teléfono de contacto</label>
+                    <input id="telefono" type="tel" formControlName="telefono_contacto" class="input-control" placeholder="Ej. 0987654321" />
+                  </div>
 
-            <button type="submit" class="btn-guardar" [disabled]="guardandoCoordinador()">
-              @if (guardandoCoordinador()) { <span>Guardando...</span> } @else { <span>Guardar cambios</span> }
-            </button>
-          </form>
-        }
-      </div>
-    }
-  </section>
-</div>
+                  <div class="form-field full-row">
+                    <label for="ubicacion">Ubicación de oficina</label>
+                    <input id="ubicacion" type="text" formControlName="ubicacion_oficina" class="input-control" placeholder="Ej. Bloque A - Oficina 102" />
+                  </div>
+
+                  <div class="form-field full-row">
+                    <label for="horario">Horario de atención al estudiante</label>
+                    <input id="horario" type="text" formControlName="horario_atencion" class="input-control" placeholder="Ej. Lunes a Viernes, 08h00 - 16h00" />
+                  </div>
+
+                  <div class="form-field full-row">
+                    <label for="mensaje">Mensaje institucional para estudiantes</label>
+                    <textarea id="mensaje" rows="4" formControlName="mensaje_ayuda_estudiantes" class="input-control textarea-control" placeholder="Escribe un mensaje de orientación o bienvenida para los estudiantes..."></textarea>
+                  </div>
+                </div>
+
+                @if (errorCoordinador()) {
+                  <div class="alert alert-error" role="alert">
+                    <span>{{ errorCoordinador() }}</span>
+                  </div>
+                }
+
+                <div class="form-actions">
+                  <button type="button" class="btn-secondary" (click)="toggleEdicionCoordinador()">Cancelar</button>
+                  <button type="submit" class="btn-primary" [disabled]="guardandoCoordinador()">
+                    @if (guardandoCoordinador()) {
+                      <span class="spinner-small white" aria-hidden="true"></span>
+                      <span>Guardando...</span>
+                    } @else {
+                      <span>Guardar perfil</span>
+                    }
+                  </button>
+                </div>
+              </form>
+            }
+          }
+        </article>
+      }
+    </section>
+  </div>
+</main>

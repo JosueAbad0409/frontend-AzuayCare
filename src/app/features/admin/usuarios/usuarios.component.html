@@ -1,163 +1,243 @@
-<div class="carreras-card animate-fade-in">
-  <!-- CABECERA -->
-  <div class="header-section">
-    <div>
-      <h3 class="title">Gestión de Usuarios y Coordinaciones</h3>
-      <p class="subtitle">Administra los roles del sistema y asigna coordinadores a sus respectivas carreras.</p>
+<main class="usuarios-container animate-fade-in">
+  <!-- CABECERA DE LA PÁGINA -->
+  <header class="page-header">
+    <div class="header-text">
+      <h1 class="page-title">Gestión de Usuarios y Coordinaciones</h1>
+      <p class="page-subtitle">Administra los roles del sistema y asigna coordinadores a sus respectivas carreras.</p>
     </div>
     
-    <button type="button" class="btn btn-purple" (click)="abrirModalAsignar()">
-      <i class="fas fa-user-tag"></i> Asignar Coordinador a Carrera
+    <button type="button" class="btn btn-primary" (click)="abrirModalAsignar()">
+      <i class="fas fa-user-tag" aria-hidden="true"></i>
+      <span>Asignar Coordinador a Carrera</span>
     </button>
-  </div>
+  </header>
 
-  <!-- BARRA DE BÚSQUEDA Y CONTADOR -->
+  <!-- BARRA DE BÚSQUEDA Y METRICAS -->
   @if (!isLoading()) {
-    <div class="search-bar-wrapper">
-      <div class="search-input-box">
-        <i class="fas fa-search search-icon"></i>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="fas fa-search search-icon" aria-hidden="true"></i>
         <input 
-          type="text" 
+          type="search" 
           placeholder="Buscar por correo, nombre o apellido..." 
           [value]="searchTerm()"
           (input)="onSearchChange($event)"
-          class="search-control"
+          class="search-input"
+          aria-label="Buscar usuarios por nombre, apellido o correo"
         />
       </div>
 
-      <span class="count-badge">Total: {{ usuariosFiltrados().length }} Usuario(s)</span>
+      <div class="count-badge" role="status" aria-live="polite">
+        <span class="count-label">Total:</span>
+        <strong class="count-value">{{ usuariosFiltrados().length }} Usuario(s)</strong>
+      </div>
     </div>
   }
 
   <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
-    <div class="loading-state">
-      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
-      <p>Cargando usuarios y asignaciones...</p>
+    <div class="state-card loading-state" role="alert" aria-busy="true">
+      <i class="fas fa-circle-notch fa-spin spinner-icon" aria-hidden="true"></i>
+      <p class="state-title">Cargando datos del sistema...</p>
+      <p class="state-desc">Obteniendo la lista de usuarios, carreras y coordinaciones activas.</p>
     </div>
   } @else {
-    <!-- TABLA 1: DIRECTORIO DE USUARIOS -->
-    <h4 class="section-table-title">Directorio General de Usuarios</h4>
-    <div class="table-container">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th class="col-usuario">Nombre Completo</th>
-            <th class="col-correo">Correo Institucional</th>
-            <th class="col-cedula">Cédula</th>
-            <th class="col-rol">Rol Asignado</th>
-            <th class="col-carrera">Carrera Asignada</th>
+    
+    <!-- SECCIÓN 1: DIRECTORIO DE USUARIOS -->
+    <section class="table-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fas fa-users title-icon" aria-hidden="true"></i> Directora General de Usuarios
+        </h2>
+      </div>
 
-            <!-- FILTRO DESPLEGABLE DE ESTADO EN EL ENCABEZADO -->
-            <th class="col-acc">
-              <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
-                <option value="ACTIVOS">ACTIVOS</option>
-                <option value="INACTIVOS">INACTIVOS</option>
-                <option value="TODOS">TODOS</option>
-              </select>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of usuariosFiltrados(); track u.id) {
-            <tr>
-              <td>
-                <strong>{{ u.primer_nombre }} {{ u.primer_apellido }}</strong>
-                @if (u.fecha_desactivacion) {
-                  <span class="badge-inactivo">Inactivo</span>
-                }
-              </td>
-              <td style="color: var(--text-muted);">{{ u.email_institucional }}</td>
-              <td>{{ u.cedula || 'N/A' }}</td>
-              <td>
-                <span class="badge" [ngClass]="{
-                  'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR',
-                  'badge-blue': u.rol?.nombre === 'COORDINADOR_CARRERA',
-                  'badge-success': u.rol?.nombre === 'ESTUDIANTE'
-                }">
-                  {{ u.rol?.nombre || 'ESTUDIANTE' }}
-                </span>
-              </td>
-              <td>
-                <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">
-                  {{ getCarreraNombreDeAsignacion(u.id) }}
-                </span>
-              </td>
-              <td style="text-align: right;">
-                <div class="actions-wrapper">
-                  <button type="button" class="btn-icon text-blue" (click)="abrirModalEditar(u)" title="Editar Información">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  @if (!u.fecha_desactivacion) {
-                    <button type="button" class="btn-icon text-red" (click)="eliminarUsuario(u.id)" title="Desactivar Usuario">
-                      <i class="fas fa-user-minus"></i>
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="6" class="empty-state">
-                <i class="fas fa-users-slash empty-icon"></i>
-                <p style="font-weight: 600;">No se encontraron usuarios que coincidan con los criterios seleccionados.</p>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col" class="col-usuario">Nombre Completo</th>
+                <th scope="col" class="col-correo">Correo Institucional</th>
+                <th scope="col" class="col-cedula">Cédula</th>
+                <th scope="col" class="col-rol">Rol Asignado</th>
+                <th scope="col" class="col-carrera">Carrera Asignada</th>
+                <th scope="col" class="col-acc text-right">
+                  <div class="filter-select-wrapper">
+                    <select 
+                      [value]="filtroEstado()" 
+                      (change)="onEstadoChange($event)" 
+                      class="table-filter-select" 
+                      title="Filtrar directorio por estado del usuario"
+                      aria-label="Filtrar directorio por estado"
+                    >
+                      <option value="ACTIVOS">ACTIVOS</option>
+                      <option value="INACTIVOS">INACTIVOS</option>
+                      <option value="TODOS">TODOS</option>
+                    </select>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of usuariosFiltrados(); track u.id) {
+                <tr [class.is-inactive]="u.fecha_desactivacion">
+                  <td class="col-usuario">
+                    <div class="user-identity">
+                      <span class="user-fullname">{{ u.primer_nombre }} {{ u.primer_apellido }}</span>
+                      @if (u.fecha_desactivacion) {
+                        <span class="badge badge-inactivo">Inactivo</span>
+                      }
+                    </div>
+                  </td>
+                  <td class="col-correo text-muted">{{ u.email_institucional }}</td>
+                  <td class="col-cedula font-mono">{{ u.cedula || 'N/A' }}</td>
+                  <td class="col-rol">
+                    <span class="badge" [ngClass]="{
+                      'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR',
+                      'badge-blue': u.rol?.nombre === 'COORDINADOR_CARRERA',
+                      'badge-success': u.rol?.nombre === 'ESTUDIANTE'
+                    }">
+                      {{ u.rol?.nombre || 'ESTUDIANTE' }}
+                    </span>
+                  </td>
+                  <td class="col-carrera text-muted font-medium">
+                    {{ getCarreraNombreDeAsignacion(u.id) }}
+                  </td>
+                  <td class="col-acc text-right">
+                    <div class="actions-wrapper">
+                      <button 
+                        type="button" 
+                        class="btn-icon btn-icon-blue" 
+                        (click)="abrirModalEditar(u)" 
+                        [attr.aria-label]="'Editar usuario ' + u.primer_nombre + ' ' + u.primer_apellido"
+                        title="Editar Información"
+                      >
+                        <i class="fas fa-edit" aria-hidden="true"></i>
+                      </button>
 
-    <!-- TABLA 2: ASIGNACIONES ACTIVAS DE COORDINACIÓN -->
-    <h4 class="section-table-title">Asignaciones Activas de Coordinación</h4>
-    <div class="table-container">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th class="col-asig-coord">Coordinador</th>
-            <th class="col-asig-carr">Carrera Asignada</th>
-            <th class="col-asig-ini">Fecha Inicio</th>
-            <th class="col-asig-fin">Fecha Fin</th>
-            <th class="col-asig-acc">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (asig of asignaciones(); track asig.usuario_id + '_' + asig.carrera_id) {
-            <tr>
-              <td><strong>{{ asig.usuario?.primer_nombre }} {{ asig.usuario?.primer_apellido }}</strong></td>
-              <td><span class="badge badge-blue">{{ asig.carrera?.nombre }}</span></td>
-              <td style="color: var(--text-muted);">{{ asig.fecha_inicio | date:'dd/MM/yyyy' }}</td>
-              <td style="color: var(--text-muted);">{{ asig.fecha_fin ? (asig.fecha_fin | date:'dd/MM/yyyy') : 'Indefinido' }}</td>
-              <td style="text-align: right;">
-                <div class="actions-wrapper">
-                  <button type="button" class="btn-icon text-red" (click)="desasignar(asig.usuario_id, asig.carrera_id)" title="Remover Asignación">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="5" class="empty-state">
-                <i class="fas fa-folder-open empty-icon"></i>
-                <p style="font-weight: 600;">No existen asignaciones de coordinación activas actualmente.</p>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+                      @if (!u.fecha_desactivacion) {
+                        <button 
+                          type="button" 
+                          class="btn-icon btn-icon-red" 
+                          (click)="eliminarUsuario(u.id)" 
+                          [attr.aria-label]="'Desactivar usuario ' + u.primer_nombre + ' ' + u.primer_apellido"
+                          title="Desactivar Usuario"
+                        >
+                          <i class="fas fa-user-minus" aria-hidden="true"></i>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6">
+                    <div class="state-card empty-state">
+                      <i class="fas fa-users-slash empty-icon" aria-hidden="true"></i>
+                      <p class="state-title">No se encontraron usuarios</p>
+                      <p class="state-desc">Intenta ajustar la búsqueda o los filtros de estado aplicados.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: ASIGNACIONES ACTIVAS -->
+    <section class="table-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fas fa-sitemap title-icon" aria-hidden="true"></i> Asignaciones Activas de Coordinación
+        </h2>
+      </div>
+
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col" class="col-asig-coord">Coordinador</th>
+                <th scope="col" class="col-asig-carr">Carrera Asignada</th>
+                <th scope="col" class="col-asig-ini">Fecha Inicio</th>
+                <th scope="col" class="col-asig-fin">Fecha Fin</th>
+                <th scope="col" class="col-asig-acc text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (asig of asignaciones(); track asig.usuario_id + '_' + asig.carrera_id) {
+                <tr>
+                  <td class="col-asig-coord">
+                    <span class="user-fullname">{{ asig.usuario?.primer_nombre }} {{ asig.usuario?.primer_apellido }}</span>
+                  </td>
+                  <td class="col-asig-carr">
+                    <span class="badge badge-blue">{{ asig.carrera?.nombre }}</span>
+                  </td>
+                  <td class="col-asig-ini text-muted font-mono">{{ asig.fecha_inicio | date:'dd/MM/yyyy' }}</td>
+                  <td class="col-asig-fin text-muted font-mono">{{ asig.fecha_fin ? (asig.fecha_fin | date:'dd/MM/yyyy') : 'Indefinido' }}</td>
+                  <td class="col-asig-acc text-right">
+                    <div class="actions-wrapper">
+                      <button 
+                        type="button" 
+                        class="btn-icon btn-icon-red" 
+                        (click)="desasignar(asig.usuario_id, asig.carrera_id)" 
+                        [attr.aria-label]="'Remover asignación de ' + asig.usuario?.primer_nombre"
+                        title="Remover Asignación"
+                      >
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">
+                    <div class="state-card empty-state">
+                      <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+                      <p class="state-title">Sin asignaciones activas</p>
+                      <p class="state-desc">No existen coordinadores asignados a carreras actualmente.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   }
 
   <!-- MODAL ASIGNAR COORDINADOR -->
   @if (showModalAsignar()) {
-    <div class="modal-backdrop" (click)="showModalAsignar.set(false)" (keydown.escape)="showModalAsignar.set(false)" tabindex="0">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">Asignar Coordinador a Carrera</h3>
-        
-        <form [formGroup]="asignacionForm" (ngSubmit)="guardarAsignacion()">
-          <div class="form-group-modal">
-            <label for="asig-user" class="form-label-modal">Seleccionar Usuario Coordinador *</label>
+    <div 
+      class="modal-backdrop" 
+      (click)="showModalAsignar.set(false)" 
+      (keydown.escape)="showModalAsignar.set(false)" 
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="title-modal-asignar"
+    >
+      <div class="modal-dialog animate-pop" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3 id="title-modal-asignar" class="modal-title">Asignar Coordinador a Carrera</h3>
+          <button 
+            type="button" 
+            class="modal-close-btn" 
+            (click)="showModalAsignar.set(false)"
+            aria-label="Cerrar modal"
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <form [formGroup]="asignacionForm" (ngSubmit)="guardarAsignacion()" class="modal-body">
+          <div class="form-group">
+            <label for="asig-user" class="form-label">
+              Seleccionar Usuario Coordinador <span class="required-asterisk">*</span>
+            </label>
             <select id="asig-user" formControlName="usuario_id" class="form-control">
               <option value="">-- Seleccione Usuario --</option>
               @for (u of coordinadoresCarreraList(); track u.id) {
@@ -166,8 +246,10 @@
             </select>
           </div>
 
-          <div class="form-group-modal">
-            <label for="asig-carrera" class="form-label-modal">Seleccionar Carrera *</label>
+          <div class="form-group">
+            <label for="asig-carrera" class="form-label">
+              Seleccionar Carrera <span class="required-asterisk">*</span>
+            </label>
             <select id="asig-carrera" formControlName="carrera_id" class="form-control">
               <option value="">-- Seleccione Carrera --</option>
               @for (c of carreras(); track c.id) {
@@ -176,28 +258,43 @@
             </select>
           </div>
 
-          <div class="form-grid-modal">
-            <div class="form-group-modal">
-              <label for="asig-inicio" class="form-label-modal">Fecha Inicio *</label>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="asig-inicio" class="form-label">
+                Fecha Inicio <span class="required-asterisk">*</span>
+              </label>
               <input id="asig-inicio" type="date" formControlName="fecha_inicio" class="form-control">
             </div>
 
-            <div class="form-group-modal">
-              <label for="asig-fin" class="form-label-modal">Fecha Fin (Opcional)</label>
+            <div class="form-group">
+              <label for="asig-fin" class="form-label">Fecha Fin (Opcional)</label>
               <input id="asig-fin" type="date" formControlName="fecha_fin" class="form-control">
             </div>
           </div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline" (click)="showModalAsignar.set(false)" [disabled]="isSaving()">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="asignacionForm.invalid || isSaving()">
+          <footer class="modal-footer">
+            <button 
+              type="button" 
+              class="btn btn-outline" 
+              (click)="showModalAsignar.set(false)" 
+              [disabled]="isSaving()"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              class="btn btn-primary" 
+              [disabled]="asignacionForm.invalid || isSaving()"
+            >
               @if (isSaving()) {
-                <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                <span>Guardando...</span>
               } @else {
-                <i class="fas fa-save"></i> Guardar Asignación
+                <i class="fas fa-save" aria-hidden="true"></i>
+                <span>Guardar Asignación</span>
               }
             </button>
-          </div>
+          </footer>
         </form>
       </div>
     </div>
@@ -205,52 +302,97 @@
 
   <!-- MODAL EDITAR USUARIO -->
   @if (showModalEditar()) {
-    <div class="modal-backdrop" (click)="showModalEditar.set(false)" (keydown.escape)="showModalEditar.set(false)" tabindex="0">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">Editar Información de Usuario</h3>
-        
-        <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()">
-          <div class="form-grid-modal">
-            <div class="form-group-modal">
-              <label for="edit-nombre" class="form-label-modal">Primer Nombre *</label>
+    <div 
+      class="modal-backdrop" 
+      (click)="showModalEditar.set(false)" 
+      (keydown.escape)="showModalEditar.set(false)" 
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="title-modal-editar"
+    >
+      <div class="modal-dialog animate-pop" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3 id="title-modal-editar" class="modal-title">Editar Información de Usuario</h3>
+          <button 
+            type="button" 
+            class="modal-close-btn" 
+            (click)="showModalEditar.set(false)"
+            aria-label="Cerrar modal"
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()" class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="edit-nombre" class="form-label">
+                Primer Nombre <span class="required-asterisk">*</span>
+              </label>
               <input id="edit-nombre" type="text" formControlName="primer_nombre" class="form-control" placeholder="Ej. Juan">
             </div>
 
-            <div class="form-group-modal">
-              <label for="edit-apellido" class="form-label-modal">Primer Apellido *</label>
+            <div class="form-group">
+              <label for="edit-apellido" class="form-label">
+                Primer Apellido <span class="required-asterisk">*</span>
+              </label>
               <input id="edit-apellido" type="text" formControlName="primer_apellido" class="form-control" placeholder="Ej. Pérez">
             </div>
           </div>
 
-          <div class="form-group-modal">
-            <label for="edit-correo" class="form-label-modal">Correo Institucional *</label>
+          <div class="form-group">
+            <label for="edit-correo" class="form-label">
+              Correo Institucional <span class="required-asterisk">*</span>
+            </label>
             <input id="edit-correo" type="email" formControlName="email_institucional" class="form-control">
           </div>
 
-          <div class="form-grid-modal">
-            <div class="form-group-modal">
-              <label for="edit-cedula" class="form-label-modal">Cédula</label>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="edit-cedula" class="form-label">Cédula</label>
               <input id="edit-cedula" type="text" formControlName="cedula" class="form-control" placeholder="10 dígitos">
             </div>
 
-            <div class="form-group-modal">
-              <label for="edit-rol" class="form-label-modal">Rol Asignado</label>
-              <input id="edit-rol" type="text" formControlName="rol_nombre" class="form-control form-control-readonly" readonly title="El rol no se puede editar desde aquí">
+            <div class="form-group">
+              <label for="edit-rol" class="form-label">Rol Asignado</label>
+              <input 
+                id="edit-rol" 
+                type="text" 
+                formControlName="rol_nombre" 
+                class="form-control form-control-readonly" 
+                readonly 
+                title="El rol no se puede editar desde aquí"
+              >
+              <span class="input-hint">El rol es de solo lectura.</span>
             </div>
           </div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline" (click)="showModalEditar.set(false)" [disabled]="isSaving()">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="editarForm.invalid || isSaving()">
+          <footer class="modal-footer">
+            <button 
+              type="button" 
+              class="btn btn-outline" 
+              (click)="showModalEditar.set(false)" 
+              [disabled]="isSaving()"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              class="btn btn-primary" 
+              [disabled]="editarForm.invalid || isSaving()"
+            >
               @if (isSaving()) {
-                <i class="fas fa-circle-notch fa-spin"></i> Guardando...
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                <span>Guardando...</span>
               } @else {
-                <i class="fas fa-save"></i> Actualizar Usuario
+                <i class="fas fa-save" aria-hidden="true"></i>
+                <span>Actualizar Usuario</span>
               }
             </button>
-          </div>
+          </footer>
         </form>
       </div>
     </div>
   }
-</div>
+</main>
