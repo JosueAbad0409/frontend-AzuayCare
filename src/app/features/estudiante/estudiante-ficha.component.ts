@@ -36,6 +36,26 @@ export interface FormularioUI extends Formulario {
 
 const AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
 
+// Regex de UUID compartido (antes se recreaba en dos métodos distintos en cada llamada).
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+// Tabla de conversión a número romano (antes se recreaba en cada llamada a numeroRomano()).
+const VALORES_ROMANOS: ReadonlyArray<{ valor: number; simbolo: string }> = [
+  { valor: 1000, simbolo: 'M' },
+  { valor: 900, simbolo: 'CM' },
+  { valor: 500, simbolo: 'D' },
+  { valor: 400, simbolo: 'CD' },
+  { valor: 100, simbolo: 'C' },
+  { valor: 90, simbolo: 'XC' },
+  { valor: 50, simbolo: 'L' },
+  { valor: 40, simbolo: 'XL' },
+  { valor: 10, simbolo: 'X' },
+  { valor: 9, simbolo: 'IX' },
+  { valor: 5, simbolo: 'V' },
+  { valor: 4, simbolo: 'IV' },
+  { valor: 1, simbolo: 'I' }
+];
+
 /** Normaliza las variantes de ortografía que existen en datos históricos del backend. */
 function normalizarEstado(estado?: string | null): EstadoUI {
   switch (estado) {
@@ -134,7 +154,12 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return this.secciones().length > 0 && this.seccionActualIndex() === this.secciones().length;
   });
 
-  balance = computed(() => this.totalIngresos() - this.totalEgresos());
+  
+  // El balance nunca debe mostrarse negativo: si los egresos superan a los
+// ingresos, se muestra 0 en vez de un número negativo.
+balance = computed(() => Math.max(0, this.totalIngresos() - this.totalEgresos()));
+/** true cuando los egresos superan a los ingresos */
+egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos());
 
   seccionActualEsFinanciera = computed(() => {
     const sec = this.secciones()[this.seccionActualIndex()];
@@ -238,29 +263,64 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   validarSeccionActual(): boolean {
-    if (this.esPasoResumen() || !this.esEditable()) return true;
+  if (this.esPasoResumen() || !this.esEditable()) return true;
 
-    const seccionActual = this.secciones()[this.seccionActualIndex()];
-    if (!seccionActual) return true;
+  const seccionActual = this.secciones()[this.seccionActualIndex()];
+  if (!seccionActual) return true;
 
-    let esValido = true;
-    for (const preg of seccionActual.preguntas || []) {
-      if (this.esPreguntaVisible(preg.id)) {
-        const ctrl = this.respuestasGroup.get(preg.id);
-        if (ctrl && ctrl.invalid) {
-          ctrl.markAsTouched();
-          esValido = false;
-        }
+  let esValido = true;
 
-        if (preg.tipoCampo?.nombre === 'MATRIZ') {
-          const matGroup = this.matricesGroup.get(preg.id) as FormGroup;
-          if (matGroup && matGroup.invalid) {
-            matGroup.markAllAsTouched();
-            esValido = false;
-          }
-        }
+  // 🔥 Validación financiera: no se puede avanzar si egresos > ingresos
+  if (seccionActual.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+    this.toastService.show(
+      'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
+      'error'
+    );
+    return false;
+  }
+
+  for (const preg of seccionActual.preguntas || []) {
+    if (!this.esPreguntaVisible(preg.id)) continue;
+
+    if (!this.validarPreguntaIndividual(preg)) esValido = false;
+
+    // Subpreguntas disparadas por dependencia
+    for (const sub of this.getSubpreguntas(preg.id)) {
+      if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
+        esValido = false;
       }
     }
+  }
+
+  return esValido;
+}
+
+  /** Valida una pregunta individual (respuesta, matriz y evidencia obligatoria si aplica). Reutilizable para preguntas y subpreguntas. */
+  private validarPreguntaIndividual(preg: Pregunta): boolean {
+    let esValido = true;
+
+    const ctrl = this.respuestasGroup.get(preg.id);
+    if (ctrl && ctrl.invalid) {
+      ctrl.markAsTouched();
+      esValido = false;
+    }
+
+    if (preg.tipoCampo?.nombre === 'MATRIZ') {
+      const matGroup = this.matricesGroup.get(preg.id) as FormGroup;
+      if (matGroup && matGroup.invalid) {
+        matGroup.markAllAsTouched();
+        esValido = false;
+      }
+    }
+
+    if (preg.requiere_evidencia) {
+      const evidenciaCtrl = this.evidenciasGroup.get(preg.id);
+      if (evidenciaCtrl && evidenciaCtrl.invalid) {
+        evidenciaCtrl.markAsTouched();
+        esValido = false;
+      }
+    }
+
     return esValido;
   }
 
@@ -605,7 +665,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     if (!this.evidenciasGroup.contains(p.id)) {
       const savedEvidencia = this.autosaveData?.evidencias?.[p.id] ?? '';
-      this.evidenciasGroup.addControl(p.id, this.fb.control(savedEvidencia));
+      // 🔥 Si la pregunta (o subpregunta) requiere evidencia, se exige realmente en la validación.
+      const evidenciaValidators = p.requiere_evidencia ? [Validators.required] : [];
+      this.evidenciasGroup.addControl(p.id, this.fb.control(savedEvidencia, evidenciaValidators));
     }
 
     this.valormap.set(this.respuestasGroup.getRawValue());
@@ -816,8 +878,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       if (opc) return opc.texto_opcion;
     }
 
-    const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(val));
-    if (esUuid) return 'Opción seleccionada';
+    if (UUID_REGEX.test(String(val))) return 'Opción seleccionada';
 
     if (pregunta.tipoCampo?.nombre === 'FECHA' && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
       const [year, month, day] = val.split('-');
@@ -925,123 +986,132 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   guardarYEnviar(esFinal: boolean = true): void {
-    const ficha = this.fichaActiva();
-    if (!ficha) return;
+  const ficha = this.fichaActiva();
+  if (!ficha) return;
 
-    const ejecutar = () => {
-      this.enviando.set(true);
-
-      const respuestasValores = this.respuestasGroup.getRawValue();
-      const evidenciasValores = this.evidenciasGroup.getRawValue();
-      const payloadRespuestas: any[] = [];
-
-      Object.keys(respuestasValores).forEach(preguntaId => {
-        if (this.esPreguntaVisible(preguntaId)) {
-          let val = respuestasValores[preguntaId];
-          const evidenciaUrl = evidenciasValores[preguntaId];
-
-          const appendEvidencia = (baseText: string | null) => {
-            if (!evidenciaUrl) return baseText;
-            return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
-          };
-
-          if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
-
-          if (Array.isArray(val) && val.length > 0) {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val, valor_texto: appendEvidencia(null) });
-          } else if (typeof val === 'number') {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val, valor_texto: appendEvidencia(null) });
-          } else if (typeof val === 'boolean') {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val ? 'SI' : 'NO') });
-          } else if (typeof val === 'string' && val.trim() !== '') {
-            const esUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
-            if (esUuid) {
-              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
-            } else {
-              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
-            }
-          } else if (evidenciaUrl) {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
-          }
-        }
-      });
-
-      const matricesValores = this.matricesGroup.getRawValue();
-
-      Object.keys(matricesValores).forEach(preguntaId => {
-        if (this.esPreguntaVisible(preguntaId)) {
-          const filasObj = matricesValores[preguntaId];
-          const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
-
-          if (filasObj && typeof filasObj === 'object') {
-            Object.keys(filasObj).forEach(filaId => {
-              const columnasSeleccionadas = filasObj[filaId];
-              if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-                columnasSeleccionadas.forEach(columnaId => {
-                  respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
-                });
-              }
-            });
-          }
-
-          if (respuestasMatriz.length > 0) {
-            payloadRespuestas.push({
-              ficha_id: ficha.id,
-              pregunta_id: preguntaId,
-              respuestas_matriz: respuestasMatriz
-            });
-          }
-        }
-      });
-
-      this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
-        .pipe(
-          takeUntilDestroyed(this.destroyRef),
-          catchError(() => {
-            this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
-            this.enviando.set(false);
-            return of(null);
-          })
-        )
-        .subscribe(res => {
-          if (res !== null) {
-            if (esFinal) {
-              this.finalizarEnvio();
-            } else {
-              this.enviando.set(false);
-              this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
-            }
-          }
-        });
-    };
-
-    if (esFinal) {
-      const eraCorreccion = this.estadoActivoUI() === 'RECHAZADA';
-      Swal.fire({
-        title: eraCorreccion ? '¿Enviar la corrección de tu ficha?' : '¿Seguro que quieres terminar la ficha?',
-        text: eraCorreccion
-          ? 'Tu ficha corregida será enviada nuevamente a Bienestar Estudiantil para revisión.'
-          : 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#2563eb',
-        cancelButtonColor: '#e11d48',
-        confirmButtonText: eraCorreccion ? 'Sí, reenviar ficha' : 'Sí, terminar ficha',
-        cancelButtonText: 'Revisar de nuevo',
-        customClass: {
-          popup: 'rounded-2xl',
-          confirmButton: 'rounded-xl',
-          cancelButton: 'rounded-xl'
-        }
-      }).then((result) => {
-        if (result.isConfirmed) {
-          ejecutar();
-        }
-      });
-    } else {
-      ejecutar();
+  const ejecutar = () => {
+    // 1. Validar PRIMERO (antes de activar el loading)
+    if (this.egresosExcedenIngresos()) {
+      this.toastService.show(
+        'No puedes enviar la ficha: los egresos superan a los ingresos. Corrige la sección financiera.',
+        'error'
+      );
+      return;
     }
+
+    // 2. Solo si pasó la validación, activar el loading
+    this.enviando.set(true);
+
+    const respuestasValores = this.respuestasGroup.getRawValue();
+    const evidenciasValores = this.evidenciasGroup.getRawValue();
+    const payloadRespuestas: any[] = [];
+
+    Object.keys(respuestasValores).forEach(preguntaId => {
+      if (this.esPreguntaVisible(preguntaId)) {
+        let val = respuestasValores[preguntaId];
+        const evidenciaUrl = evidenciasValores[preguntaId];
+
+        const appendEvidencia = (baseText: string | null) => {
+          if (!evidenciaUrl) return baseText;
+          return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
+        };
+
+        if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
+
+        if (Array.isArray(val) && val.length > 0) {
+          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val, valor_texto: appendEvidencia(null) });
+        } else if (typeof val === 'number') {
+          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val, valor_texto: appendEvidencia(null) });
+        } else if (typeof val === 'boolean') {
+          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val ? 'SI' : 'NO') });
+        } else if (typeof val === 'string' && val.trim() !== '') {
+          if (UUID_REGEX.test(val)) {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
+          } else {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
+          }
+        } else if (evidenciaUrl) {
+          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
+        }
+      }
+    });
+
+    const matricesValores = this.matricesGroup.getRawValue();
+
+    Object.keys(matricesValores).forEach(preguntaId => {
+      if (this.esPreguntaVisible(preguntaId)) {
+        const filasObj = matricesValores[preguntaId];
+        const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
+
+        if (filasObj && typeof filasObj === 'object') {
+          Object.keys(filasObj).forEach(filaId => {
+            const columnasSeleccionadas = filasObj[filaId];
+            if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+              columnasSeleccionadas.forEach(columnaId => {
+                respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
+              });
+            }
+          });
+        }
+
+        if (respuestasMatriz.length > 0) {
+          payloadRespuestas.push({
+            ficha_id: ficha.id,
+            pregunta_id: preguntaId,
+            respuestas_matriz: respuestasMatriz
+          });
+        }
+      }
+    });
+
+    this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError(() => {
+          this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
+          this.enviando.set(false);
+          return of(null);
+        })
+      )
+      .subscribe(res => {
+        if (res !== null) {
+          if (esFinal) {
+            this.finalizarEnvio();
+          } else {
+            this.enviando.set(false);
+            this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
+          }
+        }
+      });
+  };
+
+  if (esFinal) {
+    const eraCorreccion = this.estadoActivoUI() === 'RECHAZADA';
+    Swal.fire({
+      title: eraCorreccion ? '¿Enviar la corrección de tu ficha?' : '¿Seguro que quieres terminar la ficha?',
+      text: eraCorreccion
+        ? 'Tu ficha corregida será enviada nuevamente a Bienestar Estudiantil para revisión.'
+        : 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#e11d48',
+      confirmButtonText: eraCorreccion ? 'Sí, reenviar ficha' : 'Sí, terminar ficha',
+      cancelButtonText: 'Revisar de nuevo',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        ejecutar();
+      }
+    });
+  } else {
+    ejecutar();
   }
+}
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
@@ -1092,26 +1162,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   numeroRomano(num: number): string {
     if (!num || num <= 0) return String(num);
 
-    const valores = [
-      { valor: 1000, simbolo: 'M' },
-      { valor: 900,  simbolo: 'CM' },
-      { valor: 500,  simbolo: 'D' },
-      { valor: 400,  simbolo: 'CD' },
-      { valor: 100,  simbolo: 'C' },
-      { valor: 90,   simbolo: 'XC' },
-      { valor: 50,   simbolo: 'L' },
-      { valor: 40,   simbolo: 'XL' },
-      { valor: 10,   simbolo: 'X' },
-      { valor: 9,    simbolo: 'IX' },
-      { valor: 5,    simbolo: 'V' },
-      { valor: 4,    simbolo: 'IV' },
-      { valor: 1,    simbolo: 'I' }
-    ];
-
     let resultado = '';
     let n = num;
 
-    for (const { valor, simbolo } of valores) {
+    for (const { valor, simbolo } of VALORES_ROMANOS) {
       while (n >= valor) {
         resultado += simbolo;
         n -= valor;

@@ -152,42 +152,4 @@
       </table>
     </div>
   }
-
-
-  <!-- MODAL CLONAR -->
-  @if (showCloneModal()) {
-    <div class="modal-backdrop" (click)="cerrarModales()" (keydown.escape)="cerrarModales()" tabindex="0">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()">
-        <h3 class="modal-title" style="margin-bottom: 0.5rem;">
-          Clonar Formulario / Crear Nueva Versión
-        </h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-          Se duplicará la estructura completa en estado <strong>BORRADOR</strong>.
-        </p>
-
-        <form [formGroup]="cloneFormGroup" (ngSubmit)="confirmarClonacion()">
-          <div class="form-group-modal" style="margin-bottom: 1.5rem;">
-            <label for="modal-periodo-destino" class="form-label-modal">Periodo Académico Destino *</label>
-            <select id="modal-periodo-destino" formControlName="periodo_destino_id" class="form-control">
-              <option value="">-- Selecciona el Periodo --</option>
-              @for (p of periodos(); track p.id) {
-                <option [value]="p.id">{{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline" (click)="cerrarModales()" [disabled]="isCloning()">Cancelar</button>
-            <button type="submit" class="btn btn-purple" [disabled]="cloneFormGroup.invalid || isCloning()">
-              @if (isCloning()) {
-                <i class="fas fa-circle-notch fa-spin"></i> Clonando...
-              } @else {
-                <i class="fas fa-copy"></i> Confirmar Clonación
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  }
 </div>

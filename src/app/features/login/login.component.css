@@ -96,95 +96,8 @@
   pointer-events: none;
 }
 
-.ficha-stack {
-  position: absolute;
-  top: 4rem;
-  right: 3.5rem;
-  width: 240px;
-  height: 200px;
-  z-index: 5;
-}
 
-.ficha-card {
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  padding: 1.1rem 1.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
 
-.ficha-back {
-  background: rgba(244, 247, 251, 0.08);
-  border: 1px solid rgba(244, 247, 251, 0.14);
-  transform: rotate(-9deg) translate(-6px, 10px);
-}
-
-.ficha-mid {
-  background: rgba(244, 247, 251, 0.14);
-  border: 1px solid rgba(244, 247, 251, 0.2);
-  transform: rotate(5deg) translate(10px, 4px);
-}
-
-.ficha-front {
-  background: #ffffff;
-  border: 1px solid rgba(16, 27, 45, 0.06);
-  box-shadow: 0 20px 40px -14px rgba(8, 14, 26, 0.45);
-  color: var(--ink-900);
-  transform: rotate(-2deg);
-  justify-content: space-between;
-}
-
-.ficha-front__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.ficha-tag {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--ink-500);
-}
-
-.ficha-status {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--accent-600);
-  background: var(--accent-100);
-  padding: 0.15rem 0.5rem;
-  border-radius: 100px;
-}
-
-.ficha-line {
-  display: block;
-  height: 6px;
-  border-radius: 4px;
-  background: var(--color-surface-alt);
-  width: 100%;
-}
-.ficha-line--s { width: 55%; }
-.ficha-line--m { width: 78%; }
-
-.ficha-front__foot {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.65rem;
-  color: var(--ink-500);
-  font-weight: 600;
-}
-
-.ficha-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #2f8f57;
-  flex-shrink: 0;
-}
 
 .visual-content {
   position: relative;
@@ -192,9 +105,51 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 4.5rem 4rem 5rem;
-  max-width: 560px;
+  justify-content: center; /* Centra verticalmente */
+  align-items: center;     /* Centra horizontalmente */
+  text-align: center;      /* Centra el texto */
+  padding: 3rem;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+/* Estilos para tu nueva imagen superior */
+.visual-center-image {
+  max-width: 180px; /* Ajusta este valor para hacer la imagen más grande o pequeña */
+  height: auto;
+  margin-bottom: 2.5rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); /* Sombra suave para que resalte */
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 247, 251, 0.75);
+  margin: 0 0 1.5rem;
+}
+
+.visual-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 4vw, 3.7rem);
+  font-weight: 600;
+  line-height: 1.1;
+  margin: 0 0 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.visual-title .highlight {
+  color: var(--accent-600);
+  filter: brightness(1.35);
+}
+
+.visual-subtitle {
+  font-size: 1.05rem;
+  color: rgba(244, 247, 251, 0.82);
+  line-height: 1.65;
+  max-width: 480px;
+  margin: 0;
 }
 
 .eyebrow {
@@ -507,25 +462,37 @@
 
 @media (max-width: 959px) {
   .visual-pane {
-    display: block;
-    height: 240px;
-    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    height: auto; /* Quitamos la altura fija que aplastaba todo */
+    min-height: auto;
+    padding: 2.5rem 0; /* Le damos aire por arriba y abajo */
   }
-  .ficha-stack {
-    top: 1.25rem;
-    right: 1.25rem;
-    width: 150px;
-    height: 130px;
-    transform: scale(0.85);
-    transform-origin: top right;
-  }
+  
   .visual-content {
-    padding: 1.5rem 1.5rem;
-    justify-content: flex-end;
+    padding: 1rem 1.5rem;
+    justify-content: center; /* Mantenemos el centrado vertical */
+    height: auto;
   }
-  .visual-title { font-size: 1.75rem; }
-  .visual-subtitle { display: none; }
-  .eyebrow { margin-bottom: 0.5rem; font-size: 0.7rem; }
+  
+  .visual-center-image {
+    max-width: 110px; /* Logo un poco más pequeño para móviles */
+    margin-bottom: 1.5rem;
+  }
+  
+  .eyebrow { 
+    margin-bottom: 0.5rem; 
+    font-size: 0.65rem; 
+  }
+  
+  .visual-title { 
+    font-size: 1.85rem; 
+    margin-bottom: 0; /* Quitamos el margen porque el subtítulo se oculta */
+  }
+  
+  .visual-subtitle { 
+    display: none; /* Ocultamos el subtítulo en móvil para mantenerlo limpio */
+  }
 }
 
 @media (max-width: 480px) {
@@ -544,20 +511,4 @@
     flex-direction: row;
     justify-content: center;
   }
-  .ficha-stack {
-    display: none;
-  }
-}
-
-@keyframes spin { to { transform: rotate(1turn); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 1.6s; }
-}
-
-:host ::ng-deep #googleBtn iframe:focus-visible,
-button:focus-visible,
-a:focus-visible {
-  outline: 3px solid var(--primary-600);
-  outline-offset: 2px;
 }

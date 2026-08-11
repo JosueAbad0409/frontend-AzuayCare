@@ -1,52 +1,141 @@
-import { Component, inject, signal, AfterViewInit, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  AfterViewInit,
+  OnInit,
+  ChangeDetectionStrategy,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { PrioridadAtencionService } from '../../../core/services/prioridad-atencion.service';
+import { environment } from '../../../../environments/environment';
 
 declare var gsap: any;
+
+interface MensajeChat {
+  rol: 'user' | 'bot';
+  texto: string;
+  fuentes?: Array<{
+    tool: string;
+    filas?: number;
+    consultado_en?: string;
+  }>;
+}
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './admin-layout.component.html',
   styleUrls: ['./admin-layout.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLayoutComponent implements OnInit, AfterViewInit {
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly prioridadService = inject(PrioridadAtencionService);
+  private readonly http = inject(HttpClient);
 
-  isSidebarCollapsed = signal<boolean>(false);
-  isSidebarOpenMobile = signal<boolean>(false);
-  casosAltoCount = signal<number>(0);
+  isSidebarCollapsed = signal(false);
+  isSidebarOpenMobile = signal(false);
+  casosAltoCount = signal(0);
+
+  chatAbierto = signal(false);
+  iaCargando = signal(false);
+  mensajes = signal<MensajeChat[]>([]);
+  promptActual = '';
+
+  private chatMessagesRef = viewChild<ElementRef<HTMLDivElement>>('chatMessages');
+
+  /** Unifica rol string u objeto { nombre } */
+  esCoordinadorBienestar = computed(() => {
+    const rol = this.authService.user()?.rol as any;
+    return rol === 'COORDINADOR_BIENESTAR' || rol?.nombre === 'COORDINADOR_BIENESTAR';
+  });
 
   ngOnInit(): void {
-  const user = this.authService.user();
-  const rol = user?.rol as any;
-  
-  const esCoordinadorBienestar = 
-    rol === 'COORDINADOR_BIENESTAR' || rol?.nombre === 'COORDINADOR_BIENESTAR';
-
-  if (esCoordinadorBienestar) {
-    this.cargarCasosAlto();
+    if (this.esCoordinadorBienestar()) {
+      this.cargarCasosAlto();
+    }
   }
-}
 
   ngAfterViewInit(): void {
     this.animateEntrance();
   }
 
   private cargarCasosAlto(): void {
-    this.prioridadService.getFichasPorPrioridad(0, 1, 'Alto').subscribe({
+    this.prioridadService.getFichasPorPrioridad(0, 1, 'CON_ALERTAS').subscribe({
       next: (res) => this.casosAltoCount.set(res?.total || 0),
-      error: (err) => {
-        console.error('Error al cargar casos con alta prioridad:', err);
-        this.casosAltoCount.set(0);
-      }
+      error: () => this.casosAltoCount.set(0),
     });
+  }
+
+  toggleChat(): void {
+    this.chatAbierto.update((v) => !v);
+  }
+
+  cerrarChat(): void {
+    this.chatAbierto.set(false);
+  }
+
+  enviarSugerencia(texto: string): void {
+    this.promptActual = texto;
+    this.enviarMensaje();
+  }
+
+  enviarMensaje(): void {
+  const texto = this.promptActual.trim();
+  if (!texto || this.iaCargando()) return;
+
+  this.mensajes.update((m) => [...m, { rol: 'user', texto }]);
+  this.promptActual = '';
+  this.iaCargando.set(true);
+  this.scrollChatAlFinal();
+
+  this.http
+    .post<{ response: string; fuentes?: any[] }>(
+      `${environment.apiUrl}/ia/chat`, // ajusta si tu ruta es /api/ia/chat
+      { prompt: texto },
+    )
+    .subscribe({
+      next: (res) => {
+        this.mensajes.update((m) => [
+          ...m,
+          {
+            rol: 'bot',
+            texto: res.response || 'Sin respuesta',
+            fuentes: res.fuentes || [],
+          },
+        ]);
+        this.iaCargando.set(false);
+        this.scrollChatAlFinal();
+      },
+      error: () => {
+        this.mensajes.update((m) => [
+          ...m,
+          {
+            rol: 'bot',
+            texto: 'No pude conectar con el asistente. Revisa la API o intenta de nuevo.',
+          },
+        ]);
+        this.iaCargando.set(false);
+        this.scrollChatAlFinal();
+      },
+    });
+}
+
+  private scrollChatAlFinal(): void {
+    setTimeout(() => {
+      const el = this.chatMessagesRef()?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 60);
   }
 
   private animateEntrance(): void {
@@ -56,16 +145,16 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
         opacity: 0,
         duration: 0.5,
         stagger: 0.08,
-        ease: 'power2.out'
+        ease: 'power2.out',
       });
     }
   }
 
   toggleSidebar(): void {
     if (typeof window !== 'undefined' && window.innerWidth <= 900) {
-      this.isSidebarOpenMobile.update(v => !v);
+      this.isSidebarOpenMobile.update((v) => !v);
     } else {
-      this.isSidebarCollapsed.update(val => !val);
+      this.isSidebarCollapsed.update((val) => !val);
     }
   }
 

@@ -51,7 +51,7 @@
           </button>
         </div>
 
-        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
           <ng-container *ngIf="preguntaId">
             <div *ngFor="let col of columnasExistentes; let i = index" class="flex justify-between items-center bg-slate-50 p-1.5 rounded border text-xs">
               <span class="truncate font-medium text-slate-700">{{ col.texto_columna }}</span>
@@ -94,7 +94,7 @@
           </button>
         </div>
 
-        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
           <ng-container *ngIf="preguntaId">
             <div *ngFor="let fila of filasExistentes; let i = index" class="flex justify-between items-center bg-slate-50 p-1.5 rounded border text-xs">
               <span class="truncate font-medium text-slate-700">{{ i + 1 }}. {{ fila.texto_fila }}</span>
@@ -128,14 +128,15 @@
           </span>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- AQUÍ ESTÁ LA MAGIA DEL SCROLL RESPONSIVO -->
+        <div class="w-full overflow-x-auto pb-4 custom-scrollbar">
           <table 
             class="w-full text-xs text-left border-collapse"
             *ngIf="(columnasTempArray.length > 0 || columnasExistentes.length > 0) && (filasTempArray.length > 0 || filasExistentes.length > 0); else emptyTable"
           >
             <thead>
               <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                <th class="p-2 border-r border-slate-200">Criterio / Evaluación</th>
+                <th class="p-2 border-r border-slate-200 min-w-[150px]">Criterio / Evaluación</th>
                 
                 <ng-container *ngIf="!preguntaId">
                   <th *ngFor="let colCtrl of columnasTempArray.controls" class="p-2 text-center border-r border-slate-200 min-w-[80px]">

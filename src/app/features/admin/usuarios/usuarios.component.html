@@ -19,7 +19,7 @@
         <i class="fas fa-search search-icon" aria-hidden="true"></i>
         <input 
           type="search" 
-          placeholder="Buscar por correo, nombre o apellido..." 
+          placeholder="Buscar por correo, nombre, apellido o cédula..." 
           [value]="searchTerm()"
           (input)="onSearchChange($event)"
           class="search-input"
@@ -95,7 +95,8 @@
                     <span class="badge" [ngClass]="{
                       'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR',
                       'badge-blue': u.rol?.nombre === 'COORDINADOR_CARRERA',
-                      'badge-success': u.rol?.nombre === 'ESTUDIANTE'
+                      'badge-success': u.rol?.nombre === 'ESTUDIANTE',
+                      
                     }">
                       {{ u.rol?.nombre || 'ESTUDIANTE' }}
                     </span>
@@ -110,7 +111,7 @@
                         class="btn-icon btn-icon-blue" 
                         (click)="abrirModalEditar(u)" 
                         [attr.aria-label]="'Editar usuario ' + u.primer_nombre + ' ' + u.primer_apellido"
-                        title="Editar Información"
+                        title="Editar Información y Rol"
                       >
                         <i class="fas fa-edit" aria-hidden="true"></i>
                       </button>
@@ -207,192 +208,5 @@
         </div>
       </div>
     </section>
-  }
-
-  <!-- MODAL ASIGNAR COORDINADOR -->
-  @if (showModalAsignar()) {
-    <div 
-      class="modal-backdrop" 
-      (click)="showModalAsignar.set(false)" 
-      (keydown.escape)="showModalAsignar.set(false)" 
-      tabindex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="title-modal-asignar"
-    >
-      <div class="modal-dialog animate-pop" (click)="$event.stopPropagation()">
-        <header class="modal-header">
-          <h3 id="title-modal-asignar" class="modal-title">Asignar Coordinador a Carrera</h3>
-          <button 
-            type="button" 
-            class="modal-close-btn" 
-            (click)="showModalAsignar.set(false)"
-            aria-label="Cerrar modal"
-          >
-            <i class="fas fa-times" aria-hidden="true"></i>
-          </button>
-        </header>
-
-        <form [formGroup]="asignacionForm" (ngSubmit)="guardarAsignacion()" class="modal-body">
-          <div class="form-group">
-            <label for="asig-user" class="form-label">
-              Seleccionar Usuario Coordinador <span class="required-asterisk">*</span>
-            </label>
-            <select id="asig-user" formControlName="usuario_id" class="form-control">
-              <option value="">-- Seleccione Usuario --</option>
-              @for (u of coordinadoresCarreraList(); track u.id) {
-                <option [value]="u.id">{{ u.primer_nombre }} {{ u.primer_apellido }} ({{ u.email_institucional }})</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="asig-carrera" class="form-label">
-              Seleccionar Carrera <span class="required-asterisk">*</span>
-            </label>
-            <select id="asig-carrera" formControlName="carrera_id" class="form-control">
-              <option value="">-- Seleccione Carrera --</option>
-              @for (c of carreras(); track c.id) {
-                <option [value]="c.id">{{ c.nombre }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="asig-inicio" class="form-label">
-                Fecha Inicio <span class="required-asterisk">*</span>
-              </label>
-              <input id="asig-inicio" type="date" formControlName="fecha_inicio" class="form-control">
-            </div>
-
-            <div class="form-group">
-              <label for="asig-fin" class="form-label">Fecha Fin (Opcional)</label>
-              <input id="asig-fin" type="date" formControlName="fecha_fin" class="form-control">
-            </div>
-          </div>
-
-          <footer class="modal-footer">
-            <button 
-              type="button" 
-              class="btn btn-outline" 
-              (click)="showModalAsignar.set(false)" 
-              [disabled]="isSaving()"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              class="btn btn-primary" 
-              [disabled]="asignacionForm.invalid || isSaving()"
-            >
-              @if (isSaving()) {
-                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-                <span>Guardando...</span>
-              } @else {
-                <i class="fas fa-save" aria-hidden="true"></i>
-                <span>Guardar Asignación</span>
-              }
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
-  }
-
-  <!-- MODAL EDITAR USUARIO -->
-  @if (showModalEditar()) {
-    <div 
-      class="modal-backdrop" 
-      (click)="showModalEditar.set(false)" 
-      (keydown.escape)="showModalEditar.set(false)" 
-      tabindex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="title-modal-editar"
-    >
-      <div class="modal-dialog animate-pop" (click)="$event.stopPropagation()">
-        <header class="modal-header">
-          <h3 id="title-modal-editar" class="modal-title">Editar Información de Usuario</h3>
-          <button 
-            type="button" 
-            class="modal-close-btn" 
-            (click)="showModalEditar.set(false)"
-            aria-label="Cerrar modal"
-          >
-            <i class="fas fa-times" aria-hidden="true"></i>
-          </button>
-        </header>
-
-        <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()" class="modal-body">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="edit-nombre" class="form-label">
-                Primer Nombre <span class="required-asterisk">*</span>
-              </label>
-              <input id="edit-nombre" type="text" formControlName="primer_nombre" class="form-control" placeholder="Ej. Juan">
-            </div>
-
-            <div class="form-group">
-              <label for="edit-apellido" class="form-label">
-                Primer Apellido <span class="required-asterisk">*</span>
-              </label>
-              <input id="edit-apellido" type="text" formControlName="primer_apellido" class="form-control" placeholder="Ej. Pérez">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-correo" class="form-label">
-              Correo Institucional <span class="required-asterisk">*</span>
-            </label>
-            <input id="edit-correo" type="email" formControlName="email_institucional" class="form-control">
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="edit-cedula" class="form-label">Cédula</label>
-              <input id="edit-cedula" type="text" formControlName="cedula" class="form-control" placeholder="10 dígitos">
-            </div>
-
-            <div class="form-group">
-              <label for="edit-rol" class="form-label">Rol Asignado</label>
-              <input 
-                id="edit-rol" 
-                type="text" 
-                formControlName="rol_nombre" 
-                class="form-control form-control-readonly" 
-                readonly 
-                title="El rol no se puede editar desde aquí"
-              >
-              <span class="input-hint">El rol es de solo lectura.</span>
-            </div>
-          </div>
-
-          <footer class="modal-footer">
-            <button 
-              type="button" 
-              class="btn btn-outline" 
-              (click)="showModalEditar.set(false)" 
-              [disabled]="isSaving()"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              class="btn btn-primary" 
-              [disabled]="editarForm.invalid || isSaving()"
-            >
-              @if (isSaving()) {
-                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-                <span>Guardando...</span>
-              } @else {
-                <i class="fas fa-save" aria-hidden="true"></i>
-                <span>Actualizar Usuario</span>
-              }
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
   }
 </main>

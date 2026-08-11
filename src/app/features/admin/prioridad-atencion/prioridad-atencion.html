@@ -1,10 +1,10 @@
 <div class="animate-fade-in p-6">
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 p-5 flex justify-between items-center">
-      <div>
-        <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide">Reporte Especializado de Necesidades Educativas</h2>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide break-words">Reporte Especializado de Necesidades Educativas</h2>
         <p class="text-xs text-slate-500 mt-1">Muestra todos los estudiantes declarantes con vulnerabilidades, necesidades especiales o prioridades de salud.</p>
       </div>
-      <button class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 text-sm transition-colors" (click)="exportarReporte()">
+      <button class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors w-full sm:w-auto" (click)="exportarReporte()">
         <i class="fas fa-file-export"></i> Exportar Reporte
       </button>
     </div>
@@ -51,7 +51,7 @@
                                 
                                 <!-- 🔥 GENERACIÓN DINÁMICA DE ETIQUETAS -->
                                 <td class="py-4 px-5">
-                                    <div class="flex flex-wrap gap-2">
+                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                         @for (llave of obtenerLlavesVulnerabilidad(item.detalles_vulnerabilidad); track llave) {
                                             <div class="bg-white border border-rose-200 rounded-lg p-2 shadow-sm max-w-sm">
                                                 <div class="text-[10px] font-bold text-slate-500 uppercase leading-tight mb-1">{{ llave }}</div>

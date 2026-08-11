@@ -4,12 +4,14 @@ import {
   OnDestroy,
   inject,
   signal,
+  computed, // <-- ¡Importamos computed!
   ElementRef,
   ViewChild,
   ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import {
   ReportesService,
   DashboardResumenBackend
@@ -29,7 +31,7 @@ interface CondicionCount {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
@@ -53,28 +55,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
   totalNee = signal(0);
   totalConRiesgo = signal(0);
   condiciones = signal<CondicionCount[]>([]);
-
   periodoActivo = signal<PeriodoMatricula | null>(null);
   isLoading = signal(true);
 
-  // Datos para gráficos
+  // Datos Gráficos Originales
   carrerasLabels = signal<string[]>([]);
   carrerasEnviadas = signal<number[]>([]);
   carrerasValidadas = signal<number[]>([]);
   economiaLabels = signal<string[]>([]);
   economiaData = signal<number[]>([]);
 
-  // Referencias a los Canvas
+  // Memoria de fichas
+  todasLasFichas = signal<any[]>([]);
+  tipoGraficoCarrera = signal<string>('bar');
+  tipoGraficoEstado = signal<string>('doughnut');
+
+  // --- KPI DINÁMICO CON SIGNALS COMPUTADOS ---
+  ingresoMin = signal<number | null>(null);
+  ingresoMax = signal<number | null>(null);
+  egresoMin = signal<number | null>(null);
+  egresoMax = signal<number | null>(null);
+
+  // La magia de Angular: Esto se recalcula SOLO sin necesidad de llamar funciones
+  estudiantesFiltrados = computed(() => {
+    const minIng = this.ingresoMin() ?? -Infinity;
+    const maxIng = this.ingresoMax() ?? Infinity;
+    const minEgr = this.egresoMin() ?? -Infinity;
+    const maxEgr = this.egresoMax() ?? Infinity;
+
+    return this.todasLasFichas().filter(f => {
+      const i = Number(f.total_ingresos || 0);
+      const e = Number(f.total_egresos || 0);
+      return i >= minIng && i <= maxIng && e >= minEgr && e <= maxEgr;
+    }).length;
+  });
+
+  // Referencias Canvas
   @ViewChild('estadoChartCanvas', { static: false }) estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('economiaChartCanvas', { static: false }) economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('carreraChartCanvas', { static: false }) carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('carreraEconomiaChartCanvas', { static: false }) carreraEconomiaChartCanvas?: ElementRef<HTMLCanvasElement>;
 
-  private estadoChart?: Chart;
-  private economiaChart?: Chart;
-  private carreraChart?: Chart;
+  private charts: { estado?: Chart; economia?: Chart; carrera?: Chart; carreraEcon?: Chart } = {};
 
   ngOnInit(): void {
     this.cargarTodo();
+    // Configuración global de fuentes para Chart.js
+    Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+    Chart.defaults.color = '#64748b';
   }
 
   ngOnDestroy(): void {
@@ -82,18 +110,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private destruirGraficos(): void {
-    if (this.estadoChart) {
-      this.estadoChart.destroy();
-      this.estadoChart = undefined;
-    }
-    if (this.economiaChart) {
-      this.economiaChart.destroy();
-      this.economiaChart = undefined;
-    }
-    if (this.carreraChart) {
-      this.carreraChart.destroy();
-      this.carreraChart = undefined;
-    }
+    Object.values(this.charts).forEach(chart => chart?.destroy());
+    this.charts = {};
   }
 
   cargarTodo(): void {
@@ -113,51 +131,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const periodoId = resumen.periodoActivo?.id;
 
-        // Carga de fichas
         this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').subscribe({
           next: (response: any) => {
             const lista: any[] = response.data || response || [];
+            this.todasLasFichas.set(lista);
             this.contarEstadosDesdeFichas(lista);
 
             if (periodoId) {
               this.prioridadService.getReporteNee(periodoId).subscribe({
-                next: (nee) => {
-                  this.procesarNee(nee || []);
-                  this.finalizarCarga();
-                },
-                error: () => {
-                  this.procesarNee([]);
-                  this.finalizarCarga();
-                }
+                next: (nee) => { this.procesarNee(nee || []); this.finalizarCarga(); },
+                error: () => { this.procesarNee([]); this.finalizarCarga(); }
               });
-            } else {
-              this.finalizarCarga();
-            }
+            } else { this.finalizarCarga(); }
           },
-          error: () => {
-            this.finalizarCarga();
-          }
+          error: () => this.finalizarCarga()
         });
       },
-      error: (err) => {
-        console.error('Error dashboard:', err);
-        this.isLoading.set(false);
-      }
+      error: (err) => { console.error('Error dashboard:', err); this.isLoading.set(false); }
     });
   }
 
-  private calcularNivelesEconomicos(lista: any[]): void {
-    const utiles = lista.filter((f) => {
-      const e = String(f.estado_ficha || '').toUpperCase();
-      return e === 'ENVIADA' || e === 'ENVIADO' || e === 'VALIDADO' ||
-        e === 'RECHAZADO' || e === 'RECHAZADA';
-    });
+  limpiarFiltros(): void {
+    this.ingresoMin.set(null);
+    this.ingresoMax.set(null);
+    this.egresoMin.set(null);
+    this.egresoMax.set(null);
+  }
 
-    let critico = 0;   
-    let bajo = 0;      
-    let medioBajo = 0; 
-    let medio = 0;     
-    let alto = 0;      
+  cambiarTipoGrafico(grafico: string, nuevoTipo: string): void {
+  if (grafico === 'carrera') {
+    this.tipoGraficoCarrera.set(nuevoTipo);
+    this.charts.carrera?.destroy();
+    this.dibujarGraficoCarrera();
+  } else if (grafico === 'estado') {
+    this.tipoGraficoEstado.set(nuevoTipo);
+    this.charts.estado?.destroy();
+    this.dibujarGraficoEstado();
+  }
+}
+
+
+  private calcularNivelesEconomicos(lista: any[]): void {
+    const utiles = lista.filter(f => ['ENVIADA', 'ENVIADO', 'VALIDADO', 'RECHAZADO', 'RECHAZADA'].includes(String(f.estado_ficha || '').toUpperCase()));
+    let critico = 0, bajo = 0, medioBajo = 0, medio = 0, alto = 0;
 
     utiles.forEach((f) => {
       const balance = Number(f.balance_final ?? 0);
@@ -173,11 +189,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private contarEstadosDesdeFichas(lista: any[]): void {
-    let borrador = 0;
-    let enviadas = 0;
-    let validadas = 0;
-    let rechazadas = 0;
-
+    let borrador = 0, enviadas = 0, validadas = 0, rechazadas = 0;
     lista.forEach((f) => {
       const e = String(f.estado_ficha || '').toUpperCase();
       if (e === 'BORRADOR') borrador++;
@@ -191,18 +203,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.fichasEnviadas.set(enviadas);
     this.fichasValidadas.set(validadas);
     this.fichasRechazadas.set(rechazadas);
-
     this.calcularNivelesEconomicos(lista);
-  }
-
-  private finalizarCarga(): void {
-    this.isLoading.set(false);
-    this.cdRef.detectChanges(); // 1. Forza a Angular a actualizar el HTML e insertar/mostrar los canvas
-
-    // 2. Espera a que el navegador complete el layout CSS antes de dibujar Chart.js
-    setTimeout(() => {
-      this.dibujarGraficos();
-    }, 150);
   }
 
   private procesarNee(items: any[]): void {
@@ -210,173 +211,235 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.totalConRiesgo.set(items.filter(i => (i.riesgo_total ?? 0) > 0).length);
 
     const contador: Record<string, number> = {};
-
     items.forEach((item) => {
-      const detalles = item.detalles_vulnerabilidad || {};
-      Object.keys(detalles).forEach((llave) => {
+      Object.keys(item.detalles_vulnerabilidad || {}).forEach(llave => {
         const nombre = llave.trim() || 'Otra condición';
         contador[nombre] = (contador[nombre] || 0) + 1;
       });
     });
 
-    const lista = Object.entries(contador)
-      .map(([nombre, total]) => ({ nombre, total }))
-      .sort((a, b) => b.total - a.total);
-
-    this.condiciones.set(lista);
+    this.condiciones.set(Object.entries(contador).map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total));
   }
 
-  private dibujarGraficos(): void {
+  private finalizarCarga(): void {
+    this.isLoading.set(false);
+    this.cdRef.detectChanges();
+    setTimeout(() => { this.dibujarTodosLosGraficos(); }, 150);
+  }
+
+  // --- ARQUITECTURA MODULAR DE GRÁFICOS ---
+  private dibujarTodosLosGraficos(): void {
     this.destruirGraficos();
+    this.dibujarGraficoEstado();
+    this.dibujarGraficoEconomia();
+    this.dibujarGraficoCarrera();
+    this.dibujarGraficoCarreraApilado();
+  }
 
-    Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
-    Chart.defaults.color = '#64748b';
+  private dibujarGraficoEstado(): void {
+    if (!this.estadoChartCanvas?.nativeElement) return;
+    const ctx = this.estadoChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
 
-    // 1. --- Estado de Fichas (Doughnut) ---
-    if (this.estadoChartCanvas?.nativeElement) {
-      const ctx = this.estadoChartCanvas.nativeElement.getContext('2d');
-      if (ctx) {
-        const data = [
-          this.fichasBorrador(),
-          this.fichasEnviadas(),
-          this.fichasValidadas(),
-          this.fichasRechazadas()
-        ];
-        const tiene = data.some(v => v > 0);
+    const data = [this.fichasBorrador(), this.fichasEnviadas(), this.fichasValidadas(), this.fichasRechazadas()];
+    const tiene = data.some(v => v > 0);
 
-        this.estadoChart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Borrador', 'Enviadas', 'Validadas', 'Rechazadas'],
-            datasets: [{
-              data: tiene ? data : [1],
-              backgroundColor: tiene
-                ? ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
-                : ['#e2e8f0'],
-              borderWidth: 2,
-              borderColor: '#ffffff',
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 }
-              }
-            }
+    this.charts.estado = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Borrador', 'Enviadas', 'Validadas', 'Rechazadas'],
+        datasets: [{ data: tiene ? data : [1], backgroundColor: tiene ? ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'] : ['#e2e8f0'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 } } } }
+    });
+  }
+
+  private dibujarGraficoEconomia(): void {
+    if (!this.economiaChartCanvas?.nativeElement) return;
+    const ctx = this.economiaChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const labels = this.economiaLabels();
+    const data = this.economiaData();
+    const tiene = data.some(v => v > 0);
+
+    this.charts.economia = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: tiene ? labels : ['Sin datos'],
+        datasets: [{ data: tiene ? data : [1], backgroundColor: tiene ? ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#10b981'] : ['#e2e8f0'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 } } } }
+    });
+  }
+
+  private dibujarGraficoCarrera(): void {
+    if (!this.carreraChartCanvas?.nativeElement) return;
+    const ctx = this.carreraChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const labels = this.carrerasLabels();
+    const tiene = labels.length > 0;
+    const tipo = this.tipoGraficoCarrera() as any;
+    const esCircular = tipo === 'pie' || tipo === 'doughnut';
+
+    // Paleta de colores para que el pastel no se vea todo morado
+    const coloresPastel = [
+      '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
+      '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a855f7',
+      '#06b6d4', '#f97316', '#64748b', '#d946ef', '#059669',
+      '#fbbf24', '#f87171', '#34d399', '#818cf8' // Añadí más colores por si acaso
+    ];
+
+    this.charts.carrera = new Chart(ctx, {
+      type: tipo,
+      data: {
+        labels: tiene ? labels : ['Sin carreras'],
+        datasets: esCircular ? [
+          {
+            label: 'Validadas por Carrera',
+            data: tiene ? this.carrerasValidadas() : [0],
+            backgroundColor: coloresPastel,
+            borderWidth: 2,
+            borderColor: '#ffffff'
           }
-        });
-      }
-    }
-
-    // 2. --- Balance Nivel Socioeconómico (Doughnut) ---
-    if (this.economiaChartCanvas?.nativeElement) {
-      const ctx = this.economiaChartCanvas.nativeElement.getContext('2d');
-      if (ctx) {
-        const labels = this.economiaLabels();
-        const data = this.economiaData();
-        const tiene = data.some(v => v > 0);
-
-        this.economiaChart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: tiene ? labels : ['Sin datos'],
-            datasets: [{
-              data: tiene ? data : [1],
-              backgroundColor: tiene
-                ? ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#10b981']
-                : ['#e2e8f0'],
-              borderWidth: 2,
-              borderColor: '#ffffff',
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 }
-              }
-            }
-          }
-        });
-      }
-    }
-
-    // 3. --- Distribución por Carrera (Barras Horizontales) ---
-    if (this.carreraChartCanvas?.nativeElement) {
-      const ctx = this.carreraChartCanvas.nativeElement.getContext('2d');
-      if (ctx) {
-        const labels = this.carrerasLabels();
-        const enviadas = this.carrerasEnviadas();
-        const validadas = this.carrerasValidadas();
-        const tiene = labels.length > 0;
-
-        this.carreraChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: tiene ? labels : ['Sin carreras'],
-            datasets: [
-              {
-                label: 'Enviadas',
-                data: tiene ? enviadas : [0],
-                backgroundColor: '#8b5cf6',
-                borderRadius: 6,
-                barThickness: 14
-              },
-              {
-                label: 'Validadas',
-                data: tiene ? validadas : [0],
-                backgroundColor: '#10b981',
-                borderRadius: 6,
-                barThickness: 14
-              }
-            ]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                align: 'end',
-                labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 12 }
-              }
-            },
-            scales: {
-              x: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { precision: 0, font: { size: 11 } }
-              },
-              y: {
-                grid: { display: false },
-                ticks: {
-                  font: { size: 11, weight: 600 },
-                  callback: function(value) {
-                    const label = this.getLabelForValue(value as number) || '';
-                    return label.length > 24 ? label.substring(0, 24) + '…' : label;
+        ] : [
+          // Quité el 'barThickness' fijo para que el grosor se autoajuste a las 19 carreras
+          { label: 'Enviadas', data: tiene ? this.carrerasEnviadas() : [0], backgroundColor: '#8b5cf6', borderRadius: 4 },
+          { label: 'Validadas', data: tiene ? this.carrerasValidadas() : [0], backgroundColor: '#10b981', borderRadius: 4 }
+        ]
+      },
+      options: {
+        // Al quitar indexAxis: 'y', las barras vuelven a ser verticales por defecto
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            align: 'center',
+            labels: {
+              font: { size: 11, weight: 600 },
+              usePointStyle: true,
+              padding: 14,
+              boxWidth: 8,
+              generateLabels: (chart: any) => {
+                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                return original.map((label: any) => {
+                  if (label.text && label.text.length > 22) {
+                    label.text = label.text.substring(0, 22) + '…';
                   }
-                }
+                  return label;
+                });
               }
             }
           }
-        });
+        },
+        scales: esCircular ? {
+          x: { display: false },
+          y: { display: false }
+        } : {
+          // EJE X (ABAJO): Ahora tiene las etiquetas de las carreras
+          x: { 
+            grid: { display: false },
+            ticks: {
+              font: { size: 10, weight: 600 },
+              maxRotation: 45, // Inclina el texto 45 grados para que no choquen
+              minRotation: 45,
+              callback: function(this: any, value: any) {
+                const label = this.getLabelForValue(value as number) || '';
+                return label.length > 18 ? label.substring(0, 18) + '…' : label;
+              }
+            }
+          },
+          // EJE Y (IZQUIERDA): Ahora tiene los números (0, 1, 2, 3...)
+          y: {
+            beginAtZero: true, 
+            grid: { color: '#f1f5f9' }, 
+            ticks: { precision: 0, font: { size: 11 } }
+          }
+        }
       }
-    }
+    });
+  }
+
+  private dibujarGraficoCarreraApilado(): void {
+    if (!this.carreraEconomiaChartCanvas?.nativeElement) return;
+    const ctx = this.carreraEconomiaChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const mapa = new Map<string, { alto: number, medio: number, bajo: number }>();
+    this.todasLasFichas()
+      .filter(f => ['ENVIADA', 'ENVIADO', 'VALIDADO'].includes(String(f.estado_ficha || '').toUpperCase()))
+      .forEach(f => {
+        const carrera = f.carrera_nombre || f.carrera?.nombre || f.estudiante?.carrera || 'Desconocida';
+        const balance = Number(f.balance_final ?? 0);
+        if (!mapa.has(carrera)) mapa.set(carrera, { alto: 0, medio: 0, bajo: 0 });
+        const conteo = mapa.get(carrera)!;
+        if (balance <= 150) conteo.bajo++; else if (balance <= 400) conteo.medio++; else conteo.alto++;
+      });
+
+    const labels = Array.from(mapa.keys());
+    const tiene = labels.length > 0;
+
+    this.charts.carreraEcon = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: tiene ? labels : ['Sin carreras'],
+        datasets: [
+          { label: 'Alto (> $400)', data: tiene ? labels.map(l => mapa.get(l)!.alto) : [0], backgroundColor: '#10b981', borderRadius: 4 },
+          { label: 'Medio ($150-$400)', data: tiene ? labels.map(l => mapa.get(l)!.medio) : [0], backgroundColor: '#f59e0b', borderRadius: 4 },
+          { label: 'Bajo (< $150)', data: tiene ? labels.map(l => mapa.get(l)!.bajo) : [0], backgroundColor: '#ef4444', borderRadius: 4 }
+        ]
+      },
+      options: {
+        // Quitamos indexAxis: 'y' para que sea vertical igual que el otro
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { 
+            position: 'bottom', // Movemos la leyenda para abajo para tener más espacio visual
+            labels: { font: { size: 11, weight: 600 }, usePointStyle: true, padding: 14 } 
+          }, 
+          tooltip: { 
+            mode: 'index', 
+            intersect: false,
+            // Esta magia asegura que el tooltip muestre el texto COMPLETO al pasar el cursor
+            callbacks: {
+              title: function(tooltipItems) {
+                return tooltipItems[0].label; 
+              }
+            }
+          } 
+        },
+        scales: {
+          x: { 
+            stacked: true, 
+            grid: { display: false }, 
+            ticks: { 
+              font: { size: 10, weight: 600 },
+              // Inclinamos el texto 45 grados para que entren las 19 carreras
+              maxRotation: 45, 
+              minRotation: 45,
+              callback: function(this: any, value: any) { 
+                const label = this.getLabelForValue(value as number) || ''; 
+                // Visualmente cortamos a 18 caracteres, pero en el tooltip sale todo
+                return label.length > 18 ? label.substring(0, 18) + '…' : label; 
+              } 
+            } 
+          },
+          y: { 
+            stacked: true, 
+            beginAtZero: true, 
+            grid: { color: '#f1f5f9' }, 
+            ticks: { precision: 0, font: { size: 11 } } 
+          }
+        }
+      }
+    });
   }
 
   pctCondicion(total: number): number {
     const t = this.totalNee();
-    if (!t) return 0;
-    return Math.round((total / t) * 100);
+    return t ? Math.round((total / t) * 100) : 0;
   }
 }

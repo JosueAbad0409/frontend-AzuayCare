@@ -166,3 +166,29 @@
   
   .admin-table th, .admin-table td { padding: 1rem 0.75rem; }
 }
+/* ==========================================
+   AJUSTES DE TABLA PARA MÓVILES
+   ========================================== */
+@media (max-width: 768px) {
+  /* Reducimos el ancho mínimo para que no fuerce tanto scroll */
+  .data-table, .admin-table {
+    min-width: 100% !important; 
+  }
+
+  /* Ocultamos las columnas secundarias en celular */
+  .col-correo,
+  .col-cedula,
+  .col-asig-ini,
+  .col-asig-fin {
+    display: none !important;
+  }
+
+  /* Ajustamos el padding de las celdas que quedan para ganar espacio */
+  .data-table th, 
+  .data-table td,
+  .admin-table th, 
+  .admin-table td {
+    padding: 0.75rem 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+}
