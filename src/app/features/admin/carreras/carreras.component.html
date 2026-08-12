@@ -6,71 +6,10 @@
       <p class="subtitle">Administra las especialidades tecnológicas del Instituto Tec Azuay.</p>
     </div>
     
-    @if (!showForm()) {
-      <button type="button" class="btn btn-purple" (click)="abrirNuevoFormulario()">
-        <i class="fas fa-plus"></i> Nueva Carrera
-      </button>
-    }
+    <button type="button" class="btn btn-purple" (click)="abrirFormularioSwal()">
+      <i class="fas fa-plus"></i> Nueva Carrera
+    </button>
   </div>
-
-  <!-- FORMULARIO EXPANDIBLE CREAR/EDITAR -->
-  @if (showForm()) {
-    <div class="form-card animate-slide-down">
-      <div class="form-header">
-        <h4>{{ isEditing() ? 'Editar Carrera' : 'Registrar Nueva Carrera' }}</h4>
-        <p>Ingresa los datos institucionales correspondientes.</p>
-      </div>
-
-      <form [formGroup]="carreraForm" (ngSubmit)="guardarCarrera()">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="carrera-nombre">Nombre de la Carrera *</label>
-            <input 
-              id="carrera-nombre"
-              type="text" 
-              formControlName="nombre" 
-              placeholder="Ej. Desarrollo de Software" 
-              class="form-control"
-              [class.is-invalid]="carreraForm.controls.nombre.touched && carreraForm.controls.nombre.invalid"
-            >
-            @if (carreraForm.controls.nombre.touched && carreraForm.controls.nombre.hasError('required')) {
-              <small class="error-msg">El nombre es obligatorio.</small>
-            }
-          </div>
-
-          <div class="form-group">
-            <label for="carrera-correo">Correo Institucional *</label>
-            <input 
-              id="carrera-correo"
-              type="email" 
-              formControlName="correo_institucional" 
-              placeholder="ejemplo@tecazuay.edu.ec" 
-              class="form-control"
-              [class.is-invalid]="carreraForm.controls.correo_institucional.touched && carreraForm.controls.correo_institucional.invalid"
-            >
-            @if (carreraForm.controls.correo_institucional.touched) {
-              @if (carreraForm.controls.correo_institucional.hasError('required')) {
-                <small class="error-msg">El correo es obligatorio.</small>
-              } @else if (carreraForm.controls.correo_institucional.hasError('email')) {
-                <small class="error-msg">Formato de correo inválido.</small>
-              }
-            }
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-outline" (click)="cancelarFormulario()" [disabled]="isSaving()">Cancelar</button>
-          <button type="submit" class="btn btn-purple" [disabled]="carreraForm.invalid || isSaving()">
-            @if (isSaving()) {
-              <i class="fas fa-circle-notch fa-spin"></i> Guardando...
-            } @else {
-              <i class="fas fa-save"></i> {{ isEditing() ? 'Actualizar' : 'Guardar Carrera' }}
-            }
-          </button>
-        </div>
-      </form>
-    </div>
-  }
 
   <!-- BARRA DE BÚSQUEDA Y CONTADOR DE RESULTADOS -->
   @if (!isLoading()) {
@@ -129,7 +68,7 @@
               </td>
               <td style="text-align: right;">
                 <div class="actions-wrapper">
-                  <button type="button" class="btn-icon text-blue" (click)="abrirEditarFormulario(carrera)" title="Editar Carrera">
+                  <button type="button" class="btn-icon text-blue" (click)="abrirFormularioSwal(carrera)" title="Editar Carrera">
                     <i class="fas fa-edit"></i>
                   </button>
                   <button type="button" class="btn-icon text-red" (click)="eliminarCarrera(carrera.id)" title="Eliminar Carrera">

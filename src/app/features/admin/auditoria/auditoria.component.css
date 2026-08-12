@@ -81,3 +81,142 @@ pre.json-viewer {
   overflow-x: auto;
   max-height: 300px;
 }
+/* ==========================================================================
+   DISEÑO MOBILE-FIRST (Móviles < 768px)
+   ========================================================================== */
+
+.carreras-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg, 16px); /* Radio menor en móvil */
+  padding: 1.25rem; /* Padding reducido para aprovechar pantalla en móvil */
+  box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll suave nativo en iOS */
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 750px; /* Fuerza el scroll horizontal en lugar de colapsar las columnas */
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 1rem;
+  background-color: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  white-space: nowrap; /* Evita que los encabezados se rompan en múltiples líneas */
+}
+
+.admin-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 0.875rem;
+}
+
+/* Visor JSON Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem; /* Margen de seguridad para móviles */
+}
+
+.modal-box-lg {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh; /* Permite más altura en móviles */
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+pre.json-viewer {
+  background-color: #0f172a;
+  color: #38bdff;
+  padding: 1rem;
+  border-radius: 12px;
+  font-family: monospace;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  max-height: 250px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   MEDIA QUERIES (Tablets y Escritorio >= 768px)
+   ========================================================================== */
+
+@media (min-width: 768px) {
+  .carreras-card {
+    padding: 2.25rem;
+    border-radius: var(--radius-lg, 24px);
+  }
+
+  .title {
+    font-size: 1.45rem;
+    margin: 0 0 0.35rem 0;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin: 0 0 1.75rem 0;
+  }
+
+  .table-container {
+    border-radius: 16px;
+  }
+
+  .admin-table th {
+    padding: 1.15rem 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .admin-table td {
+    padding: 1.15rem 1.5rem;
+    font-size: 0.925rem;
+  }
+
+  .modal-box-lg {
+    padding: 2rem;
+    border-radius: 24px;
+    max-height: 85vh;
+  }
+
+  pre.json-viewer {
+    font-size: 0.825rem;
+    max-height: 300px;
+  }
+}

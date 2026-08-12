@@ -1,7 +1,7 @@
 <div class="app-layout" [class.collapsed]="isSidebarCollapsed()" [class.sidebar-open]="isSidebarOpenMobile()">
 
   @if (isSidebarOpenMobile()) {
-  <div class="sidebar-overlay" (click)="closeSidebarMobile()"></div>
+    <div class="sidebar-overlay" (click)="closeSidebarMobile()"></div>
   }
 
   <!-- BARRA LATERAL (SIDEBAR) -->
@@ -17,8 +17,7 @@
       </div>
       }
       <button class="btn-toggle" (click)="toggleSidebar()" title="Plegar / Desplegar Menú">
-        <i class="fas" [class.fa-chevron-left]="!isSidebarCollapsed()"
-          [class.fa-chevron-right]="isSidebarCollapsed()"></i>
+        <i class="fas" [class.fa-chevron-left]="!isSidebarCollapsed()" [class.fa-chevron-right]="isSidebarCollapsed()"></i>
       </button>
     </div>
 
@@ -36,69 +35,67 @@
       </a>
 
       @if (esCoordinadorBienestar()) {
-      @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Socioeconómico</h6> }
+        @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Socioeconómico</h6> }
 
-      <a routerLink="/admin/prioridad-atencion" routerLinkActive="active"
-        class="nav-item flex items-center justify-between" title="Prioridad de Atención">
-        <div class="flex items-center">
-          <i class="fas fa-triangle-exclamation nav-icon text-red-500"></i>
-          @if (!isSidebarCollapsed()) {
-          <span class="nav-text ml-2">Prioridad de Atención</span>
+        <a routerLink="/admin/prioridad-atencion" routerLinkActive="active" class="nav-item flex items-center justify-between" title="Prioridad de Atención">
+          <div class="flex items-center">
+            <i class="fas fa-triangle-exclamation nav-icon text-red-500"></i>
+            @if (!isSidebarCollapsed()) {
+            <span class="nav-text ml-2">Prioridad de Atención</span>
+            }
+          </div>
+          @if (casosAltoCount() > 0) {
+          <span class="badge-alerta" [title]="casosAltoCount() + ' casos con alertas'">
+            {{ casosAltoCount() }}
+          </span>
           }
-        </div>
-        @if (casosAltoCount() > 0) {
-        <span class="badge-alerta" [title]="casosAltoCount() + ' casos con alertas'">
-          {{ casosAltoCount() }}
-        </span>
-        }
-      </a>
+        </a>
 
-      <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
-        <i class="fas fa-file-signature nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
-      </a>
+        <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
+          <i class="fas fa-file-signature nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
+        </a>
 
-      <a routerLink="/admin/tipos-formulario" routerLinkActive="active" class="nav-item" title="Tipos de Formulario">
-        <i class="fas fa-shapes nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Tipos de Formulario</span> }
-      </a>
+        <a routerLink="/admin/tipos-formulario" routerLinkActive="active" class="nav-item" title="Tipos de Formulario">
+          <i class="fas fa-shapes nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Tipos de Formulario</span> }
+        </a>
 
-      <a routerLink="/admin/carreras" routerLinkActive="active" class="nav-item" title="Carreras">
-        <i class="fas fa-graduation-cap nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Carreras</span> }
-      </a>
+        <a routerLink="/admin/carreras" routerLinkActive="active" class="nav-item" title="Carreras">
+          <i class="fas fa-graduation-cap nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Carreras</span> }
+        </a>
 
-      <a routerLink="/admin/ciclos" routerLinkActive="active" class="nav-item" title="Ciclos Académicos">
-        <i class="fas fa-list-ol nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Ciclos</span> }
-      </a>
+        <a routerLink="/admin/ciclos" routerLinkActive="active" class="nav-item" title="Ciclos Académicos">
+          <i class="fas fa-list-ol nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Ciclos</span> }
+        </a>
 
-      <a routerLink="/admin/periodos" routerLinkActive="active" class="nav-item" title="Periodos">
-        <i class="fas fa-calendar-alt nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Periodos</span> }
-      </a>
+        <a routerLink="/admin/periodos" routerLinkActive="active" class="nav-item" title="Periodos">
+          <i class="fas fa-calendar-alt nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Periodos</span> }
+        </a>
 
-      <a routerLink="/admin/reportes" routerLinkActive="active" class="nav-item" title="Reportes Analíticos">
-        <i class="fas fa-chart-line nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Reportes</span> }
-      </a>
+        <a routerLink="/admin/reportes" routerLinkActive="active" class="nav-item" title="Reportes Analíticos">
+          <i class="fas fa-chart-line nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Reportes</span> }
+        </a>
 
-      @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Configuración</h6> }
+        @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Configuración</h6> }
 
-      <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item" title="Usuarios y Roles">
-        <i class="fas fa-users-cog nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Usuarios y Roles</span> }
-      </a>
+        <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item" title="Usuarios y Roles">
+          <i class="fas fa-users-cog nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Usuarios y Roles</span> }
+        </a>
 
-      <a routerLink="/admin/auditoria" routerLinkActive="active" class="nav-item" title="Auditoría del Sistema">
-        <i class="fas fa-user-shield nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Auditoría</span> }
-      </a>
+        <a routerLink="/admin/auditoria" routerLinkActive="active" class="nav-item" title="Auditoría del Sistema">
+          <i class="fas fa-user-shield nav-icon"></i>
+          @if (!isSidebarCollapsed()) { <span class="nav-text">Auditoría</span> }
+        </a>
       }
 
       @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Personal</h6> }
-      <a routerLink="/admin/perfil-coordinador" routerLinkActive="active" class="nav-item"
-        title="Mi Perfil de Atención">
+      <a routerLink="/admin/perfil-coordinador" routerLinkActive="active" class="nav-item" title="Mi Perfil de Atención">
         <i class="fas fa-id-card nav-icon"></i>
         @if (!isSidebarCollapsed()) { <span class="nav-text">Perfil Atención</span> }
       </a>
@@ -163,7 +160,7 @@
       </button>
     </header>
 
-        <div class="ia-chat-messages" #chatMessages>
+    <div class="ia-chat-messages" #chatMessages>
       @for (m of mensajes(); track $index) {
         <div class="ia-msg" [class.ia-msg-user]="m.rol === 'user'" [class.ia-msg-bot]="m.rol === 'bot'">
           <p>{{ m.texto }}</p>
@@ -205,8 +202,7 @@
     </div>
 
     <form class="ia-chat-input" (ngSubmit)="enviarMensaje()">
-      <input type="text" [(ngModel)]="promptActual" name="prompt" placeholder="Escribe tu pregunta..."
-        [disabled]="iaCargando()" autocomplete="off" />
+      <input type="text" [(ngModel)]="promptActual" name="prompt" placeholder="Escribe tu pregunta..." [disabled]="iaCargando()" autocomplete="off" />
       <button type="submit" [disabled]="iaCargando() || !promptActual.trim()" aria-label="Enviar">
         <i class="fas fa-paper-plane"></i>
       </button>
@@ -214,10 +210,8 @@
   </div>
   }
 
-  <button type="button" class="ia-fab" (click)="toggleChat()"
-    [attr.aria-label]="chatAbierto() ? 'Cerrar asistente' : 'Abrir asistente IA'" [class.ia-fab-open]="chatAbierto()">
+  <button type="button" class="ia-fab" (click)="toggleChat()" [attr.aria-label]="chatAbierto() ? 'Cerrar asistente' : 'Abrir asistente IA'" [class.ia-fab-open]="chatAbierto()">
     <i class="fas" [class.fa-robot]="!chatAbierto()" [class.fa-times]="chatAbierto()"></i>
   </button>
   }
-
 </div>

@@ -1,8 +1,8 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { TipoFormularioService } from '../../../core/services/tipo-formulario.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -11,7 +11,7 @@ import { TipoFormulario } from '../../../core/models/tipo-formulario.model';
 @Component({
   selector: 'app-tipos-formulario',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './tipos-formulario.component.html',
   styleUrls: ['./tipos-formulario.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -19,23 +19,11 @@ import { TipoFormulario } from '../../../core/models/tipo-formulario.model';
 export class TiposFormularioComponent {
   private readonly tipoFormularioService = inject(TipoFormularioService);
   private readonly toastService = inject(ToastService);
-  private readonly fb = inject(NonNullableFormBuilder);
 
   // Señales de Estado
   readonly tipos = signal<TipoFormulario[]>([]);
   readonly loading = signal<boolean>(false);
-  readonly isSaving = signal<boolean>(false);
-  readonly modalOpen = signal<boolean>(false);
-  readonly editingTipoId = signal<string | null>(null);
   readonly searchTerm = signal<string>('');
-
-  // Formulario reactivo fuertemente tipado
-  readonly tipoForm = this.fb.group({
-    nombre: ['', [Validators.required, Validators.maxLength(150)]],
-    descripcion: [''],
-    icono: ['fa-file-alt'],
-    color: ['#8b5cf6']
-  });
 
   // Filtro de Búsqueda Computado
   readonly tiposFiltrados = computed(() => {
@@ -67,69 +55,121 @@ export class TiposFormularioComponent {
       });
   }
 
-  openModal(tipo?: TipoFormulario): void {
-    if (tipo?.id) {
-      this.editingTipoId.set(tipo.id);
-      this.tipoForm.patchValue({
-        nombre: tipo.nombre,
-        descripcion: tipo.descripcion || '',
-        icono: tipo.icono || 'fa-file-alt',
-        color: tipo.color || '#8b5cf6'
-      });
-    } else {
-      this.editingTipoId.set(null);
-      this.tipoForm.reset({ icono: 'fa-file-alt', color: '#8b5cf6' });
-    }
-    this.modalOpen.set(true);
+  abrirFormularioSwal(tipo?: TipoFormulario): void {
+    const isEditing = !!tipo;
+    const titleText = isEditing ? 'Editar Tipo de Formulario' : 'Nuevo Tipo de Formulario';
+    const confirmText = isEditing ? 'Actualizar' : 'Crear';
+
+    Swal.fire({
+      title: titleText,
+      width: '550px',
+      html: `
+        <div style="text-align: left; padding-top: 10px;">
+          <div style="margin-bottom: 1.25rem;">
+            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Nombre *</label>
+            <input id="swal-nombre" type="text" class="swal2-input" placeholder="Ej. Ficha Socioeconómica" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? tipo.nombre : ''}">
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label for="swal-descripcion" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Descripción</label>
+            <textarea id="swal-descripcion" class="swal2-textarea" placeholder="Objetivo de esta ficha..." style="width: 100%; margin: 0; box-sizing: border-box;">${isEditing ? (tipo.descripcion || '') : ''}</textarea>
+          </div>
+
+          <div style="display: flex; gap: 1rem;">
+            <div style="flex: 1;">
+              <label for="swal-icono" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Ícono (FontAwesome)</label>
+              <input id="swal-icono" type="text" class="swal2-input" placeholder="fa-wallet" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? (tipo.icono || 'fa-file-alt') : 'fa-file-alt'}">
+            </div>
+            <div>
+              <label for="swal-color" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Color</label>
+              <input id="swal-color" type="color" class="swal2-input" style="width: 100%; height: 3.2rem; margin: 0; padding: 0.25rem; box-sizing: border-box; cursor: pointer;" value="${isEditing ? (tipo.color || '#8b5cf6') : '#8b5cf6'}">
+            </div>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: confirmText,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#64748b',
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
+        const descripcion = (document.getElementById('swal-descripcion') as HTMLTextAreaElement).value.trim();
+        const icono = (document.getElementById('swal-icono') as HTMLInputElement).value.trim() || 'fa-file-alt';
+        const color = (document.getElementById('swal-color') as HTMLInputElement).value;
+
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio.');
+          return false;
+        }
+
+        return { nombre, descripcion, icono, color };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.guardarTipoEnDb(result.value, isEditing ? tipo.id : null);
+      }
+    });
   }
 
-  closeModal(): void {
-    if (this.isSaving()) return;
-    this.modalOpen.set(false);
-    this.tipoForm.reset({ icono: 'fa-file-alt', color: '#8b5cf6' });
-  }
-
-  guardarTipo(): void {
-    if (this.tipoForm.invalid) {
-      this.tipoForm.markAllAsTouched();
-      return;
-    }
-
-    this.isSaving.set(true);
-    const formData = this.tipoForm.getRawValue();
-    const id = this.editingTipoId();
+  guardarTipoEnDb(formData: any, id: string | null): void {
+    Swal.fire({
+      title: 'Guardando...',
+      text: 'Por favor, espera un momento.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
     const peticion$ = id
       ? this.tipoFormularioService.updateTipoFormulario(id, formData)
       : this.tipoFormularioService.createTipoFormulario(formData);
 
-    peticion$
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.toastService.show(
-            id ? 'Tipo de formulario actualizado.' : 'Tipo de formulario registrado.',
-            'success'
-          );
-          this.cargarTipos();
-          this.closeModal();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.toastService.show(this.extraerMensajeError(err, 'Error al guardar el registro.'), 'error');
-        }
-      });
-  }
-
-  eliminarTipo(id: string): void {
-    if (!confirm('¿Está seguro de desactivar este tipo de formulario? Solo será posible si no tiene formularios activos asociados.')) return;
-
-    this.tipoFormularioService.deleteTipoFormulario(id).subscribe({
+    peticion$.subscribe({
       next: () => {
-        this.toastService.show('Tipo de formulario desactivado con éxito.', 'info');
+        Swal.close();
+        this.toastService.show(
+          id ? 'Tipo de formulario actualizado.' : 'Tipo de formulario registrado.',
+          'success'
+        );
         this.cargarTipos();
       },
       error: (err: HttpErrorResponse) => {
-        this.toastService.show(this.extraerMensajeError(err, 'No se pudo desactivar el tipo de formulario.'), 'error');
+        console.error('Error al guardar tipo de formulario:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: this.extraerMensajeError(err, 'Error al guardar el registro.'),
+          confirmButtonColor: '#8b5cf6'
+        });
+      }
+    });
+  }
+
+  eliminarTipo(id: string): void {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: '¿Está seguro de eliminar este tipo de formulario? Solo será posible si no tiene formularios activos asociados.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.tipoFormularioService.deleteTipoFormulario(id).subscribe({
+          next: () => {
+            this.toastService.show('Tipo de formulario desactivado con éxito.', 'info');
+            this.cargarTipos();
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error('Error al desactivar:', err);
+            this.toastService.show(this.extraerMensajeError(err, 'No se pudo desactivar el tipo de formulario.'), 'error');
+          }
+        });
       }
     });
   }

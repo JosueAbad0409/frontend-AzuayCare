@@ -1,0 +1,113 @@
+/* ==========================================================================
+   TABLA RESPONSIVA A TARJETAS (MOBILE-FIRST)
+   Transforma la tabla en un diseño de tarjetas en celulares (< 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* Quitamos el scroll horizontal porque ahora todo fluye hacia abajo */
+    .overflow-x-auto {
+        overflow-x: visible !important;
+    }
+
+    /* Forzamos a la tabla y sus elementos a comportarse como bloques */
+    table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+    }
+
+    /* Ocultamos la cabecera original (se mantiene en el DOM para accesibilidad) */
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    /* Convertimos cada fila de datos en una tarjeta con sombras */
+    tbody tr {
+        margin-bottom: 1.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding: 0.5rem 0;
+    }
+
+    /* Evitar que las filas vacías o de carga se deformen */
+    tbody td[colspan="5"] {
+        border: none !important;
+        padding: 2rem 1rem !important;
+    }
+
+    /* Ajustamos cada celda para que se vea como un campo de la tarjeta */
+    tbody td:not([colspan="5"]) {
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+        position: relative;
+        padding: 0.75rem 1.25rem 0.75rem 45% !important; /* Deja espacio a la izquierda para el título */
+        text-align: right !important;
+        min-height: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-end;
+    }
+
+    /* Alineación de textos internos a la derecha en móvil */
+    tbody td:not([colspan="5"]) div {
+        text-align: right;
+    }
+
+    /* Quitar el borde a la última celda de la tarjeta */
+    tbody td:last-child {
+        border-bottom: 0;
+        align-items: center !important;
+        padding: 1rem !important; /* Centramos el botón de acción */
+    }
+
+    /* ==========================================
+       ETIQUETAS INYECTADAS POR CSS PARA MÓVIL
+       ========================================== */
+    tbody td:not([colspan="5"])::before {
+        position: absolute;
+        left: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40%;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    tbody td:nth-of-type(1)::before { content: "Estudiante"; }
+    tbody td:nth-of-type(2)::before { content: "Carrera / Ciclo"; }
+    tbody td:nth-of-type(4)::before { content: "Riesgo Total"; }
+
+    /* ==========================================
+       CASO ESPECIAL: COLUMNA DE VULNERABILIDADES
+       ========================================== */
+    tbody td:nth-of-type(3) {
+        align-items: flex-start !important;
+        padding: 2.5rem 1.25rem 1.25rem 1.25rem !important; /* Espacio superior para el título */
+        text-align: left !important;
+    }
+
+    tbody td:nth-of-type(3)::before {
+        content: "Condiciones Detectadas";
+        top: 1rem;
+        transform: none;
+        width: 100%;
+    }
+
+    tbody td:nth-of-type(3) > div {
+        width: 100%;
+        text-align: left;
+    }
+
+    /* Aseguramos que las cajitas rojas ocupen el 100% del ancho en móviles */
+    .max-w-sm {
+        max-width: 100% !important;
+        width: 100%;
+    }
+}

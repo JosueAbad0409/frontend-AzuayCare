@@ -1,3 +1,5 @@
+import { Carrera } from "./carrera.model";
+
 export interface RolInfo {
   id?: string;
   nombre?: string;
@@ -24,6 +26,8 @@ export interface Usuario {
 
   // Permite estructura de objeto { id, nombre } o string sin romper validaciones estrictas
   rol?: any;
+
+  carrera?: Carrera;
 }
 
 export interface CreateUsuarioDto {

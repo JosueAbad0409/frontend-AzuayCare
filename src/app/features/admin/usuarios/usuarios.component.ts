@@ -106,10 +106,18 @@ export class UsuariosComponent implements OnInit {
     });
   }
 
-  getCarreraNombreDeAsignacion(usuarioId: string): string {
-    const match = this.asignaciones().find(a => a.usuario_id === usuarioId);
-    return match ? (match.carrera?.nombre || 'Carrera Asignada') : 'Sin Carrera';
+  getCarreraNombreDeAsignacion(usuario: Usuario): string {
+  // Caso 1: el usuario tiene carrera directa (estudiante)
+  if (usuario.carrera?.nombre) {
+    return usuario.carrera.nombre;
   }
+
+  // Caso 2: es coordinador, buscar en asignaciones activas
+  const match = this.asignaciones().find(a => 
+    a.usuario_id === usuario.id && !a.fecha_fin
+  );
+  return match ? (match.carrera?.nombre || 'Carrera Asignada') : 'Sin Carrera';
+}
 
   // ==========================================
   // ASIGNACIONES CON SWEETALERT

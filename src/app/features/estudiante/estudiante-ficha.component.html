@@ -745,6 +745,16 @@
                         {{ obtenerTextoRespuesta(preg) }}
                       </p>
 
+                      @if (evidenciasGroup.get(preg.id)?.value) {
+                      <div class="mt-2 text-[11px] font-semibold text-emerald-700 flex items-center gap-2">
+                        <i class="fas fa-paperclip"></i>
+                        <a [href]="evidenciasGroup.get(preg.id)?.value" target="_blank" rel="noopener"
+                          class="underline text-blue-600">
+                          Ver evidencia adjunta
+                        </a>
+                      </div>
+                      }
+
                       <!-- SUBPREGUNTAS ANIDADAS EN EL RESUMEN -->
                       @for (sub of getSubpreguntas(preg.id); track sub.id) {
                       @if (esPreguntaVisible(sub.id)) {
@@ -754,6 +764,14 @@
                         </p>
                         <p class="text-[10px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
                         <p class="text-sm font-semibold text-slate-800">{{ obtenerTextoRespuesta(sub) }}</p>
+                        @if (evidenciasGroup.get(sub.id)?.value) {
+                        <div class="mt-1 text-[11px] font-semibold text-emerald-700">
+                          <a [href]="evidenciasGroup.get(sub.id)?.value" target="_blank" rel="noopener"
+                            class="underline text-blue-600">
+                            Ver evidencia
+                          </a>
+                        </div>
+                        }
                       </div>
                       }
                       }

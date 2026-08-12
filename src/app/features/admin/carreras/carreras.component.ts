@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { Carrera } from '../../../core/models/carrera.model';
 import { CarreraService } from '../../../core/services/carrera.service';
@@ -11,7 +11,7 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-carreras',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './carreras.component.html',
   styleUrls: ['./carreras.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -19,27 +19,14 @@ import { ToastService } from '../../../core/services/toast.service';
 export class CarrerasComponent implements OnInit {
   private readonly carreraService = inject(CarreraService);
   private readonly toastService = inject(ToastService);
-  private readonly fb = inject(NonNullableFormBuilder);
   
   // Estado base
   readonly carreras = signal<Carrera[]>([]);
   readonly isLoading = signal<boolean>(true);
-  readonly isSaving = signal<boolean>(false);
   
   // Filtros
   readonly searchTerm = signal<string>('');
   readonly filtroEstado = signal<string>('TODOS');
-  
-  // Modales/Formulario
-  readonly showForm = signal<boolean>(false);
-  readonly isEditing = signal<boolean>(false);
-  readonly currentId = signal<string | null>(null);
-  
-  // Formulario reactivo fuertemente tipado
-  readonly carreraForm = this.fb.group({
-    nombre: ['', [Validators.required, Validators.maxLength(150)]],
-    correo_institucional: ['', [Validators.required, Validators.email, Validators.maxLength(150)]]
-  });
 
   // Filtro Reactivo Multicriterio
   readonly carrerasFiltradas = computed(() => {
@@ -86,74 +73,119 @@ export class CarrerasComponent implements OnInit {
       });
   }
 
-  abrirNuevoFormulario(): void {
-    this.carreraForm.reset();
-    this.isEditing.set(false);
-    this.currentId.set(null);
-    this.showForm.set(true);
-  }
+  abrirFormularioSwal(carrera?: Carrera): void {
+    const isEditing = !!carrera;
+    const titleText = isEditing ? 'Editar Carrera' : 'Registrar Nueva Carrera';
+    const confirmText = isEditing ? 'Actualizar' : 'Guardar Carrera';
 
-  abrirEditarFormulario(carrera: Carrera): void {
-    this.isEditing.set(true);
-    this.currentId.set(carrera.id);
-    this.carreraForm.patchValue({
-      nombre: carrera.nombre,
-      correo_institucional: carrera.correo_institucional
+    Swal.fire({
+      title: titleText,
+      html: `
+        <div style="text-align: left; padding-top: 10px;">
+          <div style="margin-bottom: 1.25rem;">
+            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Nombre de la Carrera *</label>
+            <input id="swal-nombre" class="swal2-input" placeholder="Ej. Desarrollo de Software" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? carrera.nombre : ''}">
+          </div>
+          <div>
+            <label for="swal-correo" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Correo Institucional *</label>
+            <input id="swal-correo" type="email" class="swal2-input" placeholder="ejemplo@tecazuay.edu.ec" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? carrera.correo_institucional : ''}">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: confirmText,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#8b5cf6', // var(--primary-color)
+      cancelButtonColor: '#64748b',  // var(--text-muted)
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
+        const correo = (document.getElementById('swal-correo') as HTMLInputElement).value.trim();
+
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio.');
+          return false;
+        }
+        if (!correo) {
+          Swal.showValidationMessage('El correo es obligatorio.');
+          return false;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(correo)) {
+          Swal.showValidationMessage('Formato de correo inválido.');
+          return false;
+        }
+
+        return { nombre, correo_institucional: correo };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.guardarCarreraEnDb(result.value, isEditing ? carrera.id : null);
+      }
     });
-    this.showForm.set(true);
   }
 
-  cancelarFormulario(): void {
-    if (this.isSaving()) return;
-    this.showForm.set(false);
-    this.carreraForm.reset();
-  }
+  guardarCarreraEnDb(formData: any, id: string | null): void {
+    // Alerta de carga mientras se guarda
+    Swal.fire({
+      title: 'Guardando...',
+      text: 'Por favor, espera un momento.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
-  guardarCarrera(): void {
-    if (this.carreraForm.invalid) {
-      this.carreraForm.markAllAsTouched();
-      return;
-    }
-
-    this.isSaving.set(true);
-    const formData = this.carreraForm.getRawValue();
-    const id = this.currentId();
-
-    const peticion$ = (this.isEditing() && id)
+    const peticion$ = id
       ? this.carreraService.updateCarrera(id, formData)
       : this.carreraService.createCarrera(formData);
 
-    peticion$
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.toastService.show(
-            this.isEditing() ? 'Carrera actualizada correctamente.' : 'Carrera registrada correctamente.',
-            'success'
-          );
-          this.cargarCarreras();
-          this.cancelarFormulario();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al guardar carrera:', err);
-          this.toastService.show(this.extraerMensajeError(err, 'Error al procesar la solicitud.'), 'error');
-        }
-      });
+    peticion$.subscribe({
+      next: () => {
+        // Cierra el Swal de carga e informa éxito usando el toast original
+        Swal.close();
+        this.toastService.show(
+          id ? 'Carrera actualizada correctamente.' : 'Carrera registrada correctamente.',
+          'success'
+        );
+        this.cargarCarreras();
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('Error al guardar carrera:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
+          confirmButtonColor: '#8b5cf6'
+        });
+      }
+    });
   }
 
   eliminarCarrera(id: string): void {
-    if (confirm('¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.')) {
-      this.carreraService.deleteCarrera(id).subscribe({
-        next: () => {
-          this.toastService.show('Carrera eliminada con éxito.', 'info');
-          this.cargarCarreras();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar carrera:', err);
-          this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
-        }
-      });
-    }
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: '¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.carreraService.deleteCarrera(id).subscribe({
+          next: () => {
+            this.toastService.show('Carrera eliminada con éxito.', 'info');
+            this.cargarCarreras();
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error('Error al eliminar carrera:', err);
+            this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
+          }
+        });
+      }
+    });
   }
 
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {

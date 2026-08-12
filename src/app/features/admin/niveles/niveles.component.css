@@ -1,62 +1,139 @@
+/* ==========================================================================
+   DISEÑO MOBILE-FIRST (Móviles < 768px)
+   ========================================================================== */
 .carreras-card {
   background: #ffffff;
-  border-radius: var(--radius-lg, 24px);
-  padding: 2.25rem;
+  border-radius: var(--radius-lg, 16px); /* Radio reducido en móvil */
+  padding: 1.25rem; /* Padding optimizado para pantallas pequeñas */
   box-shadow: var(--shadow-md, 0 12px 28px -4px rgba(15, 23, 42, 0.08));
   border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .header-section {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1.25rem;
+  flex-direction: column; /* Apila título y botón en móviles */
+  align-items: stretch;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.header-section button {
+  width: 100%;
+  justify-content: center;
 }
 
 .title {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.25rem; /* Tamaño de fuente adaptado */
   font-weight: 800;
   color: var(--text-main, #0f172a);
   letter-spacing: -0.02em;
 }
 
 .subtitle {
-  margin: 0.35rem 0 0 0;
-  font-size: 0.9rem;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
   color: var(--text-muted, #64748b);
+  line-height: 1.4;
 }
 
+/* --- Formulario --- */
+.form-card {
+  background-color: #f8fafc;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm, 0 4px 6px -1px rgba(0, 0, 0, 0.05));
+}
+
+.form-card h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-main, #0f172a);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* 1 sola columna en móviles */
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  margin-bottom: 0.4rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-sm, 10px);
+  font-size: 0.95rem; /* Evita auto-zoom en iOS */
+  outline: none;
+  background-color: #ffffff;
+  transition: all 0.25s ease;
+  box-sizing: border-box; /* Mantiene los inputs dentro del contenedor */
+}
+
+.form-control:focus {
+  border-color: var(--accent-purple, #8b5cf6);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column-reverse; /* Botón cancelar abajo en móviles */
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  padding-top: 1.25rem;
+}
+
+.form-actions button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* --- Tabla de Datos --- */
 .table-container {
+  width: 100%;
   overflow-x: auto;
-  border-radius: var(--radius-md, 16px);
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  border-radius: var(--radius-md, 12px);
   border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 650px; /* Fuerza scroll horizontal para no romper el diseño */
+}
+
+.admin-table th, .admin-table td {
+  padding: 1rem 0.75rem;
+  text-align: left;
 }
 
 .admin-table th {
-  text-align: left;
-  padding: 1.15rem 1.5rem;
   background-color: #f8fafc;
   color: var(--text-muted, #64748b);
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  white-space: nowrap; /* Evita saltos de línea en cabeceras */
 }
 
 .admin-table td {
-  padding: 1.15rem 1.5rem;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   color: var(--text-main, #0f172a);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 .btn-icon {
@@ -71,6 +148,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-icon.text-red:hover {
@@ -79,57 +157,76 @@
   border-color: #ef4444;
 }
 
-.form-card {
-  background-color: #f8fafc;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: var(--radius-md, 16px);
-  padding: 2rem;
-  margin-bottom: 2.25rem;
-  box-shadow: var(--shadow-sm, 0 4px 6px -1px rgba(0, 0, 0, 0.05));
-}
+/* ==========================================================================
+   MEDIA QUERIES (Tablets y Escritorio >= 768px)
+   ========================================================================== */
+@media (min-width: 768px) {
+  .carreras-card {
+    padding: 2.25rem;
+    border-radius: var(--radius-lg, 24px);
+  }
 
-.form-card h4 {
-  margin: 0 0 1.25rem 0;
-  color: var(--text-main, #0f172a);
-  font-size: 1.2rem;
-  font-weight: 800;
-}
+  .header-section {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .header-section button {
+    width: auto;
+  }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.75rem;
-}
+  .title {
+    font-size: 1.45rem;
+  }
 
-.form-group label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--text-main, #0f172a);
-  margin-bottom: 0.5rem;
-}
+  .subtitle {
+    font-size: 0.9rem;
+  }
 
-.form-control {
-  width: 100%;
-  padding: 0.75rem 1.1rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: var(--radius-sm, 10px);
-  font-size: 0.925rem;
-  outline: none;
-  background-color: #ffffff;
-  transition: all 0.25s ease;
-}
+  /* Formulario Desktop */
+  .form-card {
+    padding: 2rem;
+    margin-bottom: 2.25rem;
+    border-radius: var(--radius-md, 16px);
+  }
 
-.form-control:focus {
-  border-color: var(--accent-purple, #8b5cf6);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
-}
+  .form-card h4 {
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
+  }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.85rem;
-  border-top: 1px solid var(--border-color, #e2e8f0);
-  padding-top: 1.5rem;
+  .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Grilla original */
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 0.85rem;
+    padding-top: 1.5rem;
+  }
+
+  .form-actions button {
+    width: auto;
+  }
+
+  /* Tabla Desktop */
+  .table-container {
+    border-radius: var(--radius-md, 16px);
+  }
+
+  .admin-table th, .admin-table td {
+    padding: 1.15rem 1.5rem;
+  }
+
+  .admin-table th {
+    font-size: 0.8rem;
+  }
+
+  .admin-table td {
+    font-size: 0.95rem;
+  }
 }

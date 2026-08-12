@@ -6,87 +6,10 @@
       <p class="subtitle">Gestiona los ciclos académicos activos para los formularios y fichas.</p>
     </div>
     
-    @if (!showForm()) {
-      <button type="button" class="btn btn-purple" (click)="abrirNuevoFormulario()">
-        <i class="fas fa-plus"></i> Nuevo Periodo
-      </button>
-    }
+    <button type="button" class="btn btn-purple" (click)="abrirFormularioSwal()">
+      <i class="fas fa-plus"></i> Nuevo Periodo
+    </button>
   </div>
-
-  <!-- FORMULARIO EXPANDIBLE DE CREACIÓN/EDICIÓN -->
-  @if (showForm()) {
-    <div class="form-card animate-slide-down">
-      <div class="form-header">
-        <h4>{{ isEditing() ? 'Editar Periodo' : 'Registrar Nuevo Periodo' }}</h4>
-        <p>Define las fechas de vigencia del periodo académico.</p>
-      </div>
-
-      <form [formGroup]="periodoForm" (ngSubmit)="guardarPeriodo()">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="periodo-nombre">Nombre del Periodo *</label>
-            <input 
-              id="periodo-nombre"
-              type="text" 
-              formControlName="nombre" 
-              placeholder="Ej. Abril - Agosto 2026" 
-              class="form-control"
-              [class.is-invalid]="periodoForm.controls.nombre.touched && periodoForm.controls.nombre.invalid"
-            >
-            @if (periodoForm.controls.nombre.touched && periodoForm.controls.nombre.hasError('required')) {
-              <small class="error-msg">El nombre es obligatorio.</small>
-            }
-          </div>
-
-          <div class="form-group">
-            <label for="periodo-inicio">Fecha de Inicio *</label>
-            <input 
-              id="periodo-inicio"
-              type="date" 
-              formControlName="fecha_inicio" 
-              class="form-control"
-              [class.is-invalid]="periodoForm.controls.fecha_inicio.touched && periodoForm.controls.fecha_inicio.invalid"
-            >
-            @if (periodoForm.controls.fecha_inicio.touched && periodoForm.controls.fecha_inicio.hasError('required')) {
-              <small class="error-msg">Fecha obligatoria.</small>
-            }
-          </div>
-
-          <div class="form-group">
-            <label for="periodo-fin">Fecha de Fin *</label>
-            <input 
-              id="periodo-fin"
-              type="date" 
-              formControlName="fecha_fin" 
-              class="form-control"
-              [class.is-invalid]="periodoForm.controls.fecha_fin.touched && periodoForm.controls.fecha_fin.invalid"
-            >
-            @if (periodoForm.controls.fecha_fin.touched && periodoForm.controls.fecha_fin.hasError('required')) {
-              <small class="error-msg">Fecha obligatoria.</small>
-            }
-          </div>
-
-          <div class="form-group" style="display: flex; align-items: flex-end; padding-bottom: 0.25rem;">
-            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.875rem; font-weight: 700;">
-              <input type="checkbox" formControlName="activo" style="width: 1.15rem; height: 1.15rem; accent-color: var(--primary-color);">
-              Establecer como periodo ACTIVO
-            </label>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-outline" (click)="cancelarFormulario()" [disabled]="isSaving()">Cancelar</button>
-          <button type="submit" class="btn btn-purple" [disabled]="periodoForm.invalid || isSaving()">
-            @if (isSaving()) {
-              <i class="fas fa-circle-notch fa-spin"></i> Guardando...
-            } @else {
-              <i class="fas fa-save"></i> {{ isEditing() ? 'Actualizar' : 'Guardar Periodo' }}
-            }
-          </button>
-        </div>
-      </form>
-    </div>
-  }
 
   <!-- BUSCADOR Y CONTADOR -->
   @if (!isLoading()) {
@@ -136,7 +59,7 @@
           @for (periodo of periodosFiltrados(); track periodo.id) {
             <tr>
               <td><strong>{{ periodo.nombre }}</strong></td>
-              <td style="color: var(--text-muted);">
+              <td style="color: var(--text-muted, #64748b);">
                 {{ periodo.fecha_inicio | date:'dd/MM/yyyy' }} - {{ periodo.fecha_fin | date:'dd/MM/yyyy' }}
               </td>
               <td>
@@ -147,7 +70,7 @@
               </td>
               <td style="text-align: right;">
                 <div class="actions-wrapper">
-                  <button type="button" class="btn-icon text-blue" (click)="abrirEditarFormulario(periodo)" title="Editar Periodo">
+                  <button type="button" class="btn-icon text-blue" (click)="abrirFormularioSwal(periodo)" title="Editar Periodo">
                     <i class="fas fa-edit"></i>
                   </button>
                   <button type="button" class="btn-icon text-red" (click)="eliminarPeriodo(periodo.id)" title="Eliminar Periodo">

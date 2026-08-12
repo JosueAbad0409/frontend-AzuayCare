@@ -6,12 +6,20 @@
   font-family: inherit;
   border-radius: 1rem;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Protecciones estructurales Mobile-First */
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* Contiene los desbordes hijos */
 }
 
 /* --- Botones y Micro-interacciones --- */
 .btn-preset {
   transition: all 0.2s ease;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .btn-preset:hover {
@@ -35,6 +43,7 @@
   outline: none;
   width: 100%;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .input-chip-edit:hover {
@@ -55,6 +64,7 @@ table input[type="radio"] {
   cursor: pointer;
   accent-color: #8b5cf6;
   transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin: 0; /* Reseteo de márgenes por defecto del navegador */
 }
 
 table input[type="radio"]:hover {
@@ -63,7 +73,22 @@ table input[type="radio"]:hover {
 
 /* ==========================================
    CUSTOM SCROLLBAR (VITAL PARA MÓVILES)
+   Aplica esta clase al <div> que envuelve tu <table>
    ========================================== */
+.custom-scrollbar {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll horizontal nativo fluido en iOS/Android */
+  padding-bottom: 0.5rem; /* Evita que el scrollbar tape contenido */
+}
+
+/* Forzar que la matriz no colapse y sea legible en móvil */
+.custom-scrollbar table {
+  width: 100%;
+  min-width: 650px; /* Fuerza el scroll horizontal en lugar de aplastar los radios */
+  border-collapse: collapse;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   height: 6px;
   width: 6px;
@@ -108,5 +133,33 @@ table tbody tr {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   MEDIA QUERIES (MOBILE-FIRST)
+   Adaptación táctil para celulares (< 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .matriz-builder-container {
+    border-radius: 0.75rem;
+  }
+
+  .btn-preset {
+    width: 100%; /* Botones de acción estirados para fácil tap */
+    min-height: 44px; /* Zonas táctiles accesibles (Estándar iOS/Android) */
+    margin-bottom: 0.5rem;
+  }
+
+  /* Inputs de edición sutilmente más grandes para dedos */
+  .input-chip-edit {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Radio buttons de la matriz más grandes en móviles */
+  table input[type="radio"] {
+    width: 1.3rem;
+    height: 1.3rem;
   }
 }

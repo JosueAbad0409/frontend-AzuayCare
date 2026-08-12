@@ -93,11 +93,28 @@
                     </p>
 
                     @if (tieneEvidencia(preg.id)) {
-                    <div class="mt-2 text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
-                        <i class="fas fa-paperclip"></i>
-                        <a [href]="obtenerUrlEvidencia(preg.id)" target="_blank" class="underline">
-                            Ver evidencia adjunta
-                        </a>
+                    <div class="evidencias-box">
+                        <p class="evidencias-titulo">
+                            <i class="fas fa-paperclip"></i>
+                            Evidencia adjunta ({{ obtenerEvidencias(preg.id).length }})
+                        </p>
+                        <div class="evidencias-lista">
+                            @for (ev of obtenerEvidencias(preg.id); track ev.url) {
+                            <div class="evidencia-item">
+                                @if (ev.esImagen) {
+                                <a [href]="ev.url" target="_blank" rel="noopener">
+                                    <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
+                                </a>
+                                <span class="evidencia-nombre">{{ ev.nombre }}</span>
+                                } @else {
+                                <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
+                                    <i class="fas fa-file"></i>
+                                    {{ ev.nombre }}
+                                </a>
+                                }
+                            </div>
+                            }
+                        </div>
                     </div>
                     }
 
@@ -108,6 +125,33 @@
                         </p>
                         <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
                         <p class="text-sm font-semibold text-slate-800">{{ obtenerTextoRespuesta(sub) }}</p>
+
+                        <!-- Evidencias de la subpregunta -->
+                        @if (tieneEvidencia(sub.id)) {
+                        <div class="evidencias-box">
+                            <p class="evidencias-titulo">
+                                <i class="fas fa-paperclip"></i>
+                                Evidencia ({{ obtenerEvidencias(sub.id).length }})
+                            </p>
+                            <div class="evidencias-lista">
+                                @for (ev of obtenerEvidencias(sub.id); track ev.url) {
+                                <div class="evidencia-item">
+                                    @if (ev.esImagen) {
+                                    <a [href]="ev.url" target="_blank" rel="noopener">
+                                        <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
+                                    </a>
+                                    <span class="evidencia-nombre">{{ ev.nombre }}</span>
+                                    } @else {
+                                    <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
+                                        <i class="fas fa-file"></i>
+                                        {{ ev.nombre }}
+                                    </a>
+                                    }
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
                     }
                 </div>

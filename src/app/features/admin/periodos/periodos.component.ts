@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
 import { PeriodoService } from '../../../core/services/periodo.service';
@@ -11,7 +11,7 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-periodos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './periodos.component.html',
   styleUrls: ['./periodos.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -19,30 +19,15 @@ import { ToastService } from '../../../core/services/toast.service';
 export class PeriodosComponent implements OnInit {
   private readonly periodoService = inject(PeriodoService);
   private readonly toastService = inject(ToastService);
-  private readonly fb = inject(NonNullableFormBuilder);
   
   // Estado base
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly isLoading = signal<boolean>(true);
-  readonly isSaving = signal<boolean>(false);
   
   // Filtros
   readonly searchTerm = signal<string>('');
   readonly filtroEstado = signal<string>('TODOS');
   
-  // Formulario y vistas
-  readonly showForm = signal<boolean>(false);
-  readonly isEditing = signal<boolean>(false);
-  readonly currentId = signal<string | null>(null);
-  
-  // Formulario reactivo fuertemente tipado
-  readonly periodoForm = this.fb.group({
-    nombre: ['', [Validators.required, Validators.maxLength(150)]],
-    fecha_inicio: ['', Validators.required],
-    fecha_fin: ['', Validators.required],
-    activo: [false]
-  });
-
   // Filtro Reactivo Computado
   readonly periodosFiltrados = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
@@ -86,79 +71,136 @@ export class PeriodosComponent implements OnInit {
       });
   }
 
-  abrirNuevoFormulario(): void {
-    this.periodoForm.reset({ activo: false });
-    this.isEditing.set(false);
-    this.currentId.set(null);
-    this.showForm.set(true);
-  }
+  abrirFormularioSwal(periodo?: PeriodoMatricula): void {
+    const isEditing = !!periodo;
+    const titleText = isEditing ? 'Editar Periodo' : 'Registrar Nuevo Periodo';
+    const confirmText = isEditing ? 'Actualizar' : 'Guardar Periodo';
 
-  abrirEditarFormulario(periodo: PeriodoMatricula): void {
-    this.isEditing.set(true);
-    this.currentId.set(periodo.id);
-    
-    const formatearFecha = (fecha: string) => fecha ? fecha.split('T')[0] : '';
+    const formatearFecha = (fecha?: string) => fecha ? fecha.split('T')[0] : '';
+    const fechaInicioVal = isEditing ? formatearFecha(periodo?.fecha_inicio) : '';
+    const fechaFinVal = isEditing ? formatearFecha(periodo?.fecha_fin) : '';
+    const activoVal = isEditing && periodo?.activo ? 'checked' : '';
 
-    this.periodoForm.patchValue({
-      nombre: periodo.nombre,
-      fecha_inicio: formatearFecha(periodo.fecha_inicio),
-      fecha_fin: formatearFecha(periodo.fecha_fin),
-      activo: periodo.activo
+    Swal.fire({
+      title: titleText,
+      width: '600px',
+      html: `
+        <div style="text-align: left; padding-top: 10px;">
+          <div style="margin-bottom: 1.25rem;">
+            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Nombre del Periodo *</label>
+            <input id="swal-nombre" type="text" class="swal2-input" placeholder="Ej. Abril - Agosto 2026" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? periodo.nombre : ''}">
+          </div>
+          
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="flex: 1;">
+              <label for="swal-inicio" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Fecha de Inicio *</label>
+              <input id="swal-inicio" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" value="${fechaInicioVal}">
+            </div>
+            <div style="flex: 1;">
+              <label for="swal-fin" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Fecha de Fin *</label>
+              <input id="swal-fin" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" value="${fechaFinVal}">
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding-bottom: 0.25rem;">
+            <input type="checkbox" id="swal-activo" style="width: 1.2rem; height: 1.2rem; accent-color: #8b5cf6; cursor: pointer;" ${activoVal}>
+            <label for="swal-activo" style="font-size: 0.875rem; font-weight: 700; color: #334155; margin: 0; cursor: pointer;">Establecer como periodo ACTIVO</label>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: confirmText,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#64748b',
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
+        const fecha_inicio = (document.getElementById('swal-inicio') as HTMLInputElement).value;
+        const fecha_fin = (document.getElementById('swal-fin') as HTMLInputElement).value;
+        const activo = (document.getElementById('swal-activo') as HTMLInputElement).checked;
+
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio.');
+          return false;
+        }
+        if (!fecha_inicio || !fecha_fin) {
+          Swal.showValidationMessage('Las fechas de inicio y fin son obligatorias.');
+          return false;
+        }
+        if (new Date(fecha_inicio) > new Date(fecha_fin)) {
+          Swal.showValidationMessage('La fecha de inicio no puede ser mayor a la fecha de fin.');
+          return false;
+        }
+
+        return { nombre, fecha_inicio, fecha_fin, activo };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.guardarPeriodoEnDb(result.value, isEditing ? periodo.id : null);
+      }
     });
-    this.showForm.set(true);
   }
 
-  cancelarFormulario(): void {
-    if (this.isSaving()) return;
-    this.showForm.set(false);
-    this.periodoForm.reset();
-  }
+  guardarPeriodoEnDb(formData: any, id: string | null): void {
+    Swal.fire({
+      title: 'Guardando...',
+      text: 'Por favor, espera un momento.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
-  guardarPeriodo(): void {
-    if (this.periodoForm.invalid) {
-      this.periodoForm.markAllAsTouched();
-      return;
-    }
-
-    this.isSaving.set(true);
-    const formData = this.periodoForm.getRawValue();
-    const id = this.currentId();
-
-    const peticion$ = (this.isEditing() && id)
+    const peticion$ = id
       ? this.periodoService.updatePeriodo(id, formData)
       : this.periodoService.createPeriodo(formData);
 
-    peticion$
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.toastService.show(
-            this.isEditing() ? 'Periodo actualizado con éxito.' : 'Periodo registrado con éxito.',
-            'success'
-          );
-          this.cargarPeriodos();
-          this.cancelarFormulario();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al guardar periodo:', err);
-          this.toastService.show(this.extraerMensajeError(err, 'Error al procesar la solicitud.'), 'error');
-        }
-      });
+    peticion$.subscribe({
+      next: () => {
+        Swal.close();
+        this.toastService.show(
+          id ? 'Periodo actualizado con éxito.' : 'Periodo registrado con éxito.',
+          'success'
+        );
+        this.cargarPeriodos();
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('Error al guardar periodo:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
+          confirmButtonColor: '#8b5cf6'
+        });
+      }
+    });
   }
 
   eliminarPeriodo(id: string): void {
-    if (confirm('¿Estás seguro de eliminar este periodo? Los formularios asociados podrían verse afectados.')) {
-      this.periodoService.deletePeriodo(id).subscribe({
-        next: () => {
-          this.toastService.show('Periodo eliminado con éxito.', 'info');
-          this.cargarPeriodos();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar periodo:', err);
-          this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar el periodo.'), 'error');
-        }
-      });
-    }
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: '¿Estás seguro de eliminar este periodo? Los formularios asociados podrían verse afectados.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.periodoService.deletePeriodo(id).subscribe({
+          next: () => {
+            this.toastService.show('Periodo eliminado con éxito.', 'info');
+            this.cargarPeriodos();
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error('Error al eliminar periodo:', err);
+            this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar el periodo.'), 'error');
+          }
+        });
+      }
+    });
   }
 
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {

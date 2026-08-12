@@ -93,46 +93,34 @@
 .btn-icon.text-red { color: #ef4444; }
 .btn-icon.text-red:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
-/* Modal Adaptable */
-.modal-backdrop {
-  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;
-  outline: none; overflow-y: auto;
+.btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-.modal-box { 
-  background: #ffffff; 
-  border-radius: 24px; 
-  width: 100%; 
-  max-width: 520px; 
-  overflow: hidden; 
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
+
+.btn-purple { 
+  background: #8b5cf6; 
+  color: white; 
 }
-.modal-header { padding: 1.5rem 1.75rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
-.modal-header h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; }
-.modal-body { padding: 1.5rem 1.75rem; overflow-y: auto; }
+.btn-purple:hover { background: #7c3aed; }
 
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.5rem; }
-.form-control { width: 100%; padding: 0.85rem 1.1rem; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; transition: border-color 0.2s; box-sizing: border-box; }
-.form-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); outline: none; }
-.form-control.is-invalid { border-color: #ef4444; }
-
-.form-row { display: flex; gap: 1rem; align-items: flex-start; }
-.flex-1 { flex: 1; }
-
-.error-text { color: #ef4444; font-size: 0.75rem; margin-top: 0.35rem; display: block; font-weight: 600; }
-.color-input { padding: 0.25rem; height: 46px; width: 70px; cursor: pointer; }
-.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.25rem 1.75rem; background: #f8fafc; border-top: 1px solid #e2e8f0; }
-
+/* Estados Vacíos y Carga */
 .empty-state { text-align: center; padding: 3rem 1.5rem !important; color: #64748b; }
 .empty-icon { font-size: 2.5rem; color: #cbd5e1; margin-bottom: 0.75rem; }
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; color: #8b5cf6; }
 .spinner-icon { font-size: 2.25rem; margin-bottom: 0.75rem; }
+.text-muted { color: #64748b; }
 
-.animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ==========================================================================
    MEDIA QUERIES (Puntos de quiebre para Tabletas y Celulares)
@@ -149,46 +137,15 @@
   .search-bar-wrapper { flex-direction: column; align-items: stretch; gap: 0.75rem; }
   .search-input-box { max-width: 100%; min-width: 0; }
   .count-badge { text-align: center; width: auto; align-self: flex-start; }
+
+  /* Ajustes de Tabla */
+  .admin-table { min-width: 100% !important; }
+  .admin-table th, .admin-table td { padding: 0.75rem 0.5rem !important; font-size: 0.8rem !important; }
 }
 
 /* Celulares (< 576px) */
 @media (max-width: 576px) {
   .carreras-card { padding: 1.25rem 0.9rem; border-radius: 14px; }
   
-  .modal-box { border-radius: 16px; margin: 0.5rem; }
-  .modal-header, .modal-body, .form-actions { padding: 1.25rem 1rem; }
-  
-  .form-row { flex-direction: column; gap: 0; }
-  .color-input { width: 100%; }
-
-  .form-actions { flex-direction: column-reverse; }
-  .form-actions button { width: 100%; justify-content: center; }
-  
   .admin-table th, .admin-table td { padding: 1rem 0.75rem; }
-}
-/* ==========================================
-   AJUSTES DE TABLA PARA MÓVILES
-   ========================================== */
-@media (max-width: 768px) {
-  /* Reducimos el ancho mínimo para que no fuerce tanto scroll */
-  .data-table, .admin-table {
-    min-width: 100% !important; 
-  }
-
-  /* Ocultamos las columnas secundarias en celular */
-  .col-correo,
-  .col-cedula,
-  .col-asig-ini,
-  .col-asig-fin {
-    display: none !important;
-  }
-
-  /* Ajustamos el padding de las celdas que quedan para ganar espacio */
-  .data-table th, 
-  .data-table td,
-  .admin-table th, 
-  .admin-table td {
-    padding: 0.75rem 0.5rem !important;
-    font-size: 0.8rem !important;
-  }
 }

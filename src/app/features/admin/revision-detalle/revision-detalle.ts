@@ -223,12 +223,51 @@ export class RevisionDetalleComponent implements OnInit {
   }
 
   tieneEvidencia(preguntaId: string): boolean {
-    const resp = this.mapaRespuestas()[preguntaId];
-    if (!resp) return false;
-    if (resp.documentos?.length > 0) return true;
-    if (resp.valor_texto && String(resp.valor_texto).includes('[EVIDENCIA_URL:')) return true;
-    return false;
+  const resp = this.mapaRespuestas()[preguntaId];
+  if (!resp) return false;
+  if (resp.documentos?.length > 0) return true;
+  if (resp.valor_texto && String(resp.valor_texto).includes('[EVIDENCIA_URL:')) return true;
+  return false;
+}
+
+/** Devuelve la lista de evidencias de una pregunta */
+obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: string; esImagen: boolean }[] {
+  const resp = this.mapaRespuestas()[preguntaId];
+  if (!resp) return [];
+
+  const lista: { url: string; nombre: string; mime: string; esImagen: boolean }[] = [];
+
+  // Documentos de la tabla documentos_respaldo
+  if (resp.documentos?.length) {
+    for (const doc of resp.documentos) {
+      if (doc.fecha_desactivacion) continue;
+      const mime = doc.mime_type || '';
+      lista.push({
+        url: doc.ruta_archivo,
+        nombre: doc.nombre_original || 'Archivo',
+        mime,
+        esImagen: mime.toLowerCase().startsWith('image/')
+      });
+    }
   }
+
+  // Fallback: evidencia embebida en valor_texto [EVIDENCIA_URL:...]
+  if (lista.length === 0 && resp.valor_texto) {
+    const match = String(resp.valor_texto).match(/\[EVIDENCIA_URL:(.*?)\]/);
+    if (match?.[1]) {
+      const url = match[1];
+      const esImagen = /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
+      lista.push({
+        url,
+        nombre: 'Evidencia adjunta',
+        mime: esImagen ? 'image/*' : 'application/octet-stream',
+        esImagen
+      });
+    }
+  }
+
+  return lista;
+}
 
   obtenerUrlEvidencia(preguntaId: string): string {
     const resp = this.mapaRespuestas()[preguntaId];

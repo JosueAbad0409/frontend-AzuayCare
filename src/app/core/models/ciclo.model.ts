@@ -1,6 +1,7 @@
 export interface Ciclo {
   id?: string;
-  nombre: string; 
+  nombre: string;
+  orden?: number; 
   carrera_id: string;
   carrera?: {
     id: string;
@@ -14,9 +15,11 @@ export interface Ciclo {
 export interface CreateCicloDto {
   nombre: string;
   carrera_id: string;
+  orden?: number;
 }
 
 export interface UpdateCicloDto {
   nombre?: string;
   carrera_id?: string;
+  orden?: number;
 }

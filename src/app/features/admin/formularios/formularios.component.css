@@ -26,6 +26,8 @@
   -webkit-backdrop-filter: blur(16px);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* BARRITA MULTICOLOR SUPERIOR EN LA TARJETA PRINCIPAL */
@@ -144,6 +146,7 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: transparent;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en móviles */
 }
 
 :root[data-theme='dark'] .table-container {
@@ -153,7 +156,7 @@
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 960px;
+  min-width: 960px; /* Fuerza el scroll en desktop para no deformarse */
 }
 
 /* Distribución optimizada de ancho */
@@ -368,7 +371,7 @@
 :root[data-theme='dark'] .badge-danger  { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.25); }
 
 /* ==========================================
-   MODALES Y FORMULARIOS (CORRECCIÓN DE SCROLL Y CENTRADO)
+   MODALES Y FORMULARIOS
    ========================================== */
 .modal-backdrop {
   position: fixed;
@@ -380,7 +383,7 @@
   justify-content: center;
   z-index: 1000;
   padding: 1.5rem;
-  overflow-y: auto; /* Permite scroll externo */
+  overflow-y: auto;
 }
 
 .modal-box {
@@ -391,131 +394,195 @@
   max-width: 500px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
-  margin: auto; /* Evita que crezca y desaparezca hacia arriba de la pantalla */
-  max-height: 90vh; /* Límite de alto respecto al viewport */
-  overflow-y: auto; /* Scroll interno en caso de formularios muy largos */
+  margin: auto;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
-/* Scrollbar estilizada */
-.modal-box::-webkit-scrollbar {
-  width: 8px;
-}
-.modal-box::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 8px;
-}
-.modal-box::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 8px;
-}
-.modal-box::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
+.modal-box::-webkit-scrollbar { width: 8px; }
+.modal-box::-webkit-scrollbar-track { background: transparent; border-radius: 8px; }
+.modal-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+.modal-box::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 :root[data-theme='dark'] .modal-box {
   background: #0f172a;
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.modal-title {
-  margin-top: 0;
-  font-weight: 800;
-  color: var(--text-main);
-  margin-bottom: 1.25rem;
-}
-
+.modal-title { margin-top: 0; font-weight: 800; color: var(--text-main); margin-bottom: 1.25rem; }
 :root[data-theme='dark'] .modal-title { color: #f8fafc; }
 
-.form-group-modal {
-  margin-bottom: 1rem;
-}
-
-.form-label-modal {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 0.4rem;
-}
-
+.form-group-modal { margin-bottom: 1rem; }
+.form-label-modal { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem; }
 :root[data-theme='dark'] .form-label-modal { color: #cbd5e1; }
 
 .form-control {
-  width: 100%;
-  padding: 0.75rem 1.1rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 0.925rem;
-  outline: none;
-  background-color: var(--bg-main);
-  transition: all 0.25s ease;
-  box-sizing: border-box;
+  width: 100%; padding: 0.75rem 1.1rem; border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); font-size: 0.925rem; outline: none;
+  background-color: var(--bg-main); transition: all 0.25s ease; box-sizing: border-box;
 }
 
-:root[data-theme='dark'] .form-control {
-  background-color: #1e293b;
-  border-color: rgba(148, 163, 184, 0.2);
-  color: #f8fafc;
-}
-
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
-}
+:root[data-theme='dark'] .form-control { background-color: #1e293b; border-color: rgba(148, 163, 184, 0.2); color: #f8fafc; }
+.form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12); }
 
 .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 1.25rem;
+  display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;
 }
 
 :root[data-theme='dark'] .modal-footer { border-top-color: rgba(148, 163, 184, 0.15); }
 
-.loading-state, .empty-state {
-  text-align: center;
-  padding: 4rem 1rem;
-  color: var(--text-muted);
-}
+.loading-state, .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+.spinner-icon, .empty-icon { font-size: 2.25rem; color: var(--primary-color); margin-bottom: 0.75rem; }
 
-.spinner-icon, .empty-icon {
-  font-size: 2.25rem;
-  color: var(--primary-color);
-  margin-bottom: 0.75rem;
-}
-
+/* ==========================================================================
+   100% RESPONSIVE - TARJETAS MÓVILES (MOBILE-FIRST PREMIUM)
+   ========================================================================== */
 @media (max-width: 768px) {
-  .carreras-card { padding: 1.5rem; }
+  .carreras-card { padding: 1.25rem; border-radius: 16px; }
   .header-section { flex-direction: column; align-items: stretch; gap: 1rem; }
   .header-section button { width: 100%; justify-content: center; }
   .search-bar-wrapper { flex-direction: column; align-items: stretch; gap: 0.75rem; }
   .search-input-box { max-width: 100%; }
-}
 
-/* ==========================================
-   AJUSTES DE TABLA PARA MÓVILES
-   ========================================== */
-@media (max-width: 768px) {
-  /* Reducimos el ancho mínimo para que no fuerce tanto scroll */
-  .data-table, .admin-table {
-    min-width: 100% !important; 
+  /* ====================================
+     TRANSFORMACIÓN DE TABLA A TARJETAS
+     ==================================== */
+  .table-container {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
   }
-
-  /* Ocultamos las columnas secundarias en celular */
-  .col-correo,
-  .col-cedula,
-  .col-asig-ini,
-  .col-asig-fin {
+  
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  
+  /* PRESERVAR FILTROS: Los convertimos en un panel superior con 100% width real */
+  .admin-table thead {
+    display: block;
+    margin-bottom: 1.5rem;
+    background: var(--bg-alt);
+    padding: 1.25rem;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box; /* Previene desborde por padding */
+    width: 100%;
+  }
+  
+  .admin-table thead tr {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    border: none;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  /* FORZAR ANCHO AL 100% EN TH Y SELECTS */
+  .admin-table th {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-sizing: border-box;
+  }
+  
+  /* Oculta los TH que NO tienen un select (Título y Acciones) */
+  .admin-table th:not(:has(.table-filter-select)) {
     display: none !important;
   }
 
-  /* Ajustamos el padding de las celdas que quedan para ganar espacio */
-  .data-table th, 
-  .data-table td,
-  .admin-table th, 
-  .admin-table td {
-    padding: 0.75rem 0.5rem !important;
-    font-size: 0.8rem !important;
+  /* El select ocupa todo el ancho y se ajusta para dedos */
+  .table-filter-select {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background-color: var(--bg-main) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 0.85rem 1.1rem !important; /* Más alto para fácil touch */
+    border-radius: 10px !important;
+    font-size: 0.9rem !important;
+    box-sizing: border-box !important;
   }
+
+  /* FORMATO DE CADA TARJETA (Fila) */
+  .admin-table tbody tr {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-main);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    padding: 0.5rem 0;
+    position: relative;
+  }
+  
+  :root[data-theme='dark'] .admin-table tbody tr {
+    background: rgba(30, 41, 59, 0.4);
+  }
+
+  /* FORMATO DE CADA CELDA DENTRO DE LA TARJETA */
+  .admin-table td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    padding: 0.75rem 1.25rem 0.75rem 45% !important; /* Deja 45% despacio a la izq para el título */
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    min-height: 3.5rem;
+    justify-content: center;
+  }
+
+  /* Celda de botones (Acciones) al final de la tarjeta */
+  .admin-table td:last-child {
+    border-bottom: none;
+    align-items: center !important;
+    padding: 1rem !important;
+    background: var(--bg-alt);
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* ETIQUETAS MÓVILES GENERADAS DINÁMICAMENTE */
+  .admin-table td::before {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40%;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  
+  /* Nombres visuales inyectados */
+  .admin-table td:nth-of-type(1)::before { content: "Título / Desc"; }
+  .admin-table td:nth-of-type(2)::before { content: "Tipo"; }
+  .admin-table td:nth-of-type(3)::before { content: "Versión"; }
+  .admin-table td:nth-of-type(4)::before { content: "Estado"; }
+
+  /* Ajustes internos de las tarjetas */
+  .cell-info { align-items: flex-end; text-align: right; }
+  .actions-wrapper { justify-content: center; width: 100%; gap: 0.5rem; flex-wrap: wrap;}
+  .btn-icon { width: 44px; height: 44px; font-size: 1.15rem; }
+
+  /* Prevenir deformación del empty-state por el padding */
+  .admin-table td.empty-state {
+    align-items: center !important;
+    padding: 2rem 1rem !important;
+    text-align: center !important;
+  }
+  .admin-table td.empty-state::before { display: none; }
+
+  /* Ajustes Modales Móviles */
+  .modal-box { padding: 1.5rem; margin: 1rem; width: auto; max-height: 85vh; }
+  .modal-footer { flex-direction: column-reverse; }
+  .modal-footer button { width: 100%; justify-content: center; }
 }
