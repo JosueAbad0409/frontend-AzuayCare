@@ -153,8 +153,8 @@ Los archivos de entorno se encuentran en `src/environments/`.
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000',
-  googleClientId: '474214477775-m9ci1dg4p6i20s7548et5sfto14750lp.apps.googleusercontent.com'
+  apiUrl: '',
+  googleClientId: ''
 };
 ```
 
@@ -163,8 +163,8 @@ export const environment = {
 ```typescript
 export const environment = {
   production: true,
-  apiUrl: 'https://azuaycare-backend.onrender.com',
-  googleClientId: '474214477775-m9ci1dg4p6i20s7548et5sfto14750lp.apps.googleusercontent.com'
+  apiUrl: '',
+  googleClientId: ''
 };
 ```
 
@@ -239,7 +239,7 @@ Este frontend se comunica con el backend NestJS de AzuayCare:
 | Entorno     | URL                                      |
 |-------------|------------------------------------------|
 | Desarrollo  | `http://localhost:3000`                  |
-| Producción  | `https://azuaycare-backend.onrender.com` |
+| Producción  | `` |
 
 ---
 
@@ -268,4 +268,4 @@ Pasos generales:
 
 ---
 
-**AzuayCare** · Universidad del Azuay
+**AzuayCare** · Instituto tecnológico del Azuay
