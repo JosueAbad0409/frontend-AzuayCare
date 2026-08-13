@@ -111,7 +111,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   // Signals
   isDescargandoPdf = this.descargaService.isDescargando;
   formulariosDisponibles = signal<FormularioUI[]>([]);
-  vistaActual = signal<'LISTA' | 'FORMULARIO'>('LISTA');
+  vistaActual = signal<'LISTA' | 'FORMULARIO' | 'RESUMEN_FINAL'>('LISTA');
+  // Nuevos signals para manejar los datos del resumen
+  alertasVulnerabilidad = signal<any[]>([]);
 
   misFichas = signal<FichaRevision[]>([]);
   fichaActiva = signal<FichaRevision | null>(null);
@@ -979,8 +981,9 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     const ficha = this.fichaActiva();
     const cedula = ficha?.usuario?.cedula || fichaId.slice(0, 8);
     this.descargaService.descargar(
-      `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf`,
-      `Ficha_Socioeconomica_${cedula}.pdf`,
+      // 🔥 ASEGÚRATE DE QUE ESTA RUTA DIGA /pdf-resumen
+      `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf-resumen`, 
+      `Resumen_Ficha_${cedula}.pdf`, // Cambia también el nombre para diferenciarlo
       'Hubo un problema al generar tu comprobante PDF.'
     );
   }
@@ -1117,8 +1120,21 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     this.enviando.set(false);
     localStorage.removeItem(AUTOSAVE_KEY);
     this.toastService.show('¡Ficha socioeconómica enviada exitosamente a Bienestar!', 'success');
-    this.volverALista();
-    this.cargarDatosEstudiante();
+    
+    const fichaId = this.fichaActiva()?.id;
+    
+    // Consultar las alertas al backend
+    this.http.get<any>(`${environment.apiUrl}/fichas-respondidas/${fichaId}/resumen-vulnerabilidad`)
+      .subscribe({
+        next: (res) => {
+          this.alertasVulnerabilidad.set(res.detalles || []);
+          this.vistaActual.set('RESUMEN_FINAL'); // Mostramos la pantalla del QR
+        },
+        error: () => {
+          // Fallback por si falla la consulta, igual mostramos el QR
+          this.vistaActual.set('RESUMEN_FINAL'); 
+        }
+      });
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
