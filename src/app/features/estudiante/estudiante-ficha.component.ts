@@ -402,6 +402,7 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     this.fichaActiva.set(null);
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
+    this.mostrarBannerPrecarga.set(false); // 🔥 Limpieza añadida
 
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
@@ -410,11 +411,18 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     });
 
     this.recuperarAutosaveValido();
-  }
+  } 
 
   evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
-    const tieneBorradorLleno = localStorage.getItem(AUTOSAVE_KEY) !== null;
-    const tieneFichasAnteriores = fichas.length > 1;
+    // 1. Evitamos que un caché fantasma vacío bloquee el botón
+    const autosaveGuardado = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || '{}');
+    const tieneBorradorLleno = autosaveGuardado.respuestas && Object.keys(autosaveGuardado.respuestas).length > 0;
+
+    // 2. Buscamos si existe al menos UNA ficha anterior que esté completada
+    const tieneFichasAnteriores = fichas.some(f => 
+      (f.estado_ficha === 'VALIDADO' || f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO') 
+      && f.id !== this.fichaActiva()?.id // Excluimos la ficha que está llenando actualmente
+    );
 
     if (!tieneBorradorLleno && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR') {
       this.mostrarBannerPrecarga.set(true);
@@ -423,26 +431,69 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
 
   ignorarPrecarga(): void { this.mostrarBannerPrecarga.set(false); }
 
-  ejecutarPrecarga(): void {
-    const periodoNuevoId = this.fichaActiva()?.periodo_id;
-    if (!periodoNuevoId) return;
 
-    this.toastService.show('Importando datos...', 'info');
-    this.mostrarBannerPrecarga.set(false);
+  
+ejecutarPrecarga(): void {
+  const periodoNuevoId = this.fichaActiva()?.periodo_id;
+  if (!periodoNuevoId) return;
 
-    this.http.get<any>(`${environment.apiUrl}/respuestas-formulario/precarga/${periodoNuevoId}`)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => {
-          if (data && data.respuestas_transferidas) {
-            this.toastService.show('Ficha precargada exitosamente.', 'success');
-            window.location.reload();
-          } else {
-            this.toastService.show('No hay datos para precargar.', 'info');
-          }
-        },
-        error: () => this.toastService.show('Error al intentar precargar la ficha.', 'error')
-      });
+  this.toastService.show('Importando datos, por favor espera...', 'info');
+  // NO lo ocultes todavía; solo si tiene éxito
+  // this.mostrarBannerPrecarga.set(false);
+
+  this.http
+    .post<any>(`${environment.apiUrl}/respuestas-formulario/precarga/${periodoNuevoId}`, {})
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (data) => {
+        if (data?.respuestas_transferidas) {
+          this.mostrarBannerPrecarga.set(false); // solo aquí
+          this.toastService.show(
+            data.message || '¡Respuestas importadas!',
+            'success',
+          );
+          localStorage.removeItem(AUTOSAVE_KEY);
+          this.autosaveData = null;
+          this.forzarRecarga();
+        } else {
+          this.toastService.show(
+            data?.message || 'No se encontraron datos para precargar.',
+            'info',
+          );
+          // dejar el banner visible por si quiere reintentar
+        }
+      },
+      error: (err) => {
+        console.error('Error precarga:', err);
+        this.toastService.show(
+          err?.error?.message || 'Error al importar las respuestas.',
+          'error',
+        );
+        // el banner sigue visible para reintentar
+      },
+    });
+}
+
+  forzarRecarga(): void {
+    const ficha = this.fichaActiva();
+    if (!ficha) return;
+
+    // 1. Destruimos el caché local que podría estar corrupto
+    localStorage.removeItem(AUTOSAVE_KEY);
+    this.autosaveData = null;
+
+    // 2. Limpiamos visualmente el formulario para evitar mezclas de datos
+    this.respuestasGroup.reset({}, { emitEvent: false });
+    this.matricesGroup.reset({}, { emitEvent: false });
+    this.evidenciasGroup.reset({}, { emitEvent: false });
+    this.valormap.set({});
+
+    // 3. Mostramos feedback al usuario
+    this.toastService.show('Sincronizando con la base de datos...', 'info');
+    this.isLoading.set(true); 
+
+    // 4. Volvemos a disparar tu función principal que arma todo
+    this.cargarEstructuraFormulario(ficha.formulario_id);
   }
 
   crearNuevaFicha(periodoId: string, formularioId: string): void {
@@ -456,7 +507,15 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
       .subscribe({
         next: (nuevaFicha: FichaRevision) => {
           this.fichaActiva.set(nuevaFicha);
+          
+          // 🔥 CORRECCIÓN: Agregamos la nueva ficha al   signal para tener el contexto real
+          const fichasActualizadas = [...this.misFichas(), nuevaFicha];
+          this.misFichas.set(fichasActualizadas);
+          
           this.cargarEstructuraFormulario(formularioId);
+          
+          // 🔥 CORRECCIÓN: Llamamos al evaluador para que decida si muestra el botón
+          this.evaluarPrecarga(periodoId, fichasActualizadas);
         },
         error: (err) => {
           this.fichaService.getMisFichas().subscribe(fichas => {
@@ -464,6 +523,8 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
             if (found) {
               this.fichaActiva.set(found);
               this.cargarEstructuraFormulario(found.formulario_id);
+              // Si entra por el catch pero sí existía, evaluamos también
+              this.evaluarPrecarga(found.periodo_id, fichas);
             } else {
               console.error('Error al inicializar la ficha:', err);
               this.toastService.show('Error al crear o buscar tu ficha.', 'error');
