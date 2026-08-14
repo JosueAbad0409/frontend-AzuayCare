@@ -391,7 +391,6 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     if (fichaExistente) {
       this.fichaActiva.set(fichaExistente);
       this.cargarEstructuraFormulario(formularioId);
-      this.evaluarPrecarga(fichaExistente.periodo_id, this.misFichas());
     } else {
       this.crearNuevaFicha(pActivo.id, formularioId);
     }
@@ -413,21 +412,17 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     this.recuperarAutosaveValido();
   } 
 
-  evaluarPrecarga(periodoActualId: string, fichas: FichaRevision[]): void {
-    // 1. Evitamos que un caché fantasma vacío bloquee el botón
-    const autosaveGuardado = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || '{}');
-    const tieneBorradorLleno = autosaveGuardado.respuestas && Object.keys(autosaveGuardado.respuestas).length > 0;
+  evaluarPrecarga(fichas: FichaRevision[]): void {
+  const tieneRespuestasReales = this.respuestasBDCache.length > 0;
 
-    // 2. Buscamos si existe al menos UNA ficha anterior que esté completada
-    const tieneFichasAnteriores = fichas.some(f => 
-      (f.estado_ficha === 'VALIDADO' || f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO') 
-      && f.id !== this.fichaActiva()?.id // Excluimos la ficha que está llenando actualmente
-    );
+  const tieneFichasAnteriores = fichas.some(f =>
+    (f.estado_ficha === 'VALIDADO' || f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO')
+    && f.id !== this.fichaActiva()?.id
+  );
 
-    if (!tieneBorradorLleno && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR') {
-      this.mostrarBannerPrecarga.set(true);
-    }
-  }
+  const debeMostrar = !tieneRespuestasReales && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR';
+  this.mostrarBannerPrecarga.set(debeMostrar);
+}
 
   ignorarPrecarga(): void { this.mostrarBannerPrecarga.set(false); }
 
@@ -497,43 +492,36 @@ ejecutarPrecarga(): void {
   }
 
   crearNuevaFicha(periodoId: string, formularioId: string): void {
-    this.fichaService.crearFicha({
-      periodo_id: periodoId,
-      formulario_id: formularioId,
-      total_ingresos: 0,
-      total_egresos: 0
-    } as any)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (nuevaFicha: FichaRevision) => {
-          this.fichaActiva.set(nuevaFicha);
-          
-          // 🔥 CORRECCIÓN: Agregamos la nueva ficha al   signal para tener el contexto real
-          const fichasActualizadas = [...this.misFichas(), nuevaFicha];
-          this.misFichas.set(fichasActualizadas);
-          
-          this.cargarEstructuraFormulario(formularioId);
-          
-          // 🔥 CORRECCIÓN: Llamamos al evaluador para que decida si muestra el botón
-          this.evaluarPrecarga(periodoId, fichasActualizadas);
-        },
-        error: (err) => {
-          this.fichaService.getMisFichas().subscribe(fichas => {
-            const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
-            if (found) {
-              this.fichaActiva.set(found);
-              this.cargarEstructuraFormulario(found.formulario_id);
-              // Si entra por el catch pero sí existía, evaluamos también
-              this.evaluarPrecarga(found.periodo_id, fichas);
-            } else {
-              console.error('Error al inicializar la ficha:', err);
-              this.toastService.show('Error al crear o buscar tu ficha.', 'error');
-              this.isLoading.set(false);
-            }
-          });
-        }
-      });
-  }
+  this.fichaService.crearFicha({
+    periodo_id: periodoId,
+    formulario_id: formularioId,
+    total_ingresos: 0,
+    total_egresos: 0
+  } as any)
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (nuevaFicha: FichaRevision) => {
+        this.fichaActiva.set(nuevaFicha);
+        const fichasActualizadas = [...this.misFichas(), nuevaFicha];
+        this.misFichas.set(fichasActualizadas);
+        this.cargarEstructuraFormulario(formularioId);
+      },
+      error: (err) => {
+        this.fichaService.getMisFichas().subscribe(fichas => {
+          const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
+          if (found) {
+            this.fichaActiva.set(found);
+            this.cargarEstructuraFormulario(found.formulario_id);
+            // ✅ Quitada la llamada duplicada/vieja a evaluarPrecarga
+          } else {
+            console.error('Error al inicializar la ficha:', err);
+            this.toastService.show('Error al crear o buscar tu ficha.', 'error');
+            this.isLoading.set(false);
+          }
+        });
+      }
+    });
+}
 
   cargarEstructuraFormulario(formularioId: string): void {
     const fichaActual = this.fichaActiva();
@@ -631,9 +619,12 @@ ejecutarPrecarga(): void {
       this.seccionActualIndex.set(saved <= maxStep ? saved : 0);
     }
 
+    this.evaluarPrecarga(this.misFichas());
     this.isLoading.set(false);
     this.cargarOpcionesEnBackground(preguntasTodas);
   }
+
+
 
   private cargarOpcionesEnBackground(preguntas: Pregunta[]): void {
     const deSeleccion = preguntas.filter(

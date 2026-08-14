@@ -135,15 +135,11 @@ export class FormulariosComponent {
   }
 
   abrirModalEditar(form: Formulario, e: Event): void {
-    e.stopPropagation();
-    if (form.bloqueado) {
-      this.toastService.show('Formulario en versión bloqueada (solo lectura).', 'info');
-      return;
-    }
-    this.isEditMode.set(true);
-    this.selectedFormularioId.set(form.id);
-    this.abrirSwalFicha(form);
-  }
+  e.stopPropagation();
+  this.isEditMode.set(true);
+  this.selectedFormularioId.set(form.id);
+  this.abrirSwalFicha(form);
+}
 
   private abrirSwalFicha(form?: Formulario): void {
     const esEdicion = this.isEditMode();
@@ -255,12 +251,6 @@ export class FormulariosComponent {
 
   abrirModalClonar(formId: string, e: Event): void {
     e.stopPropagation();
-    const form = this.formularios().find(f => f.id === formId);
-    if (form?.bloqueado) {
-      this.toastService.show('No se puede clonar una versión bloqueada.', 'error');
-      return;
-    }
-
     const periodoActivo = this.periodos().find(p => p.activo);
     const opcionesPeriodo = this.periodos()
       .map(p => `<option value="${p.id}" ${periodoActivo?.id === p.id ? 'selected' : ''}>${p.nombre}${p.activo ? ' (ACTIVO)' : ''}</option>`)
@@ -323,7 +313,7 @@ export class FormulariosComponent {
 
   togglePublicacion(form: Formulario, e: Event): void {
     e.stopPropagation();
-    if (form.bloqueado || this.isTogglingState()) return;
+    if (this.isTogglingState()) return;
 
     const esPublicar = !form.publicado;
 

@@ -13,143 +13,127 @@
 
   <!-- BARRA DE BÚSQUEDA Y CONTADOR -->
   @if (!isLoading()) {
-    <div class="search-bar-wrapper">
-      <div class="search-input-box">
-        <i class="fas fa-search search-icon"></i>
-        <input 
-          type="text" 
-          placeholder="Buscar por título o descripción..." 
-          [value]="searchTerm()"
-          (input)="onSearchChange($event)"
-          class="search-control"
-        />
-      </div>
-
-      <span class="count-badge">Total: {{ formulariosFiltrados().length }} Ficha(s)</span>
+  <div class="search-bar-wrapper">
+    <div class="search-input-box">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Buscar por título o descripción..." [value]="searchTerm()"
+        (input)="onSearchChange($event)" class="search-control" />
     </div>
+
+    <span class="count-badge">Total: {{ formulariosFiltrados().length }} Ficha(s)</span>
+  </div>
   }
 
   <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
-    <div class="loading-state">
-      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
-      <p>Cargando formularios...</p>
-    </div>
+  <div class="loading-state">
+    <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
+    <p>Cargando formularios...</p>
+  </div>
   } @else {
-    <!-- TABLA COMPLETA CON FILTROS INTEGRADOS EN ENCABEZADOS -->
-    <div class="table-container">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th class="col-titulo">Título de la Ficha</th>
+  <!-- TABLA COMPLETA CON FILTROS INTEGRADOS EN ENCABEZADOS -->
+  <div class="table-container">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th class="col-titulo">Título de la Ficha</th>
 
-            <!-- FILTRO DESPLEGABLE POR TIPO -->
-            <th class="col-tipo">
-              <select [value]="filtroTipo()" (change)="onTipoChange($event)" class="table-filter-select" title="Filtrar por tipo">
-                <option value="TODOS">TIPO (TODOS)</option>
-                @for (t of tiposFormulario(); track t.id) {
-                  <option [value]="t.id">{{ t.nombre | uppercase }}</option>
-                }
-              </select>
-            </th>
+          <!-- FILTRO DESPLEGABLE POR TIPO -->
+          <th class="col-tipo">
+            <select [value]="filtroTipo()" (change)="onTipoChange($event)" class="table-filter-select"
+              title="Filtrar por tipo">
+              <option value="TODOS">TIPO (TODOS)</option>
+              @for (t of tiposFormulario(); track t.id) {
+              <option [value]="t.id">{{ t.nombre | uppercase }}</option>
+              }
+            </select>
+          </th>
 
-            <!-- FILTRO DESPLEGABLE POR VERSIÓN -->
-            <th class="col-vers">
-              <select [value]="filtroVersion()" (change)="onVersionChange($event)" class="table-filter-select" title="Filtrar por versión">
-                <option value="TODOS">VERSIÓN (TODAS)</option>
-                @for (v of versionesDisponibles(); track v) {
-                  <option [value]="v.toString()">VERSIÓN {{ v }}</option>
-                }
-              </select>
-            </th>
+          <!-- FILTRO DESPLEGABLE POR VERSIÓN -->
+          <th class="col-vers">
+            <select [value]="filtroVersion()" (change)="onVersionChange($event)" class="table-filter-select"
+              title="Filtrar por versión">
+              <option value="TODOS">VERSIÓN (TODAS)</option>
+              @for (v of versionesDisponibles(); track v) {
+              <option [value]="v.toString()">VERSIÓN {{ v }}</option>
+              }
+            </select>
+          </th>
 
-            <!-- FILTRO DESPLEGABLE POR ESTADO -->
-            <th class="col-estado">
-              <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
-                <option value="TODOS">ESTADO (TODOS)</option>
-                <option value="PUBLICADO">PUBLICADAS</option>
-                <option value="BORRADOR">BORRADORES</option>
-                <option value="BLOQUEADO">BLOQUEADAS</option>
-              </select>
-            </th>
+          <!-- FILTRO DESPLEGABLE POR ESTADO -->
+          <th class="col-estado">
+            <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-filter-select"
+              title="Filtrar por estado">
+              <option value="TODOS">ESTADO (TODOS)</option>
+              <option value="PUBLICADO">PUBLICADAS</option>
+              <option value="BORRADOR">BORRADORES</option>
+              <option value="BLOQUEADO">BLOQUEADAS</option>
+            </select>
+          </th>
 
-            <th class="col-acc">Acciones</th>
-          </tr>
-        </thead>
+          <th class="col-acc">Acciones</th>
+        </tr>
+      </thead>
 
-        <tbody>
-          @for (form of formulariosFiltrados(); track form.id) {
-            <tr style="cursor: pointer;" [routerLink]="['/admin/formularios/builder', form.id]">
-              <td>
-                <div class="cell-info">
-                  <span class="title-text">{{ form.titulo }}</span>
-                  <span class="sub-text">{{ form.descripcion || 'Sin descripción' }}</span>
-                </div>
-              </td>
-              <td><span class="badge badge-purple">{{ getNombreTipoFormulario(form) }}</span></td>
-              <td><span class="badge badge-blue">v{{ form.version }}</span></td>
-              <td>
-                @if (form.bloqueado) {
-                  <span class="badge badge-gray"><i class="fas fa-lock"></i> BLOQUEADO</span>
-                } @else {
-                  <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
-                    {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
-                  </span>
-                }
-              </td>
+      <tbody>
+        @for (form of formulariosFiltrados(); track form.id) {
+        <tr style="cursor: pointer;" [routerLink]="['/admin/formularios/builder', form.id]">
+          <td>
+            <div class="cell-info">
+              <span class="title-text">{{ form.titulo }}</span>
+              <span class="sub-text">{{ form.descripcion || 'Sin descripción' }}</span>
+            </div>
+          </td>
+          <td><span class="badge badge-purple">{{ getNombreTipoFormulario(form) }}</span></td>
+          <td><span class="badge badge-blue">v{{ form.version }}</span></td>
+          <td>
+            <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
+              {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
+            </span>
+          </td>
 
-              <!-- ACCIONES COMPLETA -->
-              <td style="text-align: right;" (click)="$event.stopPropagation()">
-                <div class="actions-wrapper">
-                  @if (!form.bloqueado) {
-                    <button 
-                      type="button"
-                      class="btn-icon" 
-                      [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
-                      (click)="togglePublicacion(form, $event)"
-                      [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'"
-                      [disabled]="isTogglingState()"
-                    >
-                      <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
-                    </button>
-                  }
+          <td style="text-align: right;" (click)="$event.stopPropagation()">
+            <div class="actions-wrapper">
+              <button type="button" class="btn-icon" [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
+                (click)="togglePublicacion(form, $event)"
+                [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'" [disabled]="isTogglingState()">
+                <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
 
-                  <a 
-                    [routerLink]="['/admin/formularios/builder', form.id]" 
-                    class="btn-icon text-blue"
-                    [title]="form.bloqueado ? 'Ver preguntas (solo lectura)' : 'Diseñar Preguntas'"
-                  >
-                    <i class="fas" [ngClass]="form.bloqueado ? 'fa-eye' : 'fa-tools'"></i>
-                  </a>
+              <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue"
+                title="Diseñar Preguntas">
+                <i class="fas fa-tools"></i>
+              </a>
 
-                  @if (!form.bloqueado) {
-                    <button type="button" class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)" title="Editar Formulario">
-                      <i class="fas fa-edit"></i>
-                    </button>
+              <button type="button" class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)"
+                title="Editar Formulario">
+                <i class="fas fa-edit"></i>
+              </button>
 
-                    <button type="button" class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)" title="Clonar / Crear nueva versión">
-                      <i class="fas fa-clone"></i>
-                    </button>
-                  }
+              <button type="button" class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)"
+                title="Clonar / Crear nueva versión">
+                <i class="fas fa-clone"></i>
+              </button>
 
-                  @if (!form.publicado && !form.bloqueado) {
-                    <button type="button" class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)" title="Eliminar Borrador">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="5" class="empty-state">
-                <i class="fas fa-folder-open empty-icon"></i>
-                <p style="font-weight: 600;">No hay formularios que coincidan con los criterios seleccionados.</p>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+              @if (!form.publicado) {
+              <button type="button" class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)"
+                title="Eliminar Borrador">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+              }
+            </div>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="5" class="empty-state">
+            <i class="fas fa-folder-open empty-icon"></i>
+            <p style="font-weight: 600;">No hay formularios que coincidan con los criterios seleccionados.</p>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
   }
 </div>
