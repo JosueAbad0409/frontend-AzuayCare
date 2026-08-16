@@ -1,8 +1,5 @@
 <div class="student-layout">
-  <!-- HEADER ESCRITORIO / TABLET -->
   <header class="top-header">
-    
-    <!-- Lado Izquierdo: Logo y Marca -->
     <div class="brand">
       <div class="brand-logo" aria-hidden="true">
         <i class="fas fa-heartbeat"></i>
@@ -13,7 +10,6 @@
       </div>
     </div>
 
-    <!-- Centro: Navegación para pantallas grandes -->
     <nav class="desktop-nav" aria-label="Navegación principal">
       <a routerLink="/estudiante/inicio" routerLinkActive="active" class="nav-link">
         <i class="fas fa-home"></i> Inicio
@@ -29,25 +25,22 @@
       </a>
     </nav>
 
-    <!-- Lado Derecho: Usuario y Botón Salir -->
     <div class="header-actions">
       <div class="user-greeting">
         Hola, <strong>{{ usuarioNombre() }}</strong>
       </div>
-      <button class="btn-logout" (click)="logout()" aria-label="Cerrar sesión">
+      <button class="btn-logout" (click)="logout()" aria-label="Cerrar sesión" type="button">
         <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Salir</span>
       </button>
     </div>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL (Donde cargan las vistas) -->
   <main class="main-content">
-    <div class="content-wrapper animate-fade-in">
+    <div class="content-wrapper">
       <router-outlet></router-outlet>
     </div>
   </main>
 
-  <!-- NAVEGACIÓN INFERIOR (SÓLO PARA MÓVILES) -->
   <nav class="bottom-nav" aria-label="Navegación móvil">
     <a routerLink="/estudiante/inicio" routerLinkActive="active" class="bottom-nav-item">
       <i class="fas fa-home"></i>
@@ -66,4 +59,12 @@
       <span>Perfil</span>
     </a>
   </nav>
+
+  <button class="fab-ayuda" (click)="abrirAyuda()" aria-label="Ayuda y Soporte" type="button">
+    <i class="fas fa-life-ring"></i>
+  </button>
+
+  @if (mostrarAyuda()) {
+    <app-estudiante-ayuda-modal (cerrar)="cerrarAyuda()" />
+  }
 </div>

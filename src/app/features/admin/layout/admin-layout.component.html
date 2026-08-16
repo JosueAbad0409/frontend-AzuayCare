@@ -4,20 +4,25 @@
     <div class="sidebar-overlay" (click)="closeSidebarMobile()"></div>
   }
 
-  <!-- BARRA LATERAL (SIDEBAR) -->
   <aside class="sidebar">
     <div class="sidebar-header">
       @if (!isSidebarCollapsed()) {
-      <div class="brand">
-        <img src="images/logoazuaycare.png" alt="AzuayCare" class="brand-logo">
-        <div class="brand-info">
-          <h2>AzuayCare</h2>
-          <span>IST AZUAY</span>
+        <div class="brand">
+          <img src="images/logoazuaycare.png" alt="AzuayCare Logo" class="brand-logo" />
+          <div class="brand-info">
+            <h2>AzuayCare</h2>
+            <span>IST AZUAY</span>
+          </div>
         </div>
-      </div>
       }
-      <button class="btn-toggle" (click)="toggleSidebar()" title="Plegar / Desplegar Menú">
-        <i class="fas" [class.fa-chevron-left]="!isSidebarCollapsed()" [class.fa-chevron-right]="isSidebarCollapsed()"></i>
+      <button 
+        type="button" 
+        class="btn-toggle" 
+        (click)="toggleSidebar()" 
+        title="Plegar / Desplegar Menú"
+        aria-label="Alternar estado de menú lateral"
+      >
+        <i class="fas" [class.fa-chevron-left]="!isSidebarCollapsed()" [class.fa-chevron-right]="isSidebarCollapsed()" aria-hidden="true"></i>
       </button>
     </div>
 
@@ -25,12 +30,12 @@
       @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Principal</h6> }
 
       <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item" title="Dashboard">
-        <i class="fas fa-chart-pie nav-icon"></i>
+        <i class="fas fa-chart-pie nav-icon" aria-hidden="true"></i>
         @if (!isSidebarCollapsed()) { <span class="nav-text">Dashboard</span> }
       </a>
 
       <a routerLink="/admin/revision-fichas" routerLinkActive="active" class="nav-item" title="Revisión de Fichas">
-        <i class="fas fa-clipboard-check nav-icon"></i>
+        <i class="fas fa-clipboard-check nav-icon" aria-hidden="true"></i>
         @if (!isSidebarCollapsed()) { <span class="nav-text">Revisión de Fichas</span> }
       </a>
 
@@ -39,98 +44,86 @@
 
         <a routerLink="/admin/prioridad-atencion" routerLinkActive="active" class="nav-item flex items-center justify-between" title="Prioridad de Atención">
           <div class="flex items-center">
-            <i class="fas fa-triangle-exclamation nav-icon text-red-500"></i>
+            <i class="fas fa-triangle-exclamation nav-icon text-red-500" aria-hidden="true"></i>
             @if (!isSidebarCollapsed()) {
-            <span class="nav-text ml-2">Prioridad de Atención</span>
+              <span class="nav-text ml-2">Prioridad de Atención</span>
             }
           </div>
           @if (casosAltoCount() > 0) {
-          <span class="badge-alerta" [title]="casosAltoCount() + ' casos con alertas'">
-            {{ casosAltoCount() }}
-          </span>
+            <span class="badge-alerta" [title]="casosAltoCount() + ' casos con alertas'">
+              {{ casosAltoCount() }}
+            </span>
           }
         </a>
 
         <a routerLink="/admin/formularios" routerLinkActive="active" class="nav-item" title="Formularios">
-          <i class="fas fa-file-signature nav-icon"></i>
+          <i class="fas fa-file-signature nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Formularios</span> }
         </a>
 
         <a routerLink="/admin/tipos-formulario" routerLinkActive="active" class="nav-item" title="Tipos de Formulario">
-          <i class="fas fa-shapes nav-icon"></i>
+          <i class="fas fa-shapes nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Tipos de Formulario</span> }
         </a>
 
         <a routerLink="/admin/carreras" routerLinkActive="active" class="nav-item" title="Carreras">
-          <i class="fas fa-graduation-cap nav-icon"></i>
+          <i class="fas fa-graduation-cap nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Carreras</span> }
         </a>
 
         <a routerLink="/admin/ciclos" routerLinkActive="active" class="nav-item" title="Ciclos Académicos">
-          <i class="fas fa-list-ol nav-icon"></i>
+          <i class="fas fa-list-ol nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Ciclos</span> }
         </a>
 
         <a routerLink="/admin/periodos" routerLinkActive="active" class="nav-item" title="Periodos">
-          <i class="fas fa-calendar-alt nav-icon"></i>
+          <i class="fas fa-calendar-alt nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Periodos</span> }
         </a>
 
         <a routerLink="/admin/reportes" routerLinkActive="active" class="nav-item" title="Reportes Analíticos">
-          <i class="fas fa-chart-line nav-icon"></i>
+          <i class="fas fa-chart-line nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Reportes</span> }
         </a>
 
         @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Configuración</h6> }
 
         <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item" title="Usuarios y Roles">
-          <i class="fas fa-users-cog nav-icon"></i>
+          <i class="fas fa-users-cog nav-icon" aria-hidden="true"></i>
           @if (!isSidebarCollapsed()) { <span class="nav-text">Usuarios y Roles</span> }
         </a>
-
-        <a routerLink="/admin/auditoria" routerLinkActive="active" class="nav-item" title="Auditoría del Sistema">
-          <i class="fas fa-user-shield nav-icon"></i>
-          @if (!isSidebarCollapsed()) { <span class="nav-text">Auditoría</span> }
-        </a>
       }
-
-      @if (!isSidebarCollapsed()) { <h6 class="nav-subtitle">Personal</h6> }
-      <a routerLink="/admin/perfil-coordinador" routerLinkActive="active" class="nav-item" title="Mi Perfil de Atención">
-        <i class="fas fa-id-card nav-icon"></i>
-        @if (!isSidebarCollapsed()) { <span class="nav-text">Perfil Atención</span> }
-      </a>
     </nav>
   </aside>
 
-  <!-- CONTENIDO DINÁMICO -->
   <div class="main-wrapper">
     <header class="top-header">
       <div class="header-status">
-        <button type="button" class="btn-mobile-menu" (click)="toggleSidebar()" title="Menú" aria-label="Abrir menú">
-          <i class="fas fa-bars"></i>
+        <button type="button" class="btn-mobile-menu" (click)="toggleSidebar()" title="Menú" aria-label="Abrir menú de navegación">
+          <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
-        <span class="live-dot"></span>
+        <span class="live-dot" aria-hidden="true"></span>
         <span class="status-text">Sistema Socioeconómico Activo</span>
       </div>
 
       <div class="header-user">
         <div class="user-dropdown-container">
           <div class="user-dropdown-trigger">
-            <div class="user-avatar-small"><i class="fas fa-user-circle"></i></div>
+            <div class="user-avatar-small"><i class="fas fa-user-circle" aria-hidden="true"></i></div>
             <div class="user-details-small">
               <span class="user-name-small">{{ authService.user()?.nombre || 'Coordinador' }}</span>
               <span class="role-chip">{{ authService.user()?.rol || 'BIENESTAR' }}</span>
             </div>
-            <i class="fas fa-chevron-down text-muted" style="margin-left: 0.5rem; font-size: 0.75rem;"></i>
+            <i class="fas fa-chevron-down text-muted chevron-user-icon" aria-hidden="true"></i>
           </div>
 
           <div class="dropdown-menu">
             <a routerLink="/admin/perfil-coordinador" class="dropdown-item">
-              <i class="fas fa-user-edit"></i> Mi Perfil
+              <i class="fas fa-user-edit" aria-hidden="true"></i> <span>Mi Perfil</span>
             </a>
             <div class="dropdown-divider"></div>
-            <button class="dropdown-item text-red" (click)="logout()">
-              <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            <button type="button" class="dropdown-item text-red" (click)="logout()">
+              <i class="fas fa-sign-out-alt" aria-hidden="true"></i> <span>Cerrar Sesión</span>
             </button>
           </div>
         </div>
@@ -142,76 +135,88 @@
     </main>
   </div>
 
-  <!-- ===================== CHAT FLOTANTE IA ===================== -->
   @if (esCoordinadorBienestar()) {
+    @if (chatAbierto()) {
+      <div class="ia-chat-panel" role="dialog" aria-label="Asistente AzuayCare">
+        <header class="ia-chat-header">
+          <div class="ia-chat-title">
+            <span class="ia-avatar"><i class="fas fa-robot" aria-hidden="true"></i></span>
+            <div>
+              <strong>Asistente AzuayCare</strong>
+              <small>Datos en tiempo real</small>
+            </div>
+          </div>
+          <button type="button" class="ia-chat-close" (click)="cerrarChat()" aria-label="Cerrar ventana de chat">
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </header>
 
-  @if (chatAbierto()) {
-  <div class="ia-chat-panel" role="dialog" aria-label="Asistente AzuayCare">
-    <header class="ia-chat-header">
-      <div class="ia-chat-title">
-        <span class="ia-avatar"><i class="fas fa-robot"></i></span>
-        <div>
-          <strong>Asistente AzuayCare</strong>
-          <small>Datos en tiempo real</small>
-        </div>
-      </div>
-      <button type="button" class="ia-chat-close" (click)="cerrarChat()" aria-label="Cerrar">
-        <i class="fas fa-times"></i>
-      </button>
-    </header>
+        <div class="ia-chat-messages" #chatMessages>
+          @for (m of mensajes(); track $index) {
+            <div class="ia-msg" [class.ia-msg-user]="m.rol === 'user'" [class.ia-msg-bot]="m.rol === 'bot'">
+              <p>{{ m.texto }}</p>
 
-    <div class="ia-chat-messages" #chatMessages>
-      @for (m of mensajes(); track $index) {
-        <div class="ia-msg" [class.ia-msg-user]="m.rol === 'user'" [class.ia-msg-bot]="m.rol === 'bot'">
-          <p>{{ m.texto }}</p>
+              @if (m.rol === 'bot' && m.fuentes?.length) {
+                <div class="ia-verified">
+                  <i class="fas fa-database" aria-hidden="true"></i>
+                  <span>Verificado en BD</span>
+                  <small>
+                    {{ m.fuentes!.length }} consulta{{ m.fuentes!.length > 1 ? 's' : '' }}
+                    · {{ m.fuentes![0].tool }}
+                  </small>
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="ia-chat-empty">
+              <i class="fas fa-comments" aria-hidden="true"></i>
+              <p>Pregunta sobre fichas, alertas, estudiantes o el dashboard.</p>
+              <div class="ia-suggestions">
+                <button type="button" (click)="enviarSugerencia('¿Cuántas fichas con alertas hay?')">
+                  Fichas con alertas
+                </button>
+                <button type="button" (click)="enviarSugerencia('Resumen general del sistema')">
+                  Resumen general
+                </button>
+                <button type="button" (click)="enviarSugerencia('¿Cuántas fichas hay por estado?')">
+                  Fichas por estado
+                </button>
+              </div>
+            </div>
+          }
 
-          @if (m.rol === 'bot' && m.fuentes?.length) {
-            <div class="ia-verified">
-              <i class="fas fa-database"></i>
-              <span>Verificado en BD</span>
-              <small>
-                {{ m.fuentes!.length }} consulta{{ m.fuentes!.length > 1 ? 's' : '' }}
-                · {{ m.fuentes![0].tool }}
-              </small>
+          @if (iaCargando()) {
+            <div class="ia-msg ia-msg-bot ia-typing">
+              <span></span><span></span><span></span>
             </div>
           }
         </div>
-      } @empty {
-        <div class="ia-chat-empty">
-          <i class="fas fa-comments"></i>
-          <p>Pregunta sobre fichas, alertas, estudiantes o el dashboard.</p>
-          <div class="ia-suggestions">
-            <button type="button" (click)="enviarSugerencia('¿Cuántas fichas con alertas hay?')">
-              Fichas con alertas
-            </button>
-            <button type="button" (click)="enviarSugerencia('Resumen general del sistema')">
-              Resumen general
-            </button>
-            <button type="button" (click)="enviarSugerencia('¿Cuántas fichas hay por estado?')">
-              Fichas por estado
-            </button>
-          </div>
-        </div>
-      }
 
-      @if (iaCargando()) {
-        <div class="ia-msg ia-msg-bot ia-typing">
-          <span></span><span></span><span></span>
-        </div>
-      }
-    </div>
+        <form class="ia-chat-input" (ngSubmit)="enviarMensaje()">
+          <input 
+            type="text" 
+            [(ngModel)]="promptActual" 
+            name="prompt" 
+            placeholder="Escribe tu pregunta..." 
+            [disabled]="iaCargando()" 
+            autocomplete="off" 
+            aria-label="Escribe tu pregunta para la IA"
+          />
+          <button type="submit" [disabled]="iaCargando() || !promptActual.trim()" aria-label="Enviar mensaje a la IA">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+          </button>
+        </form>
+      </div>
+    }
 
-    <form class="ia-chat-input" (ngSubmit)="enviarMensaje()">
-      <input type="text" [(ngModel)]="promptActual" name="prompt" placeholder="Escribe tu pregunta..." [disabled]="iaCargando()" autocomplete="off" />
-      <button type="submit" [disabled]="iaCargando() || !promptActual.trim()" aria-label="Enviar">
-        <i class="fas fa-paper-plane"></i>
-      </button>
-    </form>
-  </div>
-  }
-
-  <button type="button" class="ia-fab" (click)="toggleChat()" [attr.aria-label]="chatAbierto() ? 'Cerrar asistente' : 'Abrir asistente IA'" [class.ia-fab-open]="chatAbierto()">
-    <i class="fas" [class.fa-robot]="!chatAbierto()" [class.fa-times]="chatAbierto()"></i>
-  </button>
+    <button 
+      type="button" 
+      class="ia-fab" 
+      (click)="toggleChat()" 
+      [attr.aria-label]="chatAbierto() ? 'Cerrar asistente' : 'Abrir asistente IA'" 
+      [class.ia-fab-open]="chatAbierto()"
+    >
+      <i class="fas" [class.fa-robot]="!chatAbierto()" [class.fa-times]="chatAbierto()" aria-hidden="true"></i>
+    </button>
   }
 </div>

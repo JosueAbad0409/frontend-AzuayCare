@@ -1,19 +1,16 @@
-/* ==========================================
-   CONFIGURACIÓN BASE Y LAYOUT PRINCIPAL
-   ========================================== */
 html, body {
   margin: 0;
   height: 100%;
-  overflow: hidden !important; /* Evita el scroll en toda la ventana del navegador */
+  overflow: hidden !important;
 }
 
 .app-layout {
   display: flex;
-  height: 100vh; /* Fija la altura exacta a la pantalla */
+  height: 100vh;
   width: 100vw;
   background-color: var(--bg-main, #f1f5f9);
   position: relative;
-  overflow: hidden; /* Asegura que nada desborde el layout principal */
+  overflow: hidden;
 }
 
 :root[data-theme='dark'] .app-layout {
@@ -30,9 +27,6 @@ html, body {
   margin-left: auto;
 }
 
-/* ==========================================
-   SIDEBAR (SCROLL INDEPENDIENTE Y MOBILE-FIRST)
-   ========================================== */
 .sidebar {
   position: fixed;
   left: 0;
@@ -43,40 +37,35 @@ html, body {
   color: white;
   display: flex;
   flex-direction: column;
-  transform: translateX(-100%); /* Oculto por defecto en móvil */
+  transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 100;
   box-shadow: 16px 0 45px rgba(15, 23, 42, 0.18);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  
-  /* Scroll independiente solo para el sidebar */
   overflow-y: auto; 
   overflow-x: hidden;
 }
 
-/* Estilos elegantes para la barra de scroll del menú */
 .sidebar::-webkit-scrollbar { width: 5px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
 .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
 .app-layout.sidebar-open .sidebar {
-  transform: translateX(0); /* Desplegado por acción de botón en móvil */
+  transform: translateX(0);
 }
 
-/* Overlay fondo oscuro en móvil */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.55);
   z-index: 90;
   backdrop-filter: blur(2px);
-  display: block; /* Controlado por ngIf en HTML */
+  display: block;
 }
 
-/* Header del Sidebar */
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -84,8 +73,6 @@ html, body {
   padding: 1.5rem 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   min-height: 80px;
-  
-  /* Mantiene el logo siempre visible si hay muchos ítems de menú */
   position: sticky; 
   top: 0;
   background: linear-gradient(180deg, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.95) 100%);
@@ -97,9 +84,8 @@ html, body {
 .brand-info { display: flex; flex-direction: column; overflow: hidden; }
 .brand-info h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; line-height: 1.2; }
 .brand-info span { font-size: 0.65rem; color: #38bdf8; letter-spacing: 0.12em; font-weight: 800; }
-.btn-toggle { display: none; } /* Oculto en móvil, el cierre se hace con el overlay */
+.btn-toggle { display: none; }
 
-/* Navegación del Sidebar */
 .sidebar-nav {
   padding: 1rem 0.85rem;
   display: flex;
@@ -116,25 +102,19 @@ html, body {
 .nav-icon { font-size: 1.25rem; width: 26px; min-width: 26px; text-align: center; flex-shrink: 0; }
 .nav-text { overflow: hidden; text-overflow: ellipsis; }
 
-/* ==========================================
-   ÁREA DE CONTENIDO Y CABECERA (SCROLL INDEPENDIENTE)
-   ========================================== */
 .main-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  height: 100vh; /* Obliga al wrapper a medir exactamente la pantalla */
+  height: 100vh;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(255,255,255,0) 100%);
-  
-  /* Scroll independiente de las vistas (ej. las tablas y dashboards largos) */
   overflow-y: auto; 
   overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
-/* Scrollbar contenido principal */
 .main-wrapper::-webkit-scrollbar { width: 8px; }
 .main-wrapper::-webkit-scrollbar-track { background: transparent; }
 .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -148,18 +128,16 @@ html, body {
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  padding: 0.75rem 1rem; /* Menos padding en móvil */
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  
-  /* Se pega arriba del main-wrapper y no desaparece al scrollear */
   position: sticky;
   top: 0;
   z-index: 30;
   box-shadow: 0 10px 20px -10px rgba(15, 23, 42, 0.12);
-  gap: 0.5rem; /* Evita que status y user choquen */
+  gap: 0.5rem;
 }
 
 :root[data-theme='dark'] .top-header {
@@ -176,7 +154,6 @@ html, body {
 .status-text { font-size: 0.7rem; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 :root[data-theme='dark'] .status-text { color: #cbd5e1; }
 
-/* DROPDOWN PERFIL */
 .header-user { position: relative; }
 .user-dropdown-container { position: relative; }
 .user-dropdown-trigger { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.35rem; border-radius: 12px; transition: background 0.2s ease; }
@@ -184,8 +161,8 @@ html, body {
 .user-details-small { display: none; flex-direction: column; align-items: flex-start; }
 .user-name-small { font-size: 0.875rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
 .role-chip { background: transparent; color: #64748b; padding: 0; border: none; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em; }
+.chevron-user-icon { margin-left: 0.5rem; font-size: 0.75rem; }
 
-/* Menú Dropdown Flotante */
 .dropdown-menu { position: absolute; top: calc(100% + 0.5rem); right: 0; min-width: 200px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.1); opacity: 0; visibility: hidden; transform: translateY(10px); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); z-index: 50; padding: 0.5rem 0; }
 .user-dropdown-container:hover .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
 .dropdown-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1.25rem; font-size: 0.875rem; font-weight: 600; color: #334155; text-decoration: none; cursor: pointer; background: transparent; border: none; width: 100%; text-align: left; transition: background 0.2s ease; }
@@ -202,9 +179,6 @@ html, body {
   box-sizing: border-box;
 }
 
-/* ==========================================
-   CHAT FLOTANTE IA (MOBILE-FIRST)
-   ========================================== */
 .ia-fab { position: fixed; right: 1rem; bottom: 1rem; width: 50px; height: 50px; border-radius: 50%; border: none; background: linear-gradient(135deg, #8b5cf6 0%, #4f46e5 100%); color: #fff; font-size: 1.25rem; box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45); cursor: pointer; z-index: 1100; display: flex; align-items: center; justify-content: center; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
 .ia-fab-open { background: #475569; }
 .ia-chat-panel { position: fixed; right: 0.5rem; left: 0.5rem; bottom: 4.5rem; width: auto; height: min(500px, calc(100vh - 6rem)); background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25); z-index: 1100; display: flex; flex-direction: column; overflow: hidden; animation: iaPop 0.22s ease-out; }
@@ -235,17 +209,13 @@ html, body {
 .ia-chat-input input { flex: 1; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.65rem 0.85rem; font-size: 0.875rem; outline: none; min-width: 0; }
 .ia-chat-input button { width: 42px; height: 42px; border: none; border-radius: 12px; background: #4f46e5; color: #fff; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 
-/* ==========================================================================
-   MEDIA QUERIES - TABLETS / LAPTOPS / DESKTOP
-   ========================================================================== */
 @media (min-width: 901px) {
   .sidebar {
-    position: relative; /* ¡Punto clave! Se acopla al flexbox y no flota */
-    transform: translateX(0); /* Siempre visible en Desktop */
+    position: relative;
+    transform: translateX(0);
     flex-shrink: 0;
   }
 
-  /* Estado colapsado (solo aplica a Desktop) */
   .app-layout.collapsed .sidebar { width: 82px; }
   .app-layout.collapsed .sidebar-header { justify-content: center; padding: 1.5rem 0; }
   .app-layout.collapsed .nav-item { justify-content: center; padding: 0.85rem 0; gap: 0; }
@@ -255,7 +225,7 @@ html, body {
   .app-layout.collapsed .badge-alerta { display: none; }
 
   .btn-toggle {
-    display: flex; /* Muestra el botón de colapsar en Desktop */
+    display: flex;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: #94a3b8;
@@ -264,16 +234,15 @@ html, body {
     transition: all 0.2s ease; flex-shrink: 0;
   }
 
-  .btn-mobile-menu { display: none; } /* Oculta hamburguesa en Desktop */
-  .sidebar-overlay { display: none; } /* Nunca mostrar overlay en Desktop */
+  .btn-mobile-menu { display: none; }
+  .sidebar-overlay { display: none; }
 
   .top-header { padding: 1rem 2.25rem; }
   .status-text { font-size: 0.85rem; max-width: none; }
   .user-dropdown-trigger { gap: 0.75rem; padding: 0.35rem 0.75rem; }
-  .user-details-small { display: flex; } /* Vuelve a mostrar nombre y rol */
+  .user-details-small { display: flex; }
   .page-content { padding: 2.25rem; }
 
-  /* Ajustes IA Chat Desktop */
   .ia-fab { right: 1.5rem; bottom: 1.5rem; width: 56px; height: 56px; }
   .ia-fab:hover { transform: scale(1.08); box-shadow: 0 10px 28px rgba(79, 70, 229, 0.55); }
   .ia-chat-panel { right: 1.5rem; left: auto; bottom: 5.5rem; width: 380px; height: min(560px, calc(100vh - 8rem)); }

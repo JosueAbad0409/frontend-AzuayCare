@@ -5,29 +5,23 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 
   --font-display: 'Fraunces', Georgia, serif;
-
   --color-canvas: #f4f6f9;
   --color-surface: #ffffff;
   --color-surface-alt: #edf1f7;
   --color-border: #e2e8f0;
   --color-border-strong: #cbd5e1;
-
   --ink-900: #0f172a;
   --ink-700: #334155;
   --ink-500: #64748b;
   --ink-on-primary: #f8fafc;
-
   --primary-700: #163a63;
   --primary-600: #1f4e85;
   --primary-500: #2b62a3;
-
   --accent-600: #b8862e;
   --accent-100: #fef3c7;
-
   --error-bg: #fef2f2;
   --error-border: #fca5a5;
   --error-text: #991b1b;
-
   --shadow-lux: 0 25px 50px -12px rgba(22, 58, 99, 0.12), 0 0 0 1px rgba(22, 58, 99, 0.05);
 }
 
@@ -38,7 +32,6 @@
   background: var(--color-canvas);
 }
 
-/* ========== PANEL INSTITUCIONAL (IZQUIERDA) ========== */
 .visual-pane {
   position: relative;
   display: none;
@@ -96,29 +89,25 @@
   pointer-events: none;
 }
 
-
-
-
 .visual-content {
   position: relative;
   z-index: 10;
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Centra verticalmente */
-  align-items: center;     /* Centra horizontalmente */
-  text-align: center;      /* Centra el texto */
+  justify-content: center;
+  align-items: center;
+  text-align: center;
   padding: 3rem;
   margin: 0 auto;
   max-width: 600px;
 }
 
-/* Estilos para tu nueva imagen superior */
 .visual-center-image {
-  max-width: 180px; /* Ajusta este valor para hacer la imagen más grande o pequeña */
+  max-width: 180px;
   height: auto;
   margin-bottom: 2.5rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); /* Sombra suave para que resalte */
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .eyebrow {
@@ -152,38 +141,6 @@
   margin: 0;
 }
 
-.eyebrow {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(244, 247, 251, 0.75);
-  margin: 0 0 1.5rem;
-}
-
-.visual-title {
-  font-family: var(--font-display);
-  font-size: clamp(2.6rem, 4vw, 3.7rem);
-  font-weight: 600;
-  line-height: 1.1;
-  margin: 0 0 1.25rem;
-  letter-spacing: -0.01em;
-}
-
-.visual-title .highlight {
-  color: var(--accent-600);
-  filter: brightness(1.35);
-}
-
-.visual-subtitle {
-  font-size: 1.05rem;
-  color: rgba(244, 247, 251, 0.82);
-  line-height: 1.65;
-  max-width: 420px;
-  margin: 0;
-}
-
-/* ========== PANEL DE ACCESO DISRUPTIVO (DERECHA) ========== */
 .login-pane {
   position: relative;
   display: flex;
@@ -194,7 +151,6 @@
   overflow: hidden;
 }
 
-/* Luz ambiental de fondo */
 .pane-ambient-light {
   position: absolute;
   top: -20%;
@@ -206,7 +162,6 @@
   pointer-events: none;
 }
 
-/* Marca de agua gráfica que rellena el espacio visual */
 .watermark-symbol {
   position: absolute;
   bottom: -5%;
@@ -228,7 +183,6 @@
   z-index: 2;
 }
 
-/* Status Pill superior */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -259,7 +213,6 @@
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* Tarjeta Principal */
 .login-card {
   position: relative;
   width: 100%;
@@ -319,7 +272,6 @@
   line-height: 1.5;
 }
 
-/* Caja de Acción */
 .auth-box {
   background: var(--color-surface-alt);
   border-radius: 16px;
@@ -352,7 +304,6 @@
   margin: 0;
 }
 
-/* Alertas */
 .alert {
   padding: 0.85rem 1rem;
   border-radius: 10px;
@@ -372,7 +323,6 @@
 
 .alert-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
-/* Loader */
 .loader-wrapper {
   display: flex;
   flex-direction: column;
@@ -410,7 +360,6 @@
   min-height: 48px;
 }
 
-/* Grilla de Seguridad */
 .security-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -437,7 +386,6 @@
   color: var(--primary-600);
 }
 
-/* Pie */
 .login-footer {
   text-align: center;
 }
@@ -454,7 +402,6 @@
   text-decoration: underline;
 }
 
-/* ========== RESPONSIVE ========== */
 @media (min-width: 960px) {
   .split-layout { grid-template-columns: 1.1fr 0.9fr; }
   .visual-pane { display: block; }
@@ -464,19 +411,19 @@
   .visual-pane {
     display: flex;
     flex-direction: column;
-    height: auto; /* Quitamos la altura fija que aplastaba todo */
+    height: auto;
     min-height: auto;
-    padding: 2.5rem 0; /* Le damos aire por arriba y abajo */
+    padding: 2.5rem 0;
   }
   
   .visual-content {
     padding: 1rem 1.5rem;
-    justify-content: center; /* Mantenemos el centrado vertical */
+    justify-content: center;
     height: auto;
   }
   
   .visual-center-image {
-    max-width: 110px; /* Logo un poco más pequeño para móviles */
+    max-width: 110px;
     margin-bottom: 1.5rem;
   }
   
@@ -487,11 +434,11 @@
   
   .visual-title { 
     font-size: 1.85rem; 
-    margin-bottom: 0; /* Quitamos el margen porque el subtítulo se oculta */
+    margin-bottom: 0;
   }
   
   .visual-subtitle { 
-    display: none; /* Ocultamos el subtítulo en móvil para mantenerlo limpio */
+    display: none;
   }
 }
 

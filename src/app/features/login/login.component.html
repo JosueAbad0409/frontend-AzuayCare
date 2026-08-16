@@ -1,27 +1,12 @@
 <main class="split-layout">
-
-  <!-- PANEL INSTITUCIONAL (IZQUIERDA) -->
   <section class="visual-pane" aria-hidden="true">
     <div class="visual-bg-container">
-      <img 
-        src="images/tec-azuay-inicio-sesion.jpg" 
-        alt="" 
-        class="visual-bg-image"
-      />
+      <img src="images/tec-azuay-inicio-sesion.jpg" alt="" class="visual-bg-image" />
       <div class="visual-bg-overlay"></div>
     </div>
-
     <div class="grid-texture"></div>
-
     <div class="visual-content">
-      <!-- AQUÍ ESTÁ TU NUEVA IMAGEN CENTRAL -->
-      <!-- Cambia el 'src' por la ruta de la imagen o logo que quieras usar -->
-      <img 
-        src="images/logoazuaycare.png" 
-        alt="Logo Institucional" 
-        class="visual-center-image" 
-      />
-
+      <img src="images/logoazuaycare.png" alt="Logo Institucional" class="visual-center-image" />
       <p class="eyebrow">Instituto Superior Universitario Tecnológico del Azuay</p>
       <h1 class="visual-title">Del papel<br><span class="highlight">al sistema.</span></h1>
       <p class="visual-subtitle">
@@ -30,11 +15,7 @@
     </div>
   </section>
 
-
-  <!-- PANEL DE ACCESO AVANZADO (DERECHA) -->
   <section class="login-pane">
-    
-    <!-- Elementos de fondo estructurales -->
     <div class="pane-ambient-light"></div>
     <div class="watermark-symbol" aria-hidden="true">
       <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -46,8 +27,6 @@
     </div>
 
     <div class="login-container">
-      
-      <!-- Status Pill Superior -->
       <div class="status-pill">
         <span class="pulse-dot"></span>
         <span class="status-text">Servicio de Autenticación Activo</span>
@@ -55,7 +34,6 @@
 
       <article class="login-card">
         <div class="card-glow"></div>
-
         <header class="login-header">
           <div class="logo-mark" aria-hidden="true">
             <span>A</span>
@@ -70,7 +48,6 @@
             <p>Acceso seguro mediante tu cuenta institucional <strong>@tecazuay.edu.ec</strong></p>
           </div>
 
-          <!-- Manejo de Errores -->
           @if (error()) {
             <div class="alert error-alert" role="alert">
               <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -80,7 +57,6 @@
             </div>
           }
 
-          <!-- Indicador de Carga -->
           @if (isLoading()) {
             <div class="loader-wrapper" role="status" aria-live="polite">
               <div class="spinner" aria-hidden="true"></div>
@@ -88,13 +64,17 @@
             </div>
           }
 
-          <!-- Botón de Google -->
           <div class="action-area" [class.is-hidden]="isLoading()">
             <div id="googleBtn" class="google-wrapper"></div>
           </div>
+
+          @if (isServerWarming()) {
+            <p class="text-xs text-muted" style="text-align: center; margin-top: 1rem; opacity: 0.7;">
+              Preparando el servicio de autenticación…
+            </p>
+          }
         </div>
 
-        <!-- Garantías de Seguridad Integradas -->
         <div class="security-grid">
           <div class="security-item">
             <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.6"/></svg>
@@ -112,12 +92,10 @@
 
         <footer class="login-footer">
           <a href="https://tecazuay.edu.ec" target="_blank" rel="noopener" class="help-link">
-            ¿Tienes problemas para ingresar? Contacta a Soporte
+            Conoce más sobre el Tec Azuay
           </a>
         </footer>
-
       </article>
-
     </div>
   </section>
 </main>

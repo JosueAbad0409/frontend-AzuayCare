@@ -2,7 +2,6 @@
   display: block;
   width: 100%;
 
-  /* ===== Design Tokens ===== */
   --color-primary: #4f46e5;
   --color-primary-hover: #4338ca;
   --color-primary-soft: #eef2ff;
@@ -50,7 +49,6 @@
   --space-8: 2rem;
 }
 
-/* ===== Base & Utilities ===== */
 *,
 *::before,
 *::after {
@@ -99,7 +97,6 @@
   }
 }
 
-/* ===== Layout Container ===== */
 .docs-container {
   max-width: 68rem;
   margin-inline: auto;
@@ -107,9 +104,9 @@
   display: flex;
   flex-direction: column;
   gap: clamp(var(--space-5), 3vw, var(--space-8));
+  box-sizing: border-box;
 }
 
-/* ===== Header ===== */
 .docs-header {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -141,7 +138,6 @@
   line-height: 1.5;
 }
 
-/* ===== Dropzone ===== */
 .dropzone {
   background: var(--color-surface);
   border: 2px dashed var(--color-primary-border);
@@ -161,6 +157,12 @@
   background-color: var(--color-primary-soft);
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.dropzone--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .dropzone-icon {
@@ -201,7 +203,6 @@
   font-weight: 500;
 }
 
-/* ===== Gallery ===== */
 .gallery-header {
   margin-bottom: var(--space-4);
 }
@@ -231,7 +232,6 @@
   gap: var(--space-4);
 }
 
-/* ===== Document Card ===== */
 .doc-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -305,7 +305,6 @@
   font-weight: 500;
 }
 
-/* ===== Card Actions ===== */
 .doc-actions {
   display: flex;
   align-items: center;
@@ -315,7 +314,6 @@
   margin-top: auto;
 }
 
-/* ===== Standard Buttons ===== */
 .btn {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
@@ -342,6 +340,12 @@
 
 .btn:active {
   transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn--action {
@@ -397,7 +401,6 @@
   border-color: var(--color-danger);
 }
 
-/* ===== Empty State ===== */
 .empty-state {
   background: var(--color-surface);
   border: 2px dashed var(--color-border);
@@ -419,7 +422,6 @@
   font-size: 0.95rem;
 }
 
-/* ===== Modals Sin Oscurecimiento de Fondo ===== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -428,7 +430,7 @@
   justify-content: center;
   padding: var(--space-4);
   z-index: 1000;
-  background: transparent; /* Fondo 100% transparente sin opacar la vista */
+  background: transparent;
 }
 
 .modal-backdrop--alert {
@@ -438,10 +440,10 @@
 .modal-overlay {
   position: absolute;
   inset: 0;
-  background: transparent; /* Sin color ni desenfoque oscuro */
+  background: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(2px);
 }
 
-/* Preview Modal */
 .preview-modal {
   position: relative;
   background: var(--color-surface);
@@ -454,8 +456,9 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-xl); /* Sombra alta para separar visualmente la tarjeta */
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
+  z-index: 1010;
 }
 
 .preview-header {
@@ -567,7 +570,6 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Alert Modal */
 .alert-modal {
   position: relative;
   max-width: 24rem;
@@ -578,6 +580,8 @@
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-xl);
   text-align: center;
+  margin: auto;
+  z-index: 1110;
 }
 
 .alert-icon {
@@ -617,7 +621,6 @@
   width: 100%;
 }
 
-/* ===== Breakpoints ===== */
 @media (min-width: 640px) {
   .docs-container {
     padding: var(--space-6);
@@ -637,7 +640,3 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
-
-
-
-

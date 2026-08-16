@@ -10,7 +10,9 @@ export class CoordinadorCarreraService {
   private readonly apiUrl = `${environment.apiUrl}/coordinadores-carreras`;
 
   getAsignaciones(): Observable<CoordinadorCarreraAsignacion[]> {
-    return this.http.get<CoordinadorCarreraAsignacion[]>(this.apiUrl);
+    return this.http.get<CoordinadorCarreraAsignacion[]>(this.apiUrl, {
+      params: { take: '500' }
+    });
   }
 
   asignarCoordinador(dto: CreateCoordinadorCarreraDto): Observable<CoordinadorCarreraAsignacion> {

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioService } from '../../core/services/usuario.service';
@@ -28,6 +28,7 @@ interface PerfilCoordinadorPayload {
   usuario_id: string;
   titulo_profesional?: string;
   telefono_contacto?: string;
+  correo_contacto?: string;
   ubicacion_oficina?: string;
   horario_atencion?: string;
   mensaje_ayuda_estudiantes?: string;
@@ -52,7 +53,6 @@ export class PerfilComponent implements OnInit {
 
   @ViewChild('fotoInput') fotoInput!: ElementRef<HTMLInputElement>;
 
-  // Signals reactivas de usuario
   usuario = computed(() => this.authService.user());
 
   fotoUrl = computed(() => {
@@ -88,11 +88,9 @@ export class PerfilComponent implements OnInit {
     return (partes[0][0] + partes[1][0]).toUpperCase();
   });
 
-  // Estado de foto de perfil
   subiendoFoto = signal(false);
   errorFoto = signal('');
 
-  // Catálogos Académicos
   carreras = signal<Carrera[]>([]);
   ciclos = signal<Ciclo[]>([]);
   cargandoAcademico = signal(false);
@@ -107,7 +105,6 @@ export class PerfilComponent implements OnInit {
     return this.ciclos().find(c => c.id === id)?.nombre ?? 'No asignado';
   });
 
-  // Estado y Formulario de Coordinador
   modoEdicionCoordinador = signal(false);
   cargandoPerfilCoordinador = signal(false);
   guardandoCoordinador = signal(false);
@@ -115,10 +112,11 @@ export class PerfilComponent implements OnInit {
   errorCoordinador = signal('');
 
   coordinadorForm: FormGroup = this.fb.group({
-    titulo_profesional: [''],
-    telefono_contacto: [''],
-    ubicacion_oficina: [''],
-    horario_atencion: [''],
+    titulo_profesional: ['', Validators.required],
+    telefono_contacto: ['', [Validators.required, Validators.pattern('^[0-9]*$')]],
+    correo_contacto: ['', [Validators.required, Validators.email]],
+    ubicacion_oficina: ['', Validators.required],
+    horario_atencion: ['', Validators.required],
     mensaje_ayuda_estudiantes: [''],
   });
 
@@ -131,7 +129,6 @@ export class PerfilComponent implements OnInit {
     }
   }
 
-  // Activa/Desactiva el formulario vs vista de lectura
   toggleEdicionCoordinador(): void {
     this.modoEdicionCoordinador.update(v => !v);
   }
@@ -143,7 +140,7 @@ export class PerfilComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (c: Carrera[]) => this.carreras.set(c),
-        error: (err: unknown) => console.error('Error al cargar carreras', err)
+        error: (err: unknown) => console.error(err)
       });
 
     this.ciclosService.getCiclos()
@@ -154,7 +151,7 @@ export class PerfilComponent implements OnInit {
           this.cargandoAcademico.set(false);
         },
         error: (err: unknown) => {
-          console.error('Error al cargar ciclos', err);
+          console.error(err);
           this.cargandoAcademico.set(false);
         }
       });
@@ -171,31 +168,36 @@ export class PerfilComponent implements OnInit {
         next: (perfil: PerfilCoordinador | null) => {
           if (perfil) {
             this.coordinadorForm.patchValue({
-              titulo_profesional: perfil.tituloProfesional ?? '',
-              telefono_contacto: perfil.telefonoContacto ?? '',
-              ubicacion_oficina: perfil.ubicacionOficina ?? '',
-              horario_atencion: perfil.horarioAtencion ?? '',
-              mensaje_ayuda_estudiantes: perfil.mensajeAyuda ?? '',
+              titulo_profesional: perfil.titulo_profesional ?? '',
+              telefono_contacto: perfil.telefono_contacto ?? '',
+              correo_contacto: perfil.correo_contacto ?? '',
+              ubicacion_oficina: perfil.ubicacion_oficina ?? '',
+              horario_atencion: perfil.horario_atencion ?? '',
+              mensaje_ayuda_estudiantes: perfil.mensaje_ayuda_estudiantes ?? '',
             });
           } else {
-            // Si no hay perfil previo, abrimos edición por defecto
             this.modoEdicionCoordinador.set(true);
           }
           this.cargandoPerfilCoordinador.set(false);
         },
         error: (err: unknown) => {
-          console.error('Error al cargar perfil de coordinador', err);
+          console.error(err);
           this.cargandoPerfilCoordinador.set(false);
         },
       });
   }
 
-  guardarPerfilCoordinador(): void {
+  guardarPerfilCoordinador(event?: Event): void {
+    event?.preventDefault();
+    
     const usuarioId = this.usuario()?.id;
-    if (!usuarioId || this.coordinadorForm.invalid) {
+    
+    if (this.coordinadorForm.invalid) {
       this.coordinadorForm.markAllAsTouched();
       return;
     }
+    
+    if (!usuarioId || this.guardandoCoordinador()) return;
 
     this.guardandoCoordinador.set(true);
     this.errorCoordinador.set('');
@@ -211,7 +213,7 @@ export class PerfilComponent implements OnInit {
       .subscribe({
         next: () => {
           this.guardandoCoordinador.set(false);
-          this.modoEdicionCoordinador.set(false); // <--- Regresa al modo vista (UI limpia)
+          this.modoEdicionCoordinador.set(false);
           this.mensajeExitoCoordinador.set('Tu información de atención se actualizó correctamente.');
           setTimeout(() => this.mensajeExitoCoordinador.set(''), 4000);
         },
@@ -258,7 +260,7 @@ export class PerfilComponent implements OnInit {
           },
         });
     } catch (err) {
-      console.error('Error al procesar la imagen:', err);
+      console.error(err);
       this.errorFoto.set('Ocurrió un error al procesar y comprimir la imagen.');
       this.subiendoFoto.set(false);
     } finally {

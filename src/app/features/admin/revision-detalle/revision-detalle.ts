@@ -1,6 +1,7 @@
 import {
   Component,
   OnInit,
+  OnDestroy,
   inject,
   signal,
   computed,
@@ -18,7 +19,8 @@ import { HistorialEstadoFicha } from '../../../core/models/historial-estado.mode
 import { Seccion, Pregunta } from '../../../core/models/formulario.model';
 import { PreguntaDependencia } from '../../../core/models/dependencia.model';
 import { ToastService } from '../../../core/services/toast.service';
-import { forkJoin, of, catchError } from 'rxjs';
+import { forkJoin, of, catchError, Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-revision-detalle',
@@ -28,33 +30,87 @@ import { forkJoin, of, catchError } from 'rxjs';
   styleUrls: ['./revision-detalle.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RevisionDetalleComponent implements OnInit {
+export class RevisionDetalleComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly revisionService = inject(RevisionService);
   private readonly historialService = inject(HistorialEstadoService);
-    private readonly toastService = inject(ToastService);
+  private readonly toastService = inject(ToastService);
   private readonly formularioService = inject(FormularioService);
   private readonly dependenciasService = inject(DependenciasService);
 
-  ficha = signal<FichaRevision | null>(null);
-  respuestas = signal<any[]>([]);
-  historial = signal<HistorialEstadoFicha[]>([]);
-  secciones = signal<Seccion[]>([]);
-  dependencias = signal<PreguntaDependencia[]>([]);
-  mapaRespuestas = signal<Record<string, any>>({});
-  isLoading = signal(true);
-  tabActiva = signal<'DETALLE' | 'HISTORIAL'>('DETALLE');
-  comentario = signal('');
-  guardando = signal(false);
+  readonly ficha = signal<FichaRevision | null>(null);
+  readonly respuestas = signal<any[]>([]);
+  readonly historial = signal<HistorialEstadoFicha[]>([]);
+  readonly secciones = signal<Seccion[]>([]);
+  readonly dependencias = signal<PreguntaDependencia[]>([]);
+  readonly mapaRespuestas = signal<Record<string, any>>({});
+  readonly isLoading = signal<boolean>(true);
+  readonly tabActiva = signal<'DETALLE' | 'HISTORIAL'>('DETALLE');
+  readonly comentario = signal<string>('');
+  readonly guardando = signal<boolean>(false);
 
-  puedeRevisar = computed(() => {
+  readonly filterPregunta = signal<string>('');
+  readonly filterEvidencias = signal<'TODAS' | 'CON_EVIDENCIA' | 'SIN_EVIDENCIA'>('TODAS');
+
+  private readonly filterSubject = new Subject<string>();
+  private filterSubscription?: Subscription;
+
+  readonly puedeRevisar = computed(() => {
     const estado = this.ficha()?.estado_ficha?.toUpperCase();
     return estado === 'ENVIADA' || estado === 'ENVIADO';
   });
 
+  private normalizarTexto(texto: string | null | undefined): string {
+    if (!texto) return '';
+    return texto
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  readonly seccionesFiltradas = computed(() => {
+    const term = this.normalizarTexto(this.filterPregunta());
+    const filtroEv = this.filterEvidencias();
+    const lista = this.secciones();
+
+    return lista.map(sec => {
+      const secNombreNorm = this.normalizarTexto(sec.nombre);
+      const coincideSeccion = secNombreNorm.includes(term);
+
+      const preguntasCoincidentes = (sec.preguntas || []).filter(p => {
+        const tieneEv = this.tieneEvidencia(p.id);
+        const subpreguntas = this.getSubpreguntas(p.id);
+        const algunaSubTieneEv = subpreguntas.some(sub => this.tieneEvidencia(sub.id));
+        const evidenciaMatch = tieneEv || algunaSubTieneEv;
+
+        if (filtroEv === 'CON_EVIDENCIA' && !evidenciaMatch) return false;
+        if (filtroEv === 'SIN_EVIDENCIA' && evidenciaMatch) return false;
+
+        if (!term || coincideSeccion) return true;
+
+        const enunciadoNorm = this.normalizarTexto(p.enunciado);
+        const respNorm = this.normalizarTexto(this.obtenerTextoRespuesta(p));
+
+        if (enunciadoNorm.includes(term) || respNorm.includes(term)) return true;
+
+        return subpreguntas.some(sub => {
+          const subEnunciadoNorm = this.normalizarTexto(sub.enunciado);
+          const subRespNorm = this.normalizarTexto(this.obtenerTextoRespuesta(sub));
+          return subEnunciadoNorm.includes(term) || subRespNorm.includes(term);
+        });
+      });
+
+      return { ...sec, preguntas: preguntasCoincidentes };
+    }).filter(sec => sec.preguntas && sec.preguntas.length > 0);
+  });
 
   ngOnInit(): void {
+    this.filterSubscription = this.filterSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => this.filterPregunta.set(val));
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.router.navigate(['/admin/revision-fichas']);
@@ -63,7 +119,26 @@ export class RevisionDetalleComponent implements OnInit {
     this.cargarTodo(id);
   }
 
-    private cargarTodo(id: string): void {
+  ngOnDestroy(): void {
+    this.filterSubscription?.unsubscribe();
+  }
+
+  onFilterInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.filterSubject.next(val);
+  }
+
+  onEvidenciaFilterChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value as 'TODAS' | 'CON_EVIDENCIA' | 'SIN_EVIDENCIA';
+    this.filterEvidencias.set(val);
+  }
+
+  limpiarFiltro(): void {
+    this.filterPregunta.set('');
+    this.filterEvidencias.set('TODAS');
+  }
+
+  private cargarTodo(id: string): void {
     this.isLoading.set(true);
 
     this.revisionService.getFichaDetalle(id).subscribe({
@@ -181,7 +256,7 @@ export class RevisionDetalleComponent implements OnInit {
 
   cambiarEstado(nuevoEstado: EstadoFicha): void {
     const f = this.ficha();
-    if (!f || !this.puedeRevisar()) return;
+    if (!f || !this.puedeRevisar() || this.guardando()) return;
 
     this.guardando.set(true);
     this.revisionService.actualizarEstadoFicha(f.id, nuevoEstado, this.comentario()).subscribe({
@@ -193,7 +268,6 @@ export class RevisionDetalleComponent implements OnInit {
           nuevoEstado === 'VALIDADO' ? 'Ficha validada con éxito.' : 'Ficha rechazada.',
           nuevoEstado === 'VALIDADO' ? 'success' : 'info'
         );
-        // Recargar historial
         this.historialService.getHistorialByFicha(f.id).subscribe({
           next: (h) => this.historial.set(h)
         });
@@ -206,7 +280,7 @@ export class RevisionDetalleComponent implements OnInit {
     });
   }
 
-    esPreguntaDependiente(preguntaId: string): boolean {
+  esPreguntaDependiente(preguntaId: string): boolean {
     return this.dependencias().some(d => d.pregunta_id === preguntaId);
   }
 
@@ -223,51 +297,48 @@ export class RevisionDetalleComponent implements OnInit {
   }
 
   tieneEvidencia(preguntaId: string): boolean {
-  const resp = this.mapaRespuestas()[preguntaId];
-  if (!resp) return false;
-  if (resp.documentos?.length > 0) return true;
-  if (resp.valor_texto && String(resp.valor_texto).includes('[EVIDENCIA_URL:')) return true;
-  return false;
-}
-
-/** Devuelve la lista de evidencias de una pregunta */
-obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: string; esImagen: boolean }[] {
-  const resp = this.mapaRespuestas()[preguntaId];
-  if (!resp) return [];
-
-  const lista: { url: string; nombre: string; mime: string; esImagen: boolean }[] = [];
-
-  // Documentos de la tabla documentos_respaldo
-  if (resp.documentos?.length) {
-    for (const doc of resp.documentos) {
-      if (doc.fecha_desactivacion) continue;
-      const mime = doc.mime_type || '';
-      lista.push({
-        url: doc.ruta_archivo,
-        nombre: doc.nombre_original || 'Archivo',
-        mime,
-        esImagen: mime.toLowerCase().startsWith('image/')
-      });
-    }
+    const resp = this.mapaRespuestas()[preguntaId];
+    if (!resp) return false;
+    if (resp.documentos?.length > 0) return true;
+    if (resp.valor_texto && String(resp.valor_texto).includes('[EVIDENCIA_URL:')) return true;
+    return false;
   }
 
-  // Fallback: evidencia embebida en valor_texto [EVIDENCIA_URL:...]
-  if (lista.length === 0 && resp.valor_texto) {
-    const match = String(resp.valor_texto).match(/\[EVIDENCIA_URL:(.*?)\]/);
-    if (match?.[1]) {
-      const url = match[1];
-      const esImagen = /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
-      lista.push({
-        url,
-        nombre: 'Evidencia adjunta',
-        mime: esImagen ? 'image/*' : 'application/octet-stream',
-        esImagen
-      });
-    }
-  }
+  obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: string; esImagen: boolean }[] {
+    const resp = this.mapaRespuestas()[preguntaId];
+    if (!resp) return [];
 
-  return lista;
-}
+    const lista: { url: string; nombre: string; mime: string; esImagen: boolean }[] = [];
+
+    if (resp.documentos?.length) {
+      for (const doc of resp.documentos) {
+        if (doc.fecha_desactivacion) continue;
+        const mime = doc.mime_type || '';
+        lista.push({
+          url: doc.ruta_archivo,
+          nombre: doc.nombre_original || 'Archivo',
+          mime,
+          esImagen: mime.toLowerCase().startsWith('image/')
+        });
+      }
+    }
+
+    if (lista.length === 0 && resp.valor_texto) {
+      const match = String(resp.valor_texto).match(/\[EVIDENCIA_URL:(.*?)\]/);
+      if (match?.[1]) {
+        const url = match[1];
+        const esImagen = /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
+        lista.push({
+          url,
+          nombre: 'Evidencia adjunta',
+          mime: esImagen ? 'image/*' : 'application/octet-stream',
+          esImagen
+        });
+      }
+    }
+
+    return lista;
+  }
 
   obtenerUrlEvidencia(preguntaId: string): string {
     const resp = this.mapaRespuestas()[preguntaId];
@@ -282,26 +353,20 @@ obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: stri
     return romanos[num - 1] || String(num);
   }
 
-    volver(): void {
+  volver(): void {
     this.router.navigate(['/admin/revision-fichas']);
   }
 
-  /**
-   * Devuelve el texto legible de una respuesta.
-   * Maneja: texto libre, numérico, selección única y selección múltiple.
-   */
-    obtenerTextoRespuesta(pregunta: Pregunta): string {
+  obtenerTextoRespuesta(pregunta: Pregunta): string {
     const resp = this.mapaRespuestas()[pregunta.id];
     if (!resp) return 'Sin respuesta';
 
-    // Matriz
     if (resp.respuestasMatriz?.length > 0) {
       return resp.respuestasMatriz
         .map((rm: any) => `${rm.fila?.texto_fila || 'Fila'}: ${rm.columna?.texto_columna || 'Columna'}`)
         .join('\n') || 'Sin respuesta';
     }
 
-    // Selección única / múltiple
     if (resp.opcionesSeleccionadas?.length > 0) {
       return resp.opcionesSeleccionadas
         .map((opc: any) =>
@@ -314,7 +379,6 @@ obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: stri
         .join(', ');
     }
 
-    // Texto libre
     if (resp.valor_texto) {
       let texto = String(resp.valor_texto);
       if (texto.includes('[EVIDENCIA_URL:')) {
@@ -323,12 +387,10 @@ obtenerEvidencias(preguntaId: string): { url: string; nombre: string; mime: stri
       if (texto) return texto;
     }
 
-    // Numérico
     if (resp.valor_numerico !== null && resp.valor_numerico !== undefined) {
       return String(resp.valor_numerico);
     }
 
-    // Buscar opción por id
     if (pregunta.opciones?.length && resp.valor_texto) {
       const opc = pregunta.opciones.find(o => o.id === resp.valor_texto);
       if (opc) return opc.texto_opcion;

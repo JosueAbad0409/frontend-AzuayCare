@@ -5,16 +5,11 @@
     aria-modal="true"
     aria-labelledby="modal-perfil-titulo"
   >
-    <!-- Overlay Transparente (Cierra el modal al dar clic afuera sin opacar el fondo) -->
     <div class="modal-overlay" (click)="onCerrarModal()" aria-hidden="true"></div>
     
-    <!-- Tarjeta del Modal -->
     <div class="modal-card">
-      
-      <!-- Línea Decorativa Superior -->
       <div class="modal-decorative-line"></div>
 
-      <!-- Encabezado del Modal -->
       <header class="modal-header">
         <h3 id="modal-perfil-titulo" class="modal-title">
           <i class="fas fa-id-badge modal-title-icon" aria-hidden="true"></i>
@@ -24,17 +19,15 @@
           type="button"
           (click)="onCerrarModal()" 
           class="btn-close"
-          aria-label="Cerrar modal"
+          aria-label="Cerrar modal de perfil"
         >
           <i class="fas fa-times" aria-hidden="true"></i>
         </button>
       </header>
 
-      <!-- Cuerpo del Modal -->
       <div class="modal-body">
-        <!-- Avatar y Datos Principales -->
         <div class="profile-summary">
-          <div class="profile-avatar">
+          <div class="profile-avatar" aria-hidden="true">
             {{ inicialCorreo }}
           </div>
           <div class="profile-main-info">
@@ -52,7 +45,6 @@
           </div>
         </div>
 
-        <!-- Matriz de Detalles -->
         <div class="grid-details">
           <div class="detail-item">
             <span class="detail-label">Identificación</span>
@@ -71,7 +63,6 @@
         </div>
       </div>
 
-      <!-- Pie del Modal -->
       <footer class="modal-footer">
         <button 
           type="button" 

@@ -1,70 +1,131 @@
 <div class="carreras-card animate-fade-in">
-  <!-- CABECERA -->
   <div class="header-section">
     <div>
-      <h3 class="title">Revisión y Validación de Fichas</h3>
+      <h1 class="title">Revisión y Validación de Fichas</h1>
       <p class="subtitle">Evalúa el balance socioeconómico y valida las fichas presentadas por los estudiantes.</p>
     </div>
   </div>
 
-  <!-- BARRA DE BÚSQUEDA Y CONTADOR -->
   @if (!isLoading()) {
     <div class="search-bar-wrapper">
       <div class="search-input-box">
-        <i class="fas fa-search search-icon"></i>
+        <i class="fas fa-search search-icon" aria-hidden="true"></i>
         <input 
           type="text" 
           placeholder="Buscar por cédula, nombre o correo..." 
           [value]="searchTerm()"
           (input)="onSearchChange($event)"
           class="search-control"
+          aria-label="Buscar fichas por cédula, nombre o correo"
         />
       </div>
 
-      <span class="count-badge">Total: {{ totalRegistros() }} Ficha(s)</span>
+      <div class="filter-actions">
+        <span class="count-badge" role="status" aria-live="polite">
+          Total: <strong>{{ totalRegistros() }}</strong> Ficha(s)
+        </span>
+        @if (searchTerm() || estadoFiltro() !== 'TODOS' || filterPeriodo() !== 'TODOS') {
+          <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
+            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+            <span>Limpiar Filtros</span>
+          </button>
+        }
+      </div>
     </div>
   }
 
-  <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
-    <div class="loading-state">
-      <i class="fas fa-circle-notch fa-spin spinner-icon"></i>
-      <p>Cargando fichas de estudiantes...</p>
+    <div class="skeleton-wrapper">
+      <div class="skeleton-row skeleton-header"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
     </div>
   } @else {
-    <!-- TABLA PRINCIPAL DE FICHAS -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
-          <tr>
-            <th>Estudiante</th>
-            <th>Cédula</th>
-            <th>Periodo</th>
-            <th>Balance Final</th>
-            <th>
-              <!-- FILTRO DESPLEGABLE POR ESTADO -->
-              <select [value]="estadoFiltro()" (change)="onEstadoChange($event)" class="table-filter-select" title="Filtrar por estado">
-                <option value="TODOS">ESTADO (TODOS)</option>
+          <tr class="header-titles">
+            <th scope="col" class="col-estudiante">Estudiante</th>
+            <th scope="col" class="col-cedula">Cédula</th>
+            <th scope="col" class="col-periodo">Periodo Académico</th>
+            <th scope="col" class="col-balance">Balance Final</th>
+            <th scope="col" class="col-estado text-center">Estado de Ficha</th>
+            <th scope="col" class="col-acc text-right">Acciones</th>
+          </tr>
+          <tr class="header-filters">
+            <th class="col-estudiante">
+              <div class="filter-input-wrap">
+                <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  class="table-column-input" 
+                  placeholder="Filtrar estudiante..." 
+                  [value]="searchTerm()"
+                  (input)="onSearchChange($event)"
+                  aria-label="Filtrar estudiante por nombre o correo"
+                />
+              </div>
+            </th>
+            <th class="col-cedula">
+              <div class="filter-input-wrap">
+                <i class="fas fa-id-card search-micro-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  class="table-column-input" 
+                  placeholder="Cédula..." 
+                  [value]="searchTerm()"
+                  (input)="onSearchChange($event)"
+                  aria-label="Filtrar por número de cédula"
+                />
+              </div>
+            </th>
+            <th class="col-periodo">
+              <select 
+                [value]="filterPeriodo()" 
+                (change)="onPeriodoChange($event)" 
+                class="table-column-select" 
+                aria-label="Filtrar por periodo académico"
+              >
+                <option value="TODOS">Todos los Periodos</option>
+                @for (p of periodosDisponibles(); track p) {
+                  <option [value]="p">{{ p }}</option>
+                }
+              </select>
+            </th>
+            <th class="col-balance"></th>
+            <th class="col-estado text-center">
+              <select 
+                [value]="estadoFiltro()" 
+                (change)="onEstadoChange($event)" 
+                class="table-column-select table-column-select-centered" 
+                aria-label="Filtrar fichas por estado"
+              >
+                <option value="TODOS">Todos los Estados</option>
                 <option value="ENVIADA">ENVIADAS</option>
                 <option value="VALIDADO">VALIDADAS</option>
                 <option value="RECHAZADO">RECHAZADAS</option>
               </select>
             </th>
-            <th style="text-align: right;">Acciones</th>
+            <th class="col-acc text-right"></th>
           </tr>
         </thead>
         <tbody>
           @for (f of fichasPaginadas(); track f.id) {
             <tr>
-              <td>
-                <strong>{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
-                <br>
-                <small class="text-muted">{{ f.usuario?.email_institucional }}</small>
+              <td class="col-estudiante" data-label="Estudiante">
+                <div class="user-identity">
+                  <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
+                  <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
+                </div>
               </td>
-              <td>{{ f.usuario?.cedula || 'N/A' }}</td>
-              <td>{{ f.periodo?.nombre || 'General' }}</td>
-              <td><strong>${{ f.balance_final | number:'1.2-2' }}</strong></td>
-              <td>
+              <td class="col-cedula font-mono" data-label="Cédula">{{ f.usuario?.cedula || 'N/A' }}</td>
+              <td class="col-periodo text-muted" data-label="Periodo">{{ f.periodo?.nombre || 'General' }}</td>
+              <td class="col-balance font-mono" data-label="Balance Final">
+                <strong>${{ f.balance_final | number:'1.2-2' }}</strong>
+              </td>
+              <td class="col-estado text-center" data-label="Estado">
                 <span class="badge" [ngClass]="{
                   'badge-success': f.estado_ficha === 'VALIDADO',
                   'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
@@ -73,17 +134,34 @@
                   {{ f.estado_ficha }}
                 </span>
               </td>
-              <td style="text-align: right;">
-                <button class="btn-icon text-blue" (click)="verDetalleFicha(f)" title="Revisar Ficha">
-                  <i class="fas fa-eye"></i>
-                </button>
+              <td class="col-acc text-right" data-label="Acciones">
+                <div class="actions-wrapper">
+                  <button 
+                    type="button"
+                    class="btn-icon text-blue" 
+                    (click)="verDetalleFicha(f)" 
+                    [disabled]="guardandoEstado()"
+                    [attr.aria-label]="'Revisar ficha de ' + f.usuario?.primer_nombre + ' ' + f.usuario?.primer_apellido"
+                    title="Revisar Ficha"
+                  >
+                    <i class="fas fa-eye" aria-hidden="true"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="empty-state" style="text-align: center; padding: 3rem;">
-                <i class="fas fa-folder-open empty-icon" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 1rem; display: block;"></i>
-                <p style="color: #64748b; font-weight: 600;">No hay fichas presentadas o que coincidan con los criterios de búsqueda.</p>
+              <td colspan="6">
+                <div class="state-card empty-state">
+                  <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+                  <p class="state-title">No hay fichas encontradas</p>
+                  <p class="state-desc">No se encontraron fichas presentadas o coincidentes con los criterios de búsqueda.</p>
+                  @if (searchTerm() || estadoFiltro() !== 'TODOS' || filterPeriodo() !== 'TODOS') {
+                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                      <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           }
@@ -91,66 +169,74 @@
       </table>
     </div>
 
-    <!-- CONTROLES DE PAGINACIÓN DE SERVIDOR -->
     @if (totalRegistros() > 0) {
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding: 0 0.5rem;">
-        <span style="font-size: 0.85rem; color: #64748b;">
+      <div class="pagination-wrapper">
+        <span class="pagination-info">
           Página <strong>{{ paginaActual() }}</strong> de <strong>{{ totalPaginas() }}</strong>
         </span>
-        <div style="display: flex; gap: 0.5rem;">
+        <div class="pagination-controls">
           <button 
-            class="btn btn-outline" 
+            type="button"
+            class="btn btn-outline btn-sm" 
             (click)="cambiarPagina(paginaActual() - 1)" 
-            [disabled]="paginaActual() === 1"
+            [disabled]="paginaActual() === 1 || guardandoEstado()"
           >
-            <i class="fas fa-chevron-left"></i> Anterior
+            <i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior
           </button>
           <button 
-            class="btn btn-outline" 
+            type="button"
+            class="btn btn-outline btn-sm" 
             (click)="cambiarPagina(paginaActual() + 1)" 
-            [disabled]="paginaActual() >= totalPaginas()"
+            [disabled]="paginaActual() >= totalPaginas() || guardandoEstado()"
           >
-            Siguiente <i class="fas fa-chevron-right"></i>
+            Siguiente <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
       </div>
     }
   }
 
-  <!-- MODAL DE AUDITORÍA Y LÍNEA DE TIEMPO -->
   @if (fichaSeleccionada()) {
     <div class="modal-backdrop" (click)="cerrarModal()">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
-
-        <!-- Header -->
+      <div class="modal-box animate-pop" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title-id">
         <div class="modal-header">
           <div>
-            <h3 class="modal-title">Evaluación y Auditoría de Ficha</h3>
+            <h2 id="modal-title-id" class="modal-title">Evaluación y Auditoría de Ficha</h2>
             <p class="modal-subtitle">Revisa respuestas, balances y decide el estado</p>
           </div>
-          <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Cerrar">
-            <i class="fas fa-times"></i>
+          <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Cerrar modal">
+            <i class="fas fa-times" aria-hidden="true"></i>
           </button>
         </div>
 
-        <!-- Tabs -->
-        <div class="tabs-nav">
-          <button type="button" class="tab-btn" [class.active]="tabActiva() === 'DETALLE'" (click)="setTab('DETALLE')">
-            <i class="fas fa-file-alt"></i> Detalle de Ficha
+        <div class="tabs-nav" role="tablist">
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="tabActiva() === 'DETALLE'" 
+            (click)="setTab('DETALLE')"
+            role="tab"
+            [attr.aria-selected]="tabActiva() === 'DETALLE'"
+          >
+            <i class="fas fa-file-alt" aria-hidden="true"></i> Detalle de Ficha
           </button>
-          <button type="button" class="tab-btn" [class.active]="tabActiva() === 'HISTORIAL'" (click)="setTab('HISTORIAL')">
-            <i class="fas fa-history"></i> Línea de Tiempo
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="tabActiva() === 'HISTORIAL'" 
+            (click)="setTab('HISTORIAL')"
+            role="tab"
+            [attr.aria-selected]="tabActiva() === 'HISTORIAL'"
+          >
+            <i class="fas fa-history" aria-hidden="true"></i> Línea de Tiempo
           </button>
         </div>
 
-        <!-- Contenido con scroll interno -->
         <div class="modal-body">
-
           @if (tabActiva() === 'DETALLE') {
-            <!-- Info estudiante + balances -->
             <div class="student-card">
               <div class="student-main">
-                <div class="student-avatar">
+                <div class="student-avatar" aria-hidden="true">
                   <i class="fas fa-user-graduate"></i>
                 </div>
                 <div>
@@ -186,8 +272,7 @@
               </div>
             </div>
 
-            <!-- Respuestas -->
-            <h4 class="section-title">Respuestas Registradas</h4>
+            <h3 class="section-title">Respuestas Registradas</h3>
             <div class="respuestas-list">
               @for (resp of respuestasFicha(); track resp.id) {
                 <div class="respuesta-card">
@@ -201,25 +286,36 @@
               }
             </div>
 
-            <!-- Comentario + acciones -->
             <div class="review-actions">
-              <label class="form-label">Comentario de Revisión / Justificación</label>
+              <label class="form-label" for="txt-comentario">Comentario de Revisión / Justificación</label>
               <textarea
+                id="txt-comentario"
                 [value]="comentarioCambio()"
                 (input)="comentarioCambio.set($any($event.target).value)"
                 class="form-control"
                 rows="3"
                 placeholder="Escriba la razón de aprobación o rechazo..."
+                [disabled]="guardandoEstado()"
               ></textarea>
 
               <div class="actions-row">
-                <button type="button" class="btn btn-outline btn-reject" (click)="cambiarEstado('RECHAZADO')" [disabled]="guardandoEstado()">
-                  @if (guardandoEstado()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i class="fas fa-times-circle"></i> }
-                  Rechazar
+                <button 
+                  type="button" 
+                  class="btn custom-swal-cancel btn-reject" 
+                  (click)="cambiarEstado('RECHAZADO')" 
+                  [disabled]="guardandoEstado()"
+                >
+                  <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-times-circle'" aria-hidden="true"></i>
+                  <span>Rechazar</span>
                 </button>
-                <button type="button" class="btn btn-purple btn-approve" (click)="cambiarEstado('VALIDADO')" [disabled]="guardandoEstado()">
-                  @if (guardandoEstado()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i class="fas fa-check-circle"></i> }
-                  Validar Ficha
+                <button 
+                  type="button" 
+                  class="btn custom-swal-confirm btn-approve" 
+                  (click)="cambiarEstado('VALIDADO')" 
+                  [disabled]="guardandoEstado()"
+                >
+                  <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-check-circle'" aria-hidden="true"></i>
+                  <span>Validar Ficha</span>
                 </button>
               </div>
             </div>
@@ -245,17 +341,17 @@
                     </div>
                   </div>
                 } @empty {
-                  <p class="empty-text" style="text-align:center; padding: 2rem 0;">
-                    No existen registros históricos para esta ficha.
-                  </p>
+                  <div class="state-card empty-state">
+                    <i class="fas fa-history empty-icon" aria-hidden="true"></i>
+                    <p class="state-title">Sin historial registrado</p>
+                    <p class="state-desc">No existen registros históricos de cambios para esta ficha.</p>
+                  </div>
                 }
               </div>
             </div>
           }
-
         </div>
       </div>
     </div>
   }
-  
 </div>

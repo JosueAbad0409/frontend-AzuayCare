@@ -1,6 +1,4 @@
 <main class="dashboard-container animate-fade-in">
-  
-  <!-- HERO BANNER PRINCIPAL -->
   <header class="hero-banner">
     <div class="hero-glow" aria-hidden="true"></div>
     
@@ -34,10 +32,7 @@
     </div>
   </header>
 
-  <!-- SECCIÓN DE TARJETAS INFORMATIVAS -->
   <section class="cards-grid">
-    
-    <!-- TARJETA 1: ESTADO DE LA FICHA -->
     <article class="info-card col-span-2">
       <header class="card-header">
         <div class="header-icon-box">
@@ -48,7 +43,6 @@
 
       <div class="status-container">
         @if (isLoading()) {
-          <!-- Estado de Carga (Skeleton Loader) -->
           <div class="skeleton-loader" role="status" aria-label="Cargando información socioeconómica">
             <div class="skeleton-avatar"></div>
             <div class="skeleton-text">
@@ -57,7 +51,6 @@
             </div>
           </div>
         } @else if (fichaActiva()) {
-          <!-- Estado con Ficha Activa -->
           <div class="status-content">
             <div class="icon-box" [ngClass]="{
               'bg-warning': fichaActiva()?.estado_ficha === 'BORRADOR',
@@ -90,7 +83,6 @@
             </a>
           </div>
         } @else {
-          <!-- Estado sin Ficha (Vacío) -->
           <div class="status-empty">
             <div class="icon-box bg-neutral text-muted" aria-hidden="true">
               <i class="fas fa-file-alt"></i>
@@ -105,7 +97,6 @@
       </div>
     </article>
 
-    <!-- TARJETA 2: MIS DOCUMENTOS -->
     <article class="info-card interactive-card" tabindex="0" routerLink="/estudiante/documentos" aria-label="Ir a la sección de mis documentos">
       <div class="card-body">
         <div class="icon-box bg-indigo text-indigo-light">
@@ -122,6 +113,5 @@
         </div>
       </footer>
     </article>
-
   </section>
 </main>

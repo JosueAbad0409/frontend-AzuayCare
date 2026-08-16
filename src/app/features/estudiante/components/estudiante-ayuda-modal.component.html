@@ -1,0 +1,83 @@
+<div class="ayuda-overlay" (click)="cerrarModal()">
+  <div class="ayuda-modal" (click)="$event.stopPropagation()">
+    <div class="ayuda-header">
+      <h2>Ayuda y Soporte</h2>
+      <button class="btn-cerrar" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+    </div>
+
+    <div class="ayuda-tabs">
+      <button
+        class="tab-btn"
+        [class.activo]="pestanaActiva() === 'bienestar'"
+        (click)="cambiarPestana('bienestar')"
+      >
+        Bienestar Estudiantil
+      </button>
+      <button
+        class="tab-btn"
+        [class.activo]="pestanaActiva() === 'coordinador'"
+        (click)="cambiarPestana('coordinador')"
+      >
+        Mi Coordinador de Carrera
+      </button>
+    </div>
+
+    <div class="ayuda-contenido">
+      @if (isLoading()) {
+        <div class="skeleton-wrapper">
+          <div class="skeleton-line skeleton-avatar"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      } @else if (error()) {
+        <div class="estado-mensaje">
+          <p>No se pudo cargar la información de ayuda.</p>
+          <button class="btn-reintentar" (click)="cargarAyuda()">Reintentar</button>
+        </div>
+      } @else {
+        @if (pestanaActiva() === 'bienestar') {
+          @if (datos()?.bienestarEstudiantil; as perfil) {
+            <div class="perfil-card">
+              <span class="badge badge-institucional">Institucional</span>
+              <h3>{{ perfil.nombreCompleto }}</h3>
+              @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
+              @if (perfil.mensajeAyuda) { <p class="mensaje">{{ perfil.mensajeAyuda }}</p> }
+              <ul class="datos-contacto">
+                @if (perfil.correo) { <li><strong>Correo:</strong> {{ perfil.correo }}</li> }
+                @if (perfil.telefono) { <li><strong>Teléfono:</strong> {{ perfil.telefono }}</li> }
+                @if (perfil.horarioAtencion) { <li><strong>Horario:</strong> {{ perfil.horarioAtencion }}</li> }
+                @if (perfil.ubicacion) { <li><strong>Ubicación:</strong> {{ perfil.ubicacion }}</li> }
+              </ul>
+            </div>
+          } @else {
+            <p class="estado-mensaje">No hay información disponible.</p>
+          }
+        }
+
+        @if (pestanaActiva() === 'coordinador') {
+          @if (datos()?.coordinadoresCarrera?.length) {
+            @for (perfil of datos()?.coordinadoresCarrera; track perfil.id) {
+              <div class="perfil-card">
+                <span class="badge badge-carrera">Coordinador de Carrera</span>
+                <h3>{{ perfil.nombreCompleto }}</h3>
+                @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
+                @if (perfil.mensajeAyuda) { <p class="mensaje">{{ perfil.mensajeAyuda }}</p> }
+                <ul class="datos-contacto">
+                  @if (perfil.correo) { <li><strong>Correo:</strong> {{ perfil.correo }}</li> }
+                  @if (perfil.telefono) { <li><strong>Teléfono:</strong> {{ perfil.telefono }}</li> }
+                  @if (perfil.horarioAtencion) { <li><strong>Horario:</strong> {{ perfil.horarioAtencion }}</li> }
+                  @if (perfil.ubicacion) { <li><strong>Ubicación:</strong> {{ perfil.ubicacion }}</li> }
+                </ul>
+              </div>
+            }
+          } @else {
+            <p class="estado-mensaje">
+              Aún no tienes una carrera asignada o no hay un coordinador vinculado.
+            </p>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>

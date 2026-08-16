@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DocumentosService } from '../../../core/services/documentos.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { DocumentoRespaldo } from '../../../core/models/documento.model';
@@ -17,25 +18,28 @@ export class EstudianteDocumentosComponent implements OnInit {
   private readonly documentosService = inject(DocumentosService);
   private readonly toastService = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly destroyRef = inject(DestroyRef);
 
-  // Estados reactivos principales
   misDocumentos = signal<DocumentoRespaldo[]>([]);
   docPreview = signal<DocumentoRespaldo | null>(null);
   safePreviewUrl = signal<SafeResourceUrl | null>(null);
   docAEliminar = signal<string | null>(null);
 
-  // Estado visual adicional para UI/UX Drag & Drop
   isDragging = signal<boolean>(false);
+  isUploading = signal<boolean>(false);
+  isDeleting = signal<boolean>(false);
 
   ngOnInit(): void {
     this.cargarMisDocumentos();
   }
 
   cargarMisDocumentos(): void {
-    this.documentosService.getMisDocumentos().subscribe({
-      next: (docs) => this.misDocumentos.set(docs),
-      error: () => this.toastService.show('Error al cargar tus documentos.', 'error')
-    });
+    this.documentosService.getMisDocumentos()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (docs) => this.misDocumentos.set(docs),
+        error: () => this.toastService.show('Error al cargar tus documentos.', 'error')
+      });
   }
 
   onFileSelected(event: Event): void {
@@ -46,7 +50,6 @@ export class EstudianteDocumentosComponent implements OnInit {
     input.value = '';
   }
 
-  // Soporte de Drag & Drop para la Dropzone
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
@@ -70,13 +73,22 @@ export class EstudianteDocumentosComponent implements OnInit {
   }
 
   private procesarArchivo(file: File): void {
-    this.documentosService.subirDocumentoLibre(file).subscribe({
-      next: (nuevoDoc) => {
-        this.misDocumentos.update(docs => [...docs, nuevoDoc]);
-        this.toastService.show('Archivo subido correctamente.', 'success');
-      },
-      error: (err: any) => this.toastService.show(err?.error?.message || 'Error al subir el archivo.', 'error')
-    });
+    if (this.isUploading()) return;
+    this.isUploading.set(true);
+
+    this.documentosService.subirDocumentoLibre(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (nuevoDoc) => {
+          this.misDocumentos.update(docs => [...docs, nuevoDoc]);
+          this.toastService.show('Archivo subido correctamente.', 'success');
+          this.isUploading.set(false);
+        },
+        error: (err: any) => {
+          this.toastService.show(err?.error?.message || 'Error al subir el archivo.', 'error');
+          this.isUploading.set(false);
+        }
+      });
   }
 
   intentarEliminar(id: string): void {
@@ -84,24 +96,31 @@ export class EstudianteDocumentosComponent implements OnInit {
   }
 
   cancelarEliminacion(): void {
+    if (this.isDeleting()) return;
     this.docAEliminar.set(null);
   }
 
   confirmarEliminacion(): void {
     const id = this.docAEliminar();
-    if (!id) return;
+    if (!id || this.isDeleting()) return;
 
-    this.documentosService.deleteDocumento(id).subscribe({
-      next: () => {
-        this.misDocumentos.update(docs => docs.filter(d => d.id !== id));
-        this.toastService.show('Archivo eliminado.', 'success');
-        this.docAEliminar.set(null);
-      },
-      error: () => {
-        this.toastService.show('Error al eliminar el archivo.', 'error');
-        this.docAEliminar.set(null);
-      }
-    });
+    this.isDeleting.set(true);
+
+    this.documentosService.deleteDocumento(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.misDocumentos.update(docs => docs.filter(d => d.id !== id));
+          this.toastService.show('Archivo eliminado.', 'success');
+          this.docAEliminar.set(null);
+          this.isDeleting.set(false);
+        },
+        error: () => {
+          this.toastService.show('Error al eliminar el archivo.', 'error');
+          this.docAEliminar.set(null);
+          this.isDeleting.set(false);
+        }
+      });
   }
 
   descargarDocumento(doc: DocumentoRespaldo): void {

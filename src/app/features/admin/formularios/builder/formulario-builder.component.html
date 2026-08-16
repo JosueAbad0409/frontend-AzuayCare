@@ -1,17 +1,23 @@
-@if (!isLoading() && formulario()) {
+@if (isLoading()) {
+<div class="skeleton-wrapper builder-container animate-fade-in" aria-live="polite" aria-busy="true">
+  <div class="skeleton-row header-skel"></div>
+  <div class="skeleton-row mb-4"></div>
+  <div class="skeleton-row mb-4" style="height: 150px;"></div>
+  <div class="skeleton-row mb-4" style="height: 200px;"></div>
+</div>
+} @else if (formulario()) {
 <div class="builder-container animate-fade-in">
 
-  <!-- CABECERA PRINCIPAL -->
   <header class="builder-header">
     <div class="header-left">
       <a routerLink="/admin/formularios" class="btn-back">
-        <i class="fas fa-arrow-left"></i> Volver a Lista
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Volver a Lista
       </a>
       <div>
         <div class="title-row">
-          <h2>{{ formulario()?.titulo }}</h2>
+          <h2 id="formulario-title">{{ formulario()?.titulo }}</h2>
           <span class="badge" [ngClass]="formulario()?.publicado ? 'badge-success' : 'badge-warning'">
-            <i class="fas" [ngClass]="formulario()?.publicado ? 'fa-check-circle' : 'fa-clock'"></i>
+            <i class="fas" [ngClass]="formulario()?.publicado ? 'fa-check-circle' : 'fa-clock'" aria-hidden="true"></i>
             {{ formulario()?.publicado ? 'PUBLICADO' : 'BORRADOR (V' + formulario()?.version + ')' }}
           </span>
         </div>
@@ -21,52 +27,47 @@
 
     <div class="header-actions">
       <button type="button" class="btn btn-outline" (click)="showRangosPanel.update(v => !v)">
-        <i class="fas fa-calculator"></i> Variables & Rangos
+        <i class="fas fa-calculator" aria-hidden="true"></i> Variables & Rangos
       </button>
 
-      <!-- ACCIONES DE EDICIÓN GLOBALES -->
       @if (!esSoloLectura()) {
-      <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()">
-        <i class="fas fa-folder-plus"></i> Nueva Sección
+      <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()" [disabled]="isSavingSeccion()">
+        <i class="fas fa-folder-plus" aria-hidden="true"></i> Nueva Sección
       </button>
       @if (!formulario()?.publicado) {
       <button type="button" class="btn btn-purple" (click)="publicarFormulario()">
-        <i class="fas fa-paper-plane"></i> Publicar Ficha
+        <i class="fas fa-paper-plane" aria-hidden="true"></i> Publicar Ficha
       </button>
       }
       }
     </div>
   </header>
 
-  <!-- BANNER DE VERSIÓN BLOQUEADA -->
   @if (esSoloLectura()) {
-  <div class="alert-readonly animate-fade-in">
-    <i class="fas fa-lock"></i>
-    Esta es una versión anterior bloqueada. Solo puedes visualizar las preguntas y su configuración; no se permite
-    ninguna edición.
+  <div class="alert-readonly animate-fade-in" role="alert">
+    <i class="fas fa-lock" aria-hidden="true"></i>
+    Esta es una versión anterior bloqueada. Solo puedes visualizar las preguntas y su configuración; no se permite ninguna edición.
   </div>
   }
 
-  <!-- PANEL DESPLEGABLE: CONFIGURACIÓN DE RANGOS Y VARIABLES CALCULADAS -->
   @if (showRangosPanel()) {
   <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-4 mb-6 shadow-sm animate-fade-in">
-    <div class="flex justify-between items-center mb-3">
-      <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
-        <i class="fas fa-sliders-h"></i> Rangos de estatus económico (BALANCE)
+    <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+      <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2 m-0">
+        <i class="fas fa-sliders-h" aria-hidden="true"></i> Rangos de estatus económico (BALANCE)
       </h4>
-      <button type="button" class="text-xs text-amber-800 hover:underline" (click)="showRangosPanel.set(false)">Cerrar</button>
+      <button type="button" class="text-xs text-amber-800 hover:underline" (click)="showRangosPanel.set(false)" aria-label="Cerrar panel de rangos">Cerrar</button>
     </div>
 
     <p class="text-xs text-amber-900/80 mb-3">
-      Estos rangos clasifican el balance (ingresos − egresos) de cada ficha.
-      Puedes cargar los predeterminados y ajustarlos antes o después de guardar.
+      Estos rangos clasifican el balance (ingresos − egresos) de cada ficha. Puedes cargar los predeterminados y ajustarlos antes o después de guardar.
     </p>
 
     @if (!esSoloLectura()) {
-    <!-- BOTÓN PRESET -->
     <div class="mb-4">
-      <button type="button" class="btn btn-outline btn-sm text-xs border-amber-400 text-amber-900" (click)="cargarRangosBalancePredeterminados()">
-        <i class="fas fa-magic"></i> Cargar rangos predeterminados de estatus económico
+      <button type="button" class="btn btn-outline btn-sm text-xs border-amber-400 text-amber-900" (click)="cargarRangosBalancePredeterminados()" [disabled]="isSavingRango()">
+        @if(isSavingRango()) { <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Cargando... }
+        @else { <i class="fas fa-magic" aria-hidden="true"></i> Cargar rangos predeterminados }
       </button>
     </div>
 
@@ -80,60 +81,95 @@
         <input type="text" formControlName="nombre" class="form-control text-xs" placeholder="Ej: Vulnerable">
       </div>
       <div>
-        <label class="text-xs font-semibold text-gray-700 block mb-1">Mínimo (puede ser negativo)</label>
+        <label class="text-xs font-semibold text-gray-700 block mb-1">Mínimo</label>
         <input type="number" formControlName="valor_min" class="form-control text-xs" placeholder="Sin mínimo">
       </div>
       <div>
-        <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo (opcional)</label>
+        <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo</label>
         <input type="number" formControlName="valor_max" class="form-control text-xs" placeholder="Sin límite">
       </div>
       <div class="flex gap-2">
         @if (editingRangoId()) {
-        <button type="button" class="btn btn-outline btn-sm" (click)="cancelarEdicionRango()">Cancelar</button>
+        <button type="button" class="btn btn-outline btn-sm" (click)="cancelarEdicionRango()" [disabled]="isSavingRango()">Cancelar</button>
         }
-        <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid">
-          <i class="fas" [ngClass]="editingRangoId() ? 'fa-save' : 'fa-plus'"></i>
-          {{ editingRangoId() ? 'Actualizar' : 'Guardar rango' }}
+        <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid || isSavingRango()">
+          @if (isSavingRango()) {
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+          } @else {
+            <i class="fas" [ngClass]="editingRangoId() ? 'fa-save' : 'fa-plus'" aria-hidden="true"></i>
+            {{ editingRangoId() ? 'Actualizar' : 'Guardar' }}
+          }
         </button>
       </div>
     </form>
     }
 
-    <div class="bg-white rounded-lg border overflow-hidden">
-      <table class="w-full text-xs text-left">
-        <thead class="bg-slate-100 font-bold text-slate-700">
-          <tr>
-            <th class="p-2">Variable</th>
-            <th class="p-2">Estatus económico</th>
-            <th class="p-2">Min.</th>
-            <th class="p-2">Max.</th>
-            @if (!esSoloLectura()) {
-            <th class="p-2 text-center">Acciones</th>
-            }
+    <div class="table-container mb-2">
+      <div class="header-actions-left p-2">
+        <span class="count-badge text-xs" aria-live="polite">Total: {{ rangosFiltrados().length }} Rango(s)</span>
+        @if (hayFiltrosRangosActivos()) {
+          <button type="button" class="btn-clear-filters text-xs py-1" (click)="limpiarFiltrosRangos()">
+            <i class="fas fa-filter-slash" aria-hidden="true"></i> Limpiar Filtros
+          </button>
+        }
+      </div>
+      <table class="admin-table w-full text-left bg-white">
+        <thead class="sticky-header">
+          <tr class="header-titles">
+            <th scope="col" style="width: 25%">Variable</th>
+            <th scope="col" style="width: 30%">Estatus económico</th>
+            <th scope="col" style="width: 15%">Min.</th>
+            <th scope="col" style="width: 15%">Max.</th>
+            @if (!esSoloLectura()) { <th scope="col" style="width: 15%" class="text-right">Acciones</th> }
+          </tr>
+          <tr class="header-filters">
+            <th>
+              <select [value]="filtroVariableRango()" (change)="onVariableRangoChange($event)" class="table-column-select-centered text-xs" aria-label="Filtrar por variable">
+                <option value="TODOS">TODAS</option>
+                @for (v of variablesDisponiblesRangos(); track v) {
+                  <option [value]="v">{{ v }}</option>
+                }
+              </select>
+            </th>
+            <th>
+              <div class="input-filter-wrapper">
+                <i class="fas fa-search filter-icon" aria-hidden="true"></i>
+                <input id="search-rango-input" type="text" placeholder="Buscar estatus..." [value]="searchTermRango()" (input)="onSearchRangoChange($event)" class="table-column-input text-xs" aria-label="Buscar rango">
+              </div>
+            </th>
+            <th></th>
+            <th></th>
+            @if (!esSoloLectura()) { <th></th> }
           </tr>
         </thead>
         <tbody>
-          @for (rango of rangosVariable(); track rango.id) {
-          <tr class="border-t hover:bg-slate-50">
-            <td class="p-2 font-mono font-bold text-purple-800">{{ rango.variable_calculo }}</td>
-            <td class="p-2 font-semibold">{{ rango.nombre }}</td>
-            <td class="p-2">{{ rango.valor_min != null ? ('$' + rango.valor_min) : 'Sin mín.' }}</td>
-            <td class="p-2">{{ rango.valor_max != null ? ('$' + rango.valor_max) : 'En adelante' }}</td>
+          @for (rango of rangosFiltrados(); track rango.id) {
+          <tr>
+            <td data-label="Variable">
+              <span class="range-tag">{{ rango.variable_calculo }}</span>
+            </td>
+            <td data-label="Estatus"><strong>{{ rango.nombre }}</strong></td>
+            <td data-label="Min.">{{ rango.valor_min != null ? ('$' + rango.valor_min) : 'Sin mín.' }}</td>
+            <td data-label="Max.">{{ rango.valor_max != null ? ('$' + rango.valor_max) : 'En adelante' }}</td>
             @if (!esSoloLectura()) {
-            <td class="p-2 text-center flex justify-center gap-2">
-              <button type="button" class="text-purple-600 hover:text-purple-800" (click)="abrirEditarRango(rango)" title="Editar">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarRangoVariable(rango.id)" title="Eliminar">
-                <i class="fas fa-trash"></i>
-              </button>
+            <td data-label="Acciones" class="text-right">
+              <div class="actions-wrapper">
+                <button type="button" class="btn-icon text-purple" (click)="abrirEditarRango(rango)" title="Editar" [disabled]="isSavingRango()">
+                  <i class="fas fa-edit" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn-icon text-red" (click)="eliminarRangoVariable(rango.id)" title="Eliminar" [disabled]="isSavingRango()">
+                  <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                </button>
+              </div>
             </td>
             }
           </tr>
           } @empty {
           <tr>
-            <td [attr.colspan]="esSoloLectura() ? 4 : 5" class="p-3 text-center text-gray-400">
-              No hay rangos. Usa el botón de predeterminados o agrega uno manualmente.
+            <td [attr.colspan]="esSoloLectura() ? 4 : 5" class="empty-state">
+              <div class="empty-state-content text-xs py-4">
+                <p>No se encontraron rangos configurados o las búsquedas no tienen resultados.</p>
+              </div>
             </td>
           </tr>
           }
@@ -143,8 +179,7 @@
   </div>
   }
 
-  <!-- LISTADO DE SECCIONES -->
-  <main class="sections-list">
+  <main class="sections-list" aria-label="Lista de Secciones">
     @for (seccion of secciones(); track seccion.id || $index; let i = $index) {
     <div class="section-card">
       <div class="section-header">
@@ -153,8 +188,8 @@
           <h3>{{ seccion.nombre }}</h3>
 
           @if (seccion.tipo_seccion === 'FINANCIERA') {
-          <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-            <i class="fas fa-coins"></i> FINANCIERA ({{
+          <span class="badge-financiera mt-1">
+            <i class="fas fa-coins" aria-hidden="true"></i> FINANCIERA ({{
             seccion.subcategoria_financiera === 'AMBOS' ? 'INGRESOS Y EGRESOS'
             : seccion.subcategoria_financiera === 'GASTOS' ? 'EGRESOS'
             : seccion.subcategoria_financiera === 'INGRESOS' ? 'INGRESOS'
@@ -162,19 +197,19 @@
             }})
           </span>
           } @else {
-          <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-            <i class="fas fa-align-left"></i> GENERAL
+          <span class="badge-financiera tag-neutral mt-1 border">
+            <i class="fas fa-align-left" aria-hidden="true"></i> GENERAL
           </span>
           }
         </div>
 
         @if (!esSoloLectura()) {
         <div class="flex items-center gap-1">
-          <button type="button" class="btn-icon text-purple" (click)="abrirModalEditarSeccion(seccion)" title="Editar Sección">
-            <i class="fas fa-edit"></i>
+          <button type="button" class="btn-icon text-purple" (click)="abrirModalEditarSeccion(seccion)" title="Editar Sección" [disabled]="isSavingSeccion()">
+            <i class="fas fa-edit" aria-hidden="true"></i>
           </button>
-          <button type="button" class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)" title="Eliminar Sección">
-            <i class="fas fa-trash-alt"></i>
+          <button type="button" class="btn-icon text-red" (click)="eliminarSeccion(seccion.id, i)" title="Eliminar Sección" [disabled]="isSavingSeccion()">
+            <i class="fas fa-trash-alt" aria-hidden="true"></i>
           </button>
         </div>
         }
@@ -183,23 +218,20 @@
       <div class="questions-container" (dragover)="onDragOver($event)">
         @for (pregunta of preguntasVisibles(seccion); track pregunta.id || $index; let j = $index) {
 
-        <!-- TARJETA DE PREGUNTA -->
         <div class="question-item flex-col gap-3"
           [class.cursor-move]="!esSoloLectura() && editingPreguntaId() !== pregunta.id"
           [draggable]="!esSoloLectura() && editingPreguntaId() !== pregunta.id" (dragstart)="onDragStart(i, j)"
           (drop)="onDrop(i, j)">
           
           @if (editingPreguntaId() === pregunta.id) {
-          <!-- CABECERA EN MODO EDICIÓN -->
           <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
           } @else {
-          <!-- CABECERA EN MODO LECTURA -->
-          <div class="flex justify-between w-full items-start">
-            <div class="question-main flex items-center gap-3">
+          <div class="flex justify-between w-full items-start flex-wrap gap-2">
+            <div class="question-main flex items-start gap-3">
               @if (!esSoloLectura()) {
-              <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab" title="Arrastrar para reordenar"></i>
+              <i class="fas fa-grip-vertical drag-handle text-slate-400 hover:text-purple-600 transition-colors cursor-grab mt-1" title="Arrastrar para reordenar" aria-hidden="true"></i>
               }
-              <span class="question-num">{{ j + 1 }}.</span>
+              <span class="question-num mt-0.5">{{ j + 1 }}.</span>
               <div class="question-content">
                 <strong>{{ pregunta.enunciado }}</strong>
                 <div class="question-badges">
@@ -210,41 +242,38 @@
                   </span>
                   }
                   @if (pregunta.requiere_evidencia) {
-                  <span class="tag tag-evid"><i class="fas fa-paperclip"></i> Evidencia Requerida</span>
+                  <span class="tag tag-evid"><i class="fas fa-paperclip" aria-hidden="true"></i> Evidencia Requerida</span>
                   }
                   @if (pregunta.es_obligatorio) {
-                  <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]"></i> Obligatoria</span>
+                  <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]" aria-hidden="true"></i> Obligatoria</span>
                   }
                 </div>
               </div>
             </div>
 
-            <!-- BOTONERA DE ACCIONES DE PREGUNTA -->
             @if (!esSoloLectura()) {
-            <div class="flex items-center gap-1">
-              <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta">
-                <i class="fas fa-edit"></i>
+            <div class="flex items-center gap-1 mt-2 md:mt-0">
+              <button type="button" class="btn-icon text-purple" (click)="abrirEditarPregunta(pregunta, seccion.id)" title="Editar Pregunta" [disabled]="isSavingQuestion()">
+                <i class="fas fa-edit" aria-hidden="true"></i>
               </button>
-              <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta">
-                <i class="fas fa-times"></i>
+              <button type="button" class="btn-icon text-red" (click)="eliminarPregunta(pregunta.id, seccion.id)" title="Eliminar Pregunta" [disabled]="isSavingQuestion()">
+                <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
             }
           </div>
           }
 
-          <!-- OPCIONES SELECCIÓN -->
           @if (esTipoSeleccion(pregunta.tipo_campo_id) && editingPreguntaId() !== pregunta.id) {
-          <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2">
-            <h5 class="font-bold text-sm text-blue-900"><i class="fas fa-list-ul"></i> Opciones Configuradas</h5>
-            <ul class="text-xs space-y-1">
+          <div class="w-full bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 space-y-2 box-border">
+            <h5 class="font-bold text-sm text-blue-900 m-0 pb-1"><i class="fas fa-list-ul" aria-hidden="true"></i> Opciones Configuradas</h5>
+            <ul class="text-xs space-y-2 m-0 p-0 list-none">
               @for (opcion of pregunta.opciones; track opcion.id || $index) {
-              <li class="bg-white p-2 rounded border">
+              <li class="bg-white p-2 rounded border block w-full box-border">
                 @if (editingOpcionId() === opcion.id) {
-                <!-- MODO EDICIÓN DE ESTA OPCIÓN -->
-                <div [formGroup]="editarOpcionForm" class="space-y-2 p-1">
+                <div [formGroup]="editarOpcionForm" class="space-y-2 p-1 w-full box-border">
                   <input type="text" formControlName="texto_opcion" placeholder="Texto de la opción" class="form-control text-xs w-full">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full box-border">
                     <div>
                       <label class="text-[10px] font-bold text-slate-500 block mb-0.5">Puntos</label>
                       <input type="number" formControlName="valor_ponderado" class="form-control text-xs w-full">
@@ -262,17 +291,16 @@
                       <input type="checkbox" formControlName="permite_texto_libre" class="accent-purple-600 w-3.5 h-3.5"> Permite 'Otros'
                     </label>
                   </div>
-                  <div class="flex justify-end gap-2 pt-1">
+                  <div class="flex justify-end gap-2 pt-2">
                     <button type="button" class="btn btn-outline btn-sm text-xs" (click)="cancelarEdicionOpcion()">Cancelar</button>
                     <button type="button" class="btn btn-purple btn-sm text-xs" [disabled]="editarOpcionForm.invalid" (click)="guardarEdicionOpcion(pregunta.id)">
-                      <i class="fas fa-check"></i> Guardar
+                      <i class="fas fa-check" aria-hidden="true"></i> Guardar
                     </button>
                   </div>
                 </div>
                 } @else {
-                <!-- MODO LECTURA DE ESTA OPCIÓN -->
-                <div class="flex justify-between items-center">
-                  <span>
+                <div class="flex justify-between items-center flex-wrap gap-2 w-full box-border">
+                  <span class="block text-ellipsis overflow-hidden">
                     • {{ opcion.texto_opcion }}
                     @if (opcion.es_correcta) { <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold ml-1 text-[10px]">✔️ CORRECTA</span> }
                     @if (opcion.permite_texto_libre) { <em class="text-gray-500 ml-1">(Especificar texto libre)</em> }
@@ -281,85 +309,83 @@
                   </span>
                   @if (!esSoloLectura()) {
                   <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" class="text-purple-600 hover:text-purple-800" (click)="abrirEditarOpcion(opcion)" title="Editar opción">
-                      <i class="fas fa-edit"></i>
+                    <button type="button" class="text-purple-600 hover:text-purple-800 border-none bg-transparent cursor-pointer p-1" (click)="abrirEditarOpcion(opcion)" title="Editar opción">
+                      <i class="fas fa-edit" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="text-red-500 hover:text-red-700" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)" title="Eliminar opción">
-                      <i class="fas fa-trash"></i>
+                    <button type="button" class="text-red-500 hover:text-red-700 border-none bg-transparent cursor-pointer p-1" (click)="eliminarOpcionExistente(opcion.id!, pregunta.id)" title="Eliminar opción">
+                      <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                   </div>
                   }
                 </div>
 
-                <!-- SUBPREGUNTA VINCULADA A ESTA OPCIÓN -->
                 @if (opcion.id && obtenerSubpreguntaDeOpcion(opcion.id); as subpregunta) {
-                <div class="mt-2 ml-3 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-2">
+                <div class="mt-2 ml-1 md:ml-3 pl-2 md:pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-2 w-full box-border">
                   <span class="text-[10px] font-extrabold text-emerald-700 uppercase block mb-0.5">
-                    <i class="fas fa-level-down-alt"></i> Se activa al elegir "{{ opcion.texto_opcion }}":
+                    <i class="fas fa-level-down-alt" aria-hidden="true"></i> Se activa al elegir "{{ opcion.texto_opcion }}":
                   </span>
-                  <span class="text-xs font-semibold text-slate-700">{{ subpregunta.enunciado }}</span>
+                  <span class="text-xs font-semibold text-slate-700 block text-ellipsis overflow-hidden">{{ subpregunta.enunciado }}</span>
                 </div>
                 }
                 }
               </li>
               } @empty {
-              <p class="text-xs text-gray-400">Sin opciones agregadas.</p>
+              <li class="text-xs text-gray-400 p-2">Sin opciones agregadas.</li>
               }
             </ul>
 
             @if (!esSoloLectura()) {
-            <div class="flex gap-2 pt-1">
+            <div class="flex gap-2 pt-2 w-full box-border">
               <input type="text" [value]="nuevaOpcionTexto()" (input)="nuevaOpcionTexto.set($any($event.target).value)"
                 (keyup.enter)="agregarOpcion(pregunta.id)" placeholder="Añadir opción rápida y presionar Enter..."
-                class="form-control text-xs">
-              <button type="button" (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm">
-                <i class="fas fa-plus"></i>
+                class="form-control text-xs flex-grow">
+              <button type="button" (click)="agregarOpcion(pregunta.id)" class="btn btn-purple btn-sm shrink-0">
+                <i class="fas fa-plus" aria-hidden="true"></i>
               </button>
             </div>
             }
           </div>
           }
 
-          <!-- CONFIGURACIÓN MATRIZ EXISTENTE -->
           @if (esTipoMatriz(pregunta.tipo_campo_id) && editingPreguntaId() !== pregunta.id) {
-          <app-matriz-builder [preguntaId]="pregunta.id" [filasExistentes]="pregunta.filasMatriz || []"
-            [columnasExistentes]="pregunta.columnasMatriz || []" (agregarFila)="agregarFilaMatriz($event)"
-            (eliminarFila)="eliminarFilaExistente($event, pregunta.id)" (agregarColumna)="agregarColumnaMatriz($event)"
-            (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"></app-matriz-builder>
+          <div class="w-full overflow-x-auto box-border mt-2">
+            <app-matriz-builder [preguntaId]="pregunta.id" [filasExistentes]="pregunta.filasMatriz || []"
+              [columnasExistentes]="pregunta.columnasMatriz || []" (agregarFila)="agregarFilaMatriz($event)"
+              (eliminarFila)="eliminarFilaExistente($event, pregunta.id)" (agregarColumna)="agregarColumnaMatriz($event)"
+              (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"></app-matriz-builder>
+          </div>
           }
         </div>
         }
 
-        <!-- FORMULARIO PARA CREAR NUEVA PREGUNTA -->
         @if (activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() === null && !esSoloLectura()) {
         <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
         } @else if (!esSoloLectura() && !(activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() !== null)) {
-        <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)">
-          <i class="fas fa-plus"></i> Añadir Pregunta a esta sección
+        <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)" [disabled]="isSavingQuestion()">
+          <i class="fas fa-plus" aria-hidden="true"></i> Añadir Pregunta a esta sección
         </button>
         }
 
-        <!-- TEMPLATE COMPARTIDO -->
         <ng-template #preguntaFormTpl>
-          <div class="new-question-box border-2 border-purple-500 rounded-xl p-4 bg-white shadow-lg my-4">
-            <h4 class="text-purple-900 font-bold mb-3 flex items-center gap-2">
-              <i class="fas" [ngClass]="editingPreguntaId() ? 'fa-edit' : 'fa-plus-circle'"></i>
+          <div class="new-question-box border-2 border-purple-500 rounded-xl p-4 bg-white shadow-lg my-4 w-full box-border">
+            <h4 class="text-purple-900 font-bold mb-3 flex items-center gap-2 m-0 pb-2">
+              <i class="fas" [ngClass]="editingPreguntaId() ? 'fa-edit' : 'fa-plus-circle'" aria-hidden="true"></i>
               {{ editingPreguntaId() ? 'Editar Pregunta' : 'Configurar Nueva Pregunta' }}
             </h4>
 
-            <form [formGroup]="preguntaForm" (ngSubmit)="guardarPregunta(seccion.id)">
-              <div class="form-group mb-3">
-                <label class="font-semibold text-xs">Enunciado o Pregunta *</label>
-                <input type="text" formControlName="enunciado" class="form-control" placeholder="Ej: Evalué los siguientes servicios de la universidad...">
+            <form [formGroup]="preguntaForm" (ngSubmit)="guardarPregunta(seccion.id)" class="w-full box-border">
+              <div class="form-group mb-3 w-full">
+                <label class="font-semibold text-xs block mb-1">Enunciado o Pregunta *</label>
+                <input type="text" formControlName="enunciado" class="form-control w-full" placeholder="Ej: Evalué los siguientes servicios de la universidad...">
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 w-full">
                 <div class="form-group">
-                  <label class="font-semibold text-xs">Tipo de Respuesta *</label>
+                  <label class="font-semibold text-xs block mb-1">Tipo de Respuesta *</label>
                   @if (esSeccionFinancieraActiva()) {
-                  <input type="text" value="NUMÉRICO (Fijo por sección financiera)" class="form-control bg-gray-100 font-semibold text-amber-800" readonly>
+                  <input type="text" value="NUMÉRICO (Fijo por sección financiera)" class="form-control bg-gray-100 font-semibold text-amber-800 w-full" readonly>
                   } @else {
-                  <select formControlName="tipo_campo_id" class="form-control">
+                  <select formControlName="tipo_campo_id" class="form-control w-full">
                     <option value="">-- Seleccionar --</option>
                     @for (tipo of tiposCampo(); track tipo.id) {
                     <option [value]="tipo.id">{{ tipo.nombre }}</option>
@@ -368,8 +394,8 @@
                   }
                 </div>
                 <div class="form-group">
-                  <label class="font-semibold text-xs">Categoría Financiera *</label>
-                  <select formControlName="categoria_financiera" class="form-control">
+                  <label class="font-semibold text-xs block mb-1">Categoría Financiera *</label>
+                  <select formControlName="categoria_financiera" class="form-control w-full">
                     <option value="NINGUNO">NINGUNO (Pregunta General)</option>
                     <option value="INGRESO">INGRESO (Sumar al total de ingresos)</option>
                     <option value="EGRESO">EGRESO (Sumar al total de gastos)</option>
@@ -377,32 +403,31 @@
                 </div>
               </div>
 
-              <!-- OPCIONES DINÁMICAS Y DROPDOWN DE PRESETS -->
               @if (esTipoSeleccion(preguntaForm.get('tipo_campo_id')?.value)) {
-              <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 mb-4 space-y-3">
-                <div class="flex justify-between items-center">
+              <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 mb-4 space-y-3 w-full box-border">
+                <div class="flex justify-between items-center flex-wrap gap-2">
                   <span class="text-xs font-bold text-blue-900 uppercase tracking-wide">
-                    <i class="fas fa-list-ul mr-1"></i> Opciones de Respuesta
+                    <i class="fas fa-list-ul mr-1" aria-hidden="true"></i> Opciones de Respuesta
                   </span>
 
-                  <div class="flex gap-2 relative">
+                  <div class="flex gap-2 relative flex-wrap">
                     <div class="relative inline-block text-left">
                       <button type="button" class="btn btn-sm btn-outline text-xs" (click)="toggleMenuPresets()">
-                        <i class="fas fa-magic"></i> Añadir Plantilla / Rangos <i class="fas fa-chevron-down ml-1"></i>
+                        <i class="fas fa-magic" aria-hidden="true"></i> Añadir Plantilla / Rangos <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                       </button>
 
                       @if (showMenuPresets()) {
                       <div class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
-                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('EDAD')">
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('EDAD')">
                           <span>🕒 Rangos de Edad</span>
                         </button>
-                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('SI_NO')">
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('SI_NO')">
                           <span>👍 Afirmativo / Negativo (Sí/No)</span>
                         </button>
-                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('INGRESOS')">
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('INGRESOS')">
                           <span>💵 Rangos de Ingresos</span>
                         </button>
-                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2" (click)="cargarPreset('VIVIENDA')">
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('VIVIENDA')">
                           <span>🏠 Tipo de Vivienda</span>
                         </button>
                       </div>
@@ -410,33 +435,33 @@
                     </div>
 
                     <button type="button" class="btn btn-sm btn-purple text-xs" (click)="agregarOpcionTemp()">
-                      <i class="fas fa-plus"></i> Añadir Opción
+                      <i class="fas fa-plus" aria-hidden="true"></i> Añadir Opción
                     </button>
                   </div>
                 </div>
 
-                <div formArrayName="opcionesTemp" class="space-y-3">
+                <div formArrayName="opcionesTemp" class="space-y-3 w-full box-border mt-3">
                   @for (opcGroup of opcionesTempArray.controls; track $index; let optIdx = $index) {
-                  <div [formGroupName]="optIdx" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:border-purple-300 transition-colors">
+                  <div [formGroupName]="optIdx" class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:border-purple-300 transition-colors w-full box-border">
                     <div class="flex flex-wrap md:flex-nowrap gap-3 items-start w-full">
                       <div class="flex-grow min-w-[200px] w-full">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Texto de Respuesta *</label>
                         <input type="text" formControlName="texto_opcion" placeholder="Ej: 18 a 25 años" class="form-control text-xs w-full">
                       </div>
 
-                      <div class="w-24 shrink-0">
+                      <div class="w-full md:w-24 shrink-0">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Puntos</label>
                         <input type="number" formControlName="valor_ponderado" placeholder="0" class="form-control text-xs w-full" title="Opcional">
                       </div>
 
-                      <div class="shrink-0 mt-4">
-                        <button type="button" class="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-colors border border-transparent hover:border-red-600" (click)="eliminarOpcionTemp(optIdx)" title="Eliminar opción">
-                          <i class="fas fa-trash"></i>
+                      <div class="shrink-0 mt-1 md:mt-4 text-right w-full md:w-auto">
+                        <button type="button" class="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-colors border border-transparent hover:border-red-600 bg-transparent cursor-pointer" (click)="eliminarOpcionTemp(optIdx)" title="Eliminar opción">
+                          <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                       </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100 w-full box-border">
                       <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-100/50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
                         <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> ¿Es la respuesta correcta?
                       </label>
@@ -449,20 +474,19 @@
                     </div>
 
                     @if (opcGroup.get('dispara_dependencia')?.value) {
-                    <div class="ml-2 md:ml-4 pl-4 border-l-4 border-emerald-500 bg-emerald-50/30 p-3 rounded-r-xl space-y-3 animate-fade-in">
+                    <div class="ml-1 md:ml-4 pl-2 md:pl-4 border-l-4 border-emerald-500 bg-emerald-50/30 p-3 rounded-r-xl space-y-3 animate-fade-in w-full box-border">
                       <span class="text-[11px] font-extrabold text-emerald-800 uppercase block">
-                        <i class="fas fa-level-down-alt"></i> Subpregunta que aparecerá al elegir esta opción:
+                        <i class="fas fa-level-down-alt" aria-hidden="true"></i> Subpregunta que aparecerá al elegir esta opción:
                       </span>
 
-                      <!-- Enunciado + Tipo -->
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full box-border">
                         <div>
                           <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Enunciado *</label>
-                          <input type="text" formControlName="subpregunta_enunciado" placeholder="Enunciado de la subpregunta..." class="form-control text-xs">
+                          <input type="text" formControlName="subpregunta_enunciado" placeholder="Enunciado de la subpregunta..." class="form-control text-xs w-full">
                         </div>
                         <div>
                           <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Tipo de Respuesta *</label>
-                          <select formControlName="subpregunta_tipo_id" class="form-control text-xs">
+                          <select formControlName="subpregunta_tipo_id" class="form-control text-xs w-full">
                             <option value="">-- Tipo de Respuesta --</option>
                             @for (tipo of tiposCampo(); track tipo.id) {
                             <option [value]="tipo.id">{{ tipo.nombre }}</option>
@@ -471,8 +495,7 @@
                         </div>
                       </div>
 
-                      <!-- Checkboxes de la subpregunta -->
-                      <div class="flex flex-wrap gap-3 pt-1">
+                      <div class="flex flex-wrap gap-3 pt-1 w-full">
                         <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
                           <input type="checkbox" formControlName="subpregunta_requiere_evidencia" class="accent-amber-600 w-3.5 h-3.5"> ¿Requiere evidencia?
                         </label>
@@ -481,24 +504,23 @@
                         </label>
                       </div>
 
-                      <!-- ===== SI LA SUBPREGUNTA ES DE SELECCIÓN ===== -->
                       @if (esSubTipoSeleccion(optIdx)) {
-                      <div class="bg-blue-50/80 border border-blue-200 rounded-lg p-3 space-y-2 mt-2">
-                        <div class="flex justify-between items-center">
+                      <div class="bg-blue-50/80 border border-blue-200 rounded-lg p-3 space-y-2 mt-2 w-full box-border">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
                           <span class="text-[10px] font-bold text-blue-900 uppercase">
-                            <i class="fas fa-list-ul"></i> Opciones de la subpregunta
+                            <i class="fas fa-list-ul" aria-hidden="true"></i> Opciones de la subpregunta
                           </span>
                           <button type="button" class="btn btn-sm btn-purple text-[10px] px-2 py-1" (click)="agregarSubOpcion(optIdx)">
-                            <i class="fas fa-plus"></i> Añadir
+                            <i class="fas fa-plus" aria-hidden="true"></i> Añadir
                           </button>
                         </div>
-                        <div formArrayName="subpregunta_opciones" class="space-y-2">
+                        <div formArrayName="subpregunta_opciones" class="space-y-2 w-full">
                           @for (subOpc of getSubOpciones(optIdx).controls; track $index; let subIdx = $index) {
-                          <div [formGroupName]="subIdx" class="flex gap-2 items-center bg-white p-2 rounded border">
-                            <input type="text" formControlName="texto_opcion" placeholder="Texto de la opción" class="form-control text-xs flex-grow">
-                            <input type="number" formControlName="valor_ponderado" placeholder="Pts" class="form-control text-xs w-16" title="Puntos">
-                            <button type="button" class="text-red-500 hover:text-red-700 p-1" (click)="eliminarSubOpcion(optIdx, subIdx)">
-                              <i class="fas fa-trash text-xs"></i>
+                          <div [formGroupName]="subIdx" class="flex flex-wrap gap-2 items-center bg-white p-2 rounded border w-full box-border">
+                            <input type="text" formControlName="texto_opcion" placeholder="Texto de la opción" class="form-control text-xs flex-grow min-w-[150px]">
+                            <input type="number" formControlName="valor_ponderado" placeholder="Pts" class="form-control text-xs w-16 shrink-0" title="Puntos">
+                            <button type="button" class="text-red-500 hover:text-red-700 p-1 border-none bg-transparent cursor-pointer shrink-0" (click)="eliminarSubOpcion(optIdx, subIdx)">
+                              <i class="fas fa-trash text-xs" aria-hidden="true"></i>
                             </button>
                           </div>
                           }
@@ -506,46 +528,43 @@
                       </div>
                       }
 
-                      <!-- ===== SI LA SUBPREGUNTA ES MATRIZ ===== -->
                       @if (esSubTipoMatriz(optIdx)) {
-                      <div class="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-3 mt-2">
+                      <div class="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-3 mt-2 w-full box-border">
                         <span class="text-[10px] font-bold text-indigo-900 uppercase block">
-                          <i class="fas fa-th"></i> Configuración de Matriz de la subpregunta
+                          <i class="fas fa-th" aria-hidden="true"></i> Configuración de Matriz
                         </span>
-                        <!-- Filas -->
-                        <div>
+                        <div class="w-full box-border">
                           <div class="flex justify-between items-center mb-1">
                             <span class="text-[10px] font-semibold text-indigo-800">Filas</span>
                             <button type="button" class="btn btn-sm btn-outline text-[10px] px-2 py-0.5" (click)="agregarSubFila(optIdx)">
-                              <i class="fas fa-plus"></i> Fila
+                              <i class="fas fa-plus" aria-hidden="true"></i> Fila
                             </button>
                           </div>
-                          <div formArrayName="subpregunta_filas" class="space-y-1">
+                          <div formArrayName="subpregunta_filas" class="space-y-1 w-full">
                             @for (fila of getSubFilas(optIdx).controls; track $index; let fIdx = $index) {
-                            <div [formGroupName]="fIdx" class="flex gap-2 items-center">
-                              <input type="text" formControlName="texto_fila" placeholder="Texto de la fila" class="form-control text-xs flex-grow">
-                              <button type="button" class="text-red-500 hover:text-red-700 p-1" (click)="eliminarSubFila(optIdx, fIdx)">
-                                <i class="fas fa-trash text-xs"></i>
+                            <div [formGroupName]="fIdx" class="flex gap-2 items-center w-full">
+                              <input type="text" formControlName="texto_fila" placeholder="Texto de la fila" class="form-control text-xs flex-grow min-w-[150px]">
+                              <button type="button" class="text-red-500 hover:text-red-700 p-1 border-none bg-transparent cursor-pointer shrink-0" (click)="eliminarSubFila(optIdx, fIdx)">
+                                <i class="fas fa-trash text-xs" aria-hidden="true"></i>
                               </button>
                             </div>
                             }
                           </div>
                         </div>
 
-                        <!-- Columnas -->
-                        <div>
+                        <div class="w-full box-border mt-3">
                           <div class="flex justify-between items-center mb-1">
                             <span class="text-[10px] font-semibold text-indigo-800">Columnas</span>
                             <button type="button" class="btn btn-sm btn-outline text-[10px] px-2 py-0.5" (click)="agregarSubColumna(optIdx)">
-                              <i class="fas fa-plus"></i> Columna
+                              <i class="fas fa-plus" aria-hidden="true"></i> Columna
                             </button>
                           </div>
-                          <div formArrayName="subpregunta_columnas" class="space-y-1">
+                          <div formArrayName="subpregunta_columnas" class="space-y-1 w-full">
                             @for (col of getSubColumnas(optIdx).controls; track $index; let cIdx = $index) {
-                            <div [formGroupName]="cIdx" class="flex gap-2 items-center">
-                              <input type="text" formControlName="texto_columna" placeholder="Texto de la columna" class="form-control text-xs flex-grow">
-                              <button type="button" class="text-red-500 hover:text-red-700 p-1" (click)="eliminarSubColumna(optIdx, cIdx)">
-                                <i class="fas fa-trash text-xs"></i>
+                            <div [formGroupName]="cIdx" class="flex gap-2 items-center w-full">
+                              <input type="text" formControlName="texto_columna" placeholder="Texto de la columna" class="form-control text-xs flex-grow min-w-[150px]">
+                              <button type="button" class="text-red-500 hover:text-red-700 p-1 border-none bg-transparent cursor-pointer shrink-0" (click)="eliminarSubColumna(optIdx, cIdx)">
+                                <i class="fas fa-trash text-xs" aria-hidden="true"></i>
                               </button>
                             </div>
                             }
@@ -559,9 +578,9 @@
                   }
 
                   @if (opcionesTempArray.controls.length > 0) {
-                  <div class="flex justify-end pt-3">
+                  <div class="flex justify-end pt-3 w-full box-border">
                     <div class="bg-purple-100 text-purple-800 text-xs font-bold px-4 py-2 rounded-xl border border-purple-200 shadow-sm flex items-center gap-2">
-                      <i class="fas fa-calculator text-purple-600"></i> Puntos de Respuestas Correctas: <span class="text-lg">{{ calcularTotalPuntos() }}</span> pts
+                      <i class="fas fa-calculator text-purple-600" aria-hidden="true"></i> Puntos Correctos: <span class="text-lg">{{ calcularTotalPuntos() }}</span> pts
                     </div>
                   </div>
                   }
@@ -570,31 +589,31 @@
               }
 
               @if (esTipoMatriz(preguntaForm.get('tipo_campo_id')?.value)) {
-              <div class="my-4 animate-fade-in">
+              <div class="my-4 animate-fade-in w-full overflow-x-auto box-border">
                 <app-matriz-builder [parentForm]="preguntaForm"></app-matriz-builder>
               </div>
               }
 
-              <div class="flex-options mb-3 flex gap-4">
+              <div class="flex-options mb-4 flex flex-wrap gap-4 w-full box-border">
                 <label class="checkbox-label text-xs font-medium cursor-pointer">
                   <input type="checkbox" formControlName="es_obligatorio"> Obligatorio
                 </label>
                 <label class="checkbox-label text-xs font-medium cursor-pointer">
                   <input type="checkbox" formControlName="requiere_evidencia"> Requiere Subir Documento / Evidencia
                 </label>
-                <label class="checkbox-label text-xs font-bold cursor-pointer text-rose-700 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors">
+                <label class="checkbox-label text-xs font-bold cursor-pointer text-rose-700 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors w-full md:w-auto">
                   <input type="checkbox" formControlName="revision_manual_obligatoria" class="accent-rose-600 w-3.5 h-3.5">
                   ⚠️ Marcar como Vulnerabilidad / Prioridad
                 </label>
               </div>
 
-              <div class="form-actions flex justify-end gap-2">
-                <button type="button" class="btn btn-outline" (click)="cancelarPregunta()">Cancelar</button>
-                <button type="submit" class="btn btn-purple" [disabled]="preguntaForm.invalid || isSavingQuestion()">
+              <div class="form-actions flex justify-end gap-2 w-full flex-wrap md:flex-nowrap">
+                <button type="button" class="btn btn-outline w-full md:w-auto" (click)="cancelarPregunta()" [disabled]="isSavingQuestion()">Cancelar</button>
+                <button type="submit" class="btn btn-purple w-full md:w-auto" [disabled]="preguntaForm.invalid || isSavingQuestion()">
                   @if (isSavingQuestion()) {
-                  <i class="fas fa-spinner fa-spin"></i> Guardando...
+                  <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Guardando...
                   } @else {
-                  {{ editingPreguntaId() ? 'Actualizar Pregunta' : 'Guardar Pregunta' }}
+                  <i class="fas fa-save" aria-hidden="true"></i> {{ editingPreguntaId() ? 'Actualizar Pregunta' : 'Guardar Pregunta' }}
                   }
                 </button>
               </div>

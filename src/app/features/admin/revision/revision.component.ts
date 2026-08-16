@@ -1,6 +1,7 @@
 import { 
   Component, 
   OnInit, 
+  OnDestroy, 
   inject, 
   signal, 
   computed, 
@@ -8,11 +9,13 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { RevisionService } from '../../../core/services/revision.service';
 import { HistorialEstadoService } from '../../../core/services/historial-estado.service';
 import { FichaRevision, EstadoFicha } from '../../../core/models/revision-ficha.model';
 import { HistorialEstadoFicha } from '../../../core/models/historial-estado.model';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-revision',
@@ -22,31 +25,45 @@ import { Router } from '@angular/router';
   styleUrls: ['./revision.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RevisionComponent implements OnInit {
+export class RevisionComponent implements OnInit, OnDestroy {
   private readonly revisionService = inject(RevisionService);
   private readonly historialService = inject(HistorialEstadoService);
   private readonly router = inject(Router);
 
-  // Estado principal: Guarda TODAS las fichas traídas del servidor
-  fichas = signal<FichaRevision[]>([]);
-  isLoading = signal<boolean>(true);
+  readonly fichas = signal<FichaRevision[]>([]);
+  readonly isLoading = signal<boolean>(true);
 
-  // Controles de interfaz
-  searchTerm = signal<string>('');
-  estadoFiltro = signal<string>('TODOS');
-  paginaActual = signal<number>(1);
-  limite = signal<number>(10);
+  readonly searchTerm = signal<string>('');
+  readonly estadoFiltro = signal<string>('TODOS');
+  readonly filterPeriodo = signal<string>('TODOS');
+  readonly paginaActual = signal<number>(1);
+  readonly limite = signal<number>(10);
 
-  // 1. FILTRO COMPUTADO (Igual que en usuarios)
-  fichasFiltradas = computed(() => {
+  private readonly searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+
+  readonly periodosDisponibles = computed(() => {
+    const set = new Set<string>();
+    this.fichas().forEach(f => {
+      const pNombre = f.periodo?.nombre;
+      if (pNombre) {
+        set.add(pNombre);
+      }
+    });
+    return Array.from(set);
+  });
+
+  readonly fichasFiltradas = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
     const estado = this.estadoFiltro();
+    const periodo = this.filterPeriodo();
 
     return this.fichas().filter(f => {
-      // Filtrar por estado
       if (estado !== 'TODOS' && f.estado_ficha !== estado) return false;
+      
+      const pNombre = f.periodo?.nombre || 'General';
+      if (periodo !== 'TODOS' && pNombre !== periodo) return false;
 
-      // Filtrar por texto
       if (!term) return true;
       const nombre = f.usuario?.primer_nombre?.toLowerCase() || '';
       const apellido = f.usuario?.primer_apellido?.toLowerCase() || '';
@@ -60,38 +77,59 @@ export class RevisionComponent implements OnInit {
     });
   });
 
-  // 2. PAGINACIÓN EN MEMORIA COMPUTADA
-  totalRegistros = computed(() => this.fichasFiltradas().length);
-  totalPaginas = computed(() => Math.ceil(this.totalRegistros() / this.limite()) || 1);
+  readonly totalRegistros = computed(() => this.fichasFiltradas().length);
+  readonly totalPaginas = computed(() => Math.ceil(this.totalRegistros() / this.limite()) || 1);
   
-  fichasPaginadas = computed(() => {
+  readonly fichasPaginadas = computed(() => {
     const inicio = (this.paginaActual() - 1) * this.limite();
     const fin = inicio + this.limite();
     return this.fichasFiltradas().slice(inicio, fin);
   });
 
-  // Estado del Modal y Detalle
-  fichaSeleccionada = signal<FichaRevision | null>(null);
-  respuestasFicha = signal<any[]>([]);
-  historialFicha = signal<HistorialEstadoFicha[]>([]);
-  tabActiva = signal<'DETALLE' | 'HISTORIAL'>('DETALLE');
-  comentarioCambio = signal<string>('');
-  guardandoEstado = signal<boolean>(false);
+  readonly fichaSeleccionada = signal<FichaRevision | null>(null);
+  readonly respuestasFicha = signal<any[]>([]);
+  readonly historialFicha = signal<HistorialEstadoFicha[]>([]);
+  readonly tabActiva = signal<'DETALLE' | 'HISTORIAL'>('DETALLE');
+  readonly comentarioCambio = signal<string>('');
+  readonly guardandoEstado = signal<boolean>(false);
 
   ngOnInit(): void {
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => {
+        this.searchTerm.set(val);
+        this.paginaActual.set(1);
+      });
+
     this.cargarTodasLasFichas();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
   }
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchTerm.set(value);
-    this.paginaActual.set(1); // Regresa a la página 1 al buscar
+    this.searchSubject.next(value);
   }
 
   onEstadoChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.estadoFiltro.set(value);
-    this.paginaActual.set(1); // Regresa a la página 1 al filtrar
+    this.paginaActual.set(1);
+  }
+
+  onPeriodoChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filterPeriodo.set(value);
+    this.paginaActual.set(1);
+  }
+
+  limpiarFiltros(): void {
+    this.searchTerm.set('');
+    this.estadoFiltro.set('TODOS');
+    this.filterPeriodo.set('TODOS');
+    this.paginaActual.set(1);
   }
 
   cambiarPagina(nuevaPagina: number): void {
@@ -103,8 +141,6 @@ export class RevisionComponent implements OnInit {
   cargarTodasLasFichas(): void {
     this.isLoading.set(true);
     
-    // Pedimos un límite muy alto para traer todo a la memoria (ej: 10,000)
-    // Ya no enviamos el search ni el estado, traemos TODO.
     this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').subscribe({
       next: (response: any) => {
         this.fichas.set(response.data || []);
@@ -134,7 +170,7 @@ export class RevisionComponent implements OnInit {
 
   cambiarEstado(nuevoEstado: EstadoFicha): void {
     const ficha = this.fichaSeleccionada();
-    if (!ficha) return;
+    if (!ficha || this.guardandoEstado()) return;
 
     this.guardandoEstado.set(true);
 
@@ -144,7 +180,6 @@ export class RevisionComponent implements OnInit {
         this.fichaSeleccionada.set(fichaActualizada);
         this.cargarHistorial(ficha.id);
         
-        // Actualizamos la ficha localmente en memoria sin volver a llamar al servidor
         this.fichas.update(fichas => 
           fichas.map(f => f.id === ficha.id ? fichaActualizada : f)
         );

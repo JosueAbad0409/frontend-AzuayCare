@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PerfilCoordinador } from '../models/perfil-coordinador.model';
+import { AyudaEstudianteResponse } from '../models/ayuda-estudiante.model';
 
 @Injectable({
   providedIn: 'root'
@@ -14,11 +15,9 @@ export class PerfilCoordinadorService {
   getPerfilByUsuario(usuarioId: string): Observable<PerfilCoordinador | null> {
     return this.http.get<PerfilCoordinador>(`${this.apiUrl}/usuario/${usuarioId}`).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Solo retornamos null si el servidor responde explícitamente que no existe (404)
         if (error.status === 404) {
           return of(null);
         }
-        // Si es un error de red, 500 u otro, propagamos el error
         return throwError(() => error);
       })
     );
@@ -34,7 +33,7 @@ export class PerfilCoordinadorService {
 
   saveOrUpdatePerfil(perfil: any): Observable<PerfilCoordinador> {
     const usuarioId = perfil.usuario_id || perfil.usuarioId;
-    
+
     return this.getPerfilByUsuario(usuarioId).pipe(
       switchMap((perfilExistente) => {
         if (perfilExistente) {
@@ -44,5 +43,9 @@ export class PerfilCoordinadorService {
         }
       })
     );
+  }
+
+  obtenerAyudaEstudiante(): Observable<AyudaEstudianteResponse> {
+    return this.http.get<AyudaEstudianteResponse>(`${this.apiUrl}/ayuda-estudiante`);
   }
 }

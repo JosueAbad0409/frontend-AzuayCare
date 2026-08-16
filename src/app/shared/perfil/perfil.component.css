@@ -1,31 +1,23 @@
 :host {
-  /* TOKENS DE DISEÑO */
   --color-primary: #163a63;
   --color-primary-hover: #102a48;
   --color-accent: #b8862e;
   --color-accent-hover: #966b22;
-  
   --bg-layout: #f1f5f9;
   --bg-surface: #ffffff;
   --bg-input: #f8fafc;
   --bg-data-block: #f8fafc;
-
   --text-main: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
-  
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
-
   --color-error: #ef4444;
   --bg-error: #fef2f2;
   --color-success: #166534;
   --bg-success: #f0fdf4;
-
-  /* Elevaciones Premium */
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-hero: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -37,16 +29,13 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================
-   LAYOUT PRINCIPAL (Fluido y Centrado)
-   ========================================== */
 .perfil-layout {
   min-height: 100dvh;
   background-color: var(--bg-layout);
   display: flex;
   justify-content: center;
-  /* Padding responsivo: Arriba (fluido) | Lados (fluido) | Abajo (fijo) */
   padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 5vw, 2rem) 4rem;
+  box-sizing: border-box;
 }
 
 .perfil-container {
@@ -57,9 +46,6 @@
   gap: clamp(1rem, 3vw, 1.5rem);
 }
 
-/* ==========================================
-   HERO PROFILE (Cabecera Central)
-   ========================================== */
 .hero-profile {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
@@ -69,7 +55,6 @@
 }
 
 .hero-cover {
-  /* Altura fluida: más pequeña en móvil, más alta en desktop */
   height: clamp(100px, 15vw, 140px);
   width: 100%;
   background: linear-gradient(135deg, var(--color-primary) 0%, #0d2138 100%);
@@ -93,7 +78,6 @@
 }
 
 .avatar-wrapper {
-  /* Margen negativo dinámico según el tamaño del avatar */
   margin-top: calc(clamp(96px, 15vw, 128px) / -2); 
   position: relative;
   z-index: 2;
@@ -197,12 +181,9 @@
   margin: 0;
   font-size: clamp(0.875rem, 2vw, 1rem);
   color: var(--text-muted);
-  word-break: break-all; /* Evita que correos largos rompan el diseño en móvil */
+  word-break: break-all;
 }
 
-/* ==========================================
-   TARJETAS
-   ========================================== */
 .cards-stack {
   display: flex;
   flex-direction: column;
@@ -229,7 +210,7 @@
 .header-with-action {
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap; /* Permite que el botón caiga a la siguiente línea si no hay espacio */
+  flex-wrap: wrap;
 }
 
 .header-title {
@@ -251,10 +232,6 @@
   color: var(--text-main);
 }
 
-/* ==========================================
-   SISTEMA DE GRIDS ULTRA-RESPONSIVO
-   ========================================== */
-/* min(100%, 240px) previene desbordamiento en pantallas minúsculas */
 .info-grid, 
 .coordinator-view-grid, 
 .form-grid {
@@ -281,7 +258,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-main);
-  word-break: break-word; /* Evita textos muy largos rompan la caja */
+  word-break: break-word;
 }
 
 .data-block {
@@ -306,6 +283,7 @@
   line-height: 1.6;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .card-help {
@@ -327,9 +305,6 @@
   margin-top: 2px;
 }
 
-/* ==========================================
-   FORMULARIO MODO EDICIÓN
-   ========================================== */
 .coordinator-form {
   display: flex;
   flex-direction: column;
@@ -354,27 +329,38 @@
   color: var(--text-secondary);
 }
 
-.input-control {
+.form-control {
   width: 100%;
-  min-height: 46px;
   padding: 0.75rem 1rem;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
   background-color: var(--bg-input);
-  font-size: 0.95rem;
-  font-family: inherit;
+  font-size: 0.9rem;
   color: var(--text-main);
   transition: all 0.2s ease;
-  box-sizing: border-box; /* Fundamental para evitar desbordamiento horizontal */
+  box-sizing: border-box;
 }
 
-.input-control::placeholder { color: #94a3b8; }
-.input-control:hover { border-color: #94a3b8; }
-.input-control:focus {
+.form-control:focus {
   outline: none;
-  background-color: var(--bg-surface);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(22, 58, 99, 0.1);
+  box-shadow: 0 0 0 3px rgba(22, 58, 99, 0.15);
+  background-color: #ffffff;
+}
+
+.form-control.is-error {
+  border-color: var(--color-error);
+  background-color: var(--bg-error);
+}
+
+.form-control.is-success {
+  border-color: #10b981;
+}
+
+.form-error-text {
+  font-size: 0.75rem;
+  color: var(--color-error);
+  font-weight: 600;
 }
 
 .textarea-control {
@@ -383,9 +369,6 @@
   line-height: 1.5;
 }
 
-/* ==========================================
-   BOTONES
-   ========================================== */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -393,7 +376,30 @@
   margin-top: 0.5rem;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 58, 99, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -404,22 +410,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.btn-primary {
-  gap: 0.5rem;
-  border: none;
-  background-color: var(--color-primary);
-  color: #ffffff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(22, 58, 99, 0.2);
-}
-
-.btn-secondary {
   border: 1px solid var(--border-strong);
   background-color: transparent;
   color: var(--text-secondary);
@@ -454,9 +444,6 @@
 button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* ==========================================
-   ESTADOS Y ALERTAS
-   ========================================== */
 .alert {
   display: flex;
   align-items: center;
@@ -467,6 +454,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   font-weight: 500;
   margin-bottom: 1rem;
 }
+
 .alert-error { background-color: var(--bg-error); color: var(--color-error); border: 1px solid #fecaca; }
 .alert-success { background-color: var(--bg-success); color: var(--color-success); border: 1px solid #bbf7d0; }
 .mt-15 { margin-top: 1.5rem; }
@@ -482,31 +470,26 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   padding: 2rem 0;
 }
 
-.spinner-icon, .spinner-small {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-.spinner-icon { width: 20px; height: 20px; }
-.spinner-small { width: 18px; height: 18px; border-color: rgba(22, 58, 99, 0.15); border-top-color: var(--color-primary); }
-.spinner-small.white { border-color: rgba(255, 255, 255, 0.3); border-top-color: #ffffff; }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
-/* ==========================================
-   MEDIA QUERIES ESPECÍFICAS PARA MÓVIL
-   ========================================== */
 @media (max-width: 640px) {
-  
-  /* Los botones en la cabecera ocupan el 100% para ser fáciles de tocar */
   .btn-outline-small {
     width: 100%;
     justify-content: center;
     padding: 0.6rem;
   }
   
-  /* Invertimos el orden y los expandimos: "Guardar" arriba, "Cancelar" abajo */
   .form-actions {
     flex-direction: column-reverse;
     gap: 0.75rem;
@@ -514,6 +497,6 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .btn-primary, .btn-secondary {
     width: 100%;
-    min-height: 48px; /* Área táctil más grande en móviles (Norma WCAG) */
+    min-height: 48px;
   }
 }

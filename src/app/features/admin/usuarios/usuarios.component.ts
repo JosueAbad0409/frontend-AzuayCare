@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, finalize } from 'rxjs';
+import { forkJoin, finalize, Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { Usuario } from '../../../core/models/usuario.model';
@@ -20,43 +21,74 @@ import { ToastService } from '../../../core/services/toast.service';
   styleUrls: ['./usuarios.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UsuariosComponent implements OnInit {
+export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly usuarioService = inject(UsuarioService);
   private readonly carreraService = inject(CarreraService);
   private readonly coordinadorCarreraService = inject(CoordinadorCarreraService);
   private readonly toastService = inject(ToastService);
 
-  // Estados Base
   readonly usuarios = signal<Usuario[]>([]);
   readonly carreras = signal<Carrera[]>([]);
   readonly asignaciones = signal<CoordinadorCarreraAsignacion[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly isSaving = signal<boolean>(false);
 
-  // Filtros
-  readonly searchTerm = signal<string>('');
+  readonly filterNombre = signal<string>('');
+  readonly filterCorreo = signal<string>('');
+  readonly filterCedula = signal<string>('');
+  readonly filterRol = signal<string>('');
+  readonly filterCarrera = signal<string>('');
   readonly filtroEstado = signal<'ACTIVOS' | 'INACTIVOS' | 'TODOS'>('ACTIVOS');
 
-  // Constante de estilos premium para SweetAlert
+  readonly filterAsigCoord = signal<string>('');
+  readonly filterAsigCarrera = signal<string>('');
+  readonly filterAsigFecha = signal<string>('');
+
+  private readonly filterSubject = new Subject<{ campo: string; valor: string }>();
+  private filterSubscription?: Subscription;
+
   private readonly SWAL_CUSTOM_CLASS = {
-    popup: 'rounded-2xl',
-    confirmButton: 'rounded-xl',
-    cancelButton: 'rounded-xl',
-    htmlContainer: 'text-left'
+    popup: 'custom-swal-popup custom-swal-wide',
+    confirmButton: 'custom-swal-confirm',
+    cancelButton: 'custom-swal-cancel',
+    htmlContainer: 'custom-swal-html'
   };
 
-  // Coordinadores de carrera elegibles (Muestra Coordinadores y Admins)
   readonly coordinadoresCarreraList = computed(() => {
     return this.usuarios().filter(u => {
       const rol = u.rol?.nombre || '';
-      // Si quieres que salgan todos los que sean coordinadores o admin
       return (rol.includes('COORDINADOR') || rol === 'ADMIN') && !u.fecha_desactivacion;
     });
   });
 
-  // Filtro Reactivo Computado
+  readonly rolesDisponibles = computed(() => {
+    const set = new Set<string>();
+    this.usuarios().forEach(u => {
+      if (u.rol?.nombre) set.add(u.rol.nombre);
+    });
+    return Array.from(set);
+  });
+
+  readonly tieneFiltrosActivos = computed(() => {
+    return !!(
+      this.filterNombre() ||
+      this.filterCorreo() ||
+      this.filterCedula() ||
+      this.filterRol() ||
+      this.filterCarrera() ||
+      this.filtroEstado() !== 'ACTIVOS' ||
+      this.filterAsigCoord() ||
+      this.filterAsigCarrera() ||
+      this.filterAsigFecha()
+    );
+  });
+
   readonly usuariosFiltrados = computed(() => {
-    const term = this.searchTerm().toLowerCase().trim();
+    const fNombre = this.filterNombre().toLowerCase().trim();
+    const fCorreo = this.filterCorreo().toLowerCase().trim();
+    const fCedula = this.filterCedula().toLowerCase().trim();
+    const fRol = this.filterRol();
+    const fCarrera = this.filterCarrera().toLowerCase().trim();
     const estado = this.filtroEstado();
 
     return this.usuarios().filter(u => {
@@ -64,24 +96,120 @@ export class UsuariosComponent implements OnInit {
       if (estado === 'ACTIVOS' && estaInactivo) return false;
       if (estado === 'INACTIVOS' && !estaInactivo) return false;
 
-      if (!term) return true;
-      return (u.email_institucional && u.email_institucional.toLowerCase().includes(term)) ||
-             (u.primer_nombre && u.primer_nombre.toLowerCase().includes(term)) ||
-             (u.primer_apellido && u.primer_apellido.toLowerCase().includes(term)) ||
-             (u.cedula && u.cedula.includes(term));
+      if (fNombre) {
+        const nombreCompleto = `${u.primer_nombre || ''} ${u.primer_apellido || ''}`.toLowerCase();
+        if (!nombreCompleto.includes(fNombre)) return false;
+      }
+
+      if (fCorreo) {
+        if (!u.email_institucional || !u.email_institucional.toLowerCase().includes(fCorreo)) return false;
+      }
+
+      if (fCedula) {
+        if (!u.cedula || !u.cedula.includes(fCedula)) return false;
+      }
+
+      if (fRol) {
+        const rolNombre = u.rol?.nombre || 'ESTUDIANTE';
+        if (rolNombre !== fRol) return false;
+      }
+
+      if (fCarrera) {
+        const carreraNombre = this.getCarreraNombreDeAsignacion(u).toLowerCase();
+        if (!carreraNombre.includes(fCarrera)) return false;
+      }
+
+      return true;
+    });
+  });
+
+  readonly asignacionesFiltradas = computed(() => {
+    const fCoord = this.filterAsigCoord().toLowerCase().trim();
+    const fCarr = this.filterAsigCarrera().toLowerCase().trim();
+    const fFecha = this.filterAsigFecha().trim();
+
+    return this.asignaciones().filter(a => {
+      if (fCoord) {
+        const nombreCoord = `${a.usuario?.primer_nombre || ''} ${a.usuario?.primer_apellido || ''}`.toLowerCase();
+        if (!nombreCoord.includes(fCoord)) return false;
+      }
+
+      if (fCarr) {
+        const nombreCarrera = (a.carrera?.nombre || '').toLowerCase();
+        if (!nombreCarrera.includes(fCarr)) return false;
+      }
+
+      if (fFecha) {
+        const fIniStr = a.fecha_inicio ? new Date(a.fecha_inicio).toISOString().substring(0, 10) : '';
+        const fFinStr = a.fecha_fin ? new Date(a.fecha_fin).toISOString().substring(0, 10) : '';
+        if (fIniStr !== fFecha && fFinStr !== fFecha) return false;
+      }
+
+      return true;
     });
   });
 
   ngOnInit(): void {
+    this.filterSubscription = this.filterSubject
+      .pipe(debounceTime(400))
+      .subscribe(({ campo, valor }) => {
+        this.aplicarFiltroSignal(campo, valor);
+      });
+
     this.cargarTodo();
   }
 
-  onSearchChange(event: Event): void {
-    this.searchTerm.set((event.target as HTMLInputElement).value);
+  ngOnDestroy(): void {
+    this.filterSubscription?.unsubscribe();
   }
 
-  onEstadoChange(event: Event): void {
-    this.filtroEstado.set((event.target as HTMLSelectElement).value as 'ACTIVOS' | 'INACTIVOS' | 'TODOS');
+  onColumnFilterInput(campo: string, event: Event): void {
+    const valor = (event.target as HTMLInputElement | HTMLSelectElement).value;
+    this.filterSubject.next({ campo, valor });
+  }
+
+  limpiarFiltros(): void {
+    this.filterNombre.set('');
+    this.filterCorreo.set('');
+    this.filterCedula.set('');
+    this.filterRol.set('');
+    this.filterCarrera.set('');
+    this.filtroEstado.set('ACTIVOS');
+    this.filterAsigCoord.set('');
+    this.filterAsigCarrera.set('');
+    this.filterAsigFecha.set('');
+  }
+
+  private aplicarFiltroSignal(campo: string, valor: string): void {
+    switch (campo) {
+      case 'nombre':
+        this.filterNombre.set(valor);
+        break;
+      case 'correo':
+        this.filterCorreo.set(valor);
+        break;
+      case 'cedula':
+        this.filterCedula.set(valor);
+        break;
+      case 'rol':
+        this.filterRol.set(valor);
+        break;
+      case 'carrera':
+        this.filterCarrera.set(valor);
+        break;
+      case 'estado':
+        this.filtroEstado.set(valor as 'ACTIVOS' | 'INACTIVOS' | 'TODOS');
+        break;
+      case 'asigCoord':
+        this.filterAsigCoord.set(valor);
+        break;
+      case 'asigCarrera':
+        this.filterAsigCarrera.set(valor);
+        break;
+      case 'asigFecha':
+        this.filterAsigFecha.set(valor);
+        break;
+    }
   }
 
   cargarTodo(): void {
@@ -107,80 +235,121 @@ export class UsuariosComponent implements OnInit {
   }
 
   getCarreraNombreDeAsignacion(usuario: Usuario): string {
-  // Caso 1: el usuario tiene carrera directa (estudiante)
-  if (usuario.carrera?.nombre) {
-    return usuario.carrera.nombre;
+    if (usuario.carrera?.nombre) {
+      return usuario.carrera.nombre;
+    }
+
+    const match = this.asignaciones().find(a => 
+      a.usuario_id === usuario.id && !a.fecha_fin
+    );
+    return match ? (match.carrera?.nombre || 'Carrera Asignada') : 'Sin Carrera';
   }
 
-  // Caso 2: es coordinador, buscar en asignaciones activas
-  const match = this.asignaciones().find(a => 
-    a.usuario_id === usuario.id && !a.fecha_fin
-  );
-  return match ? (match.carrera?.nombre || 'Carrera Asignada') : 'Sin Carrera';
-}
-
-  // ==========================================
-  // ASIGNACIONES CON SWEETALERT
-  // ==========================================
   abrirModalAsignar(): void {
-    const opcionesUsuarios = this.coordinadoresCarreraList()
-      .map(u => `<option value="${u.id}">${u.primer_nombre} ${u.primer_apellido} (${u.email_institucional})</option>`)
-      .join('');
-      
-    const opcionesCarreras = this.carreras()
-      .map(c => `<option value="${c.id}">${c.nombre}</option>`)
-      .join('');
-      
-    const hoy = new Date().toISOString().split('T')[0];
+    if (this.isSaving()) return;
+
+    const listaUsuarios = this.coordinadoresCarreraList();
+    const listaCarreras = this.carreras();
+
+    const generarUsuariosHTML = (usuarios: Usuario[]) => {
+      if (usuarios.length === 0) return `<div class="swal-empty-msg">No se encontraron resultados</div>`;
+      return usuarios.map(u => `
+        <label class="swal-radio-option">
+          <input type="radio" name="swal-asig-user-radio" value="${u.id}">
+          <div class="swal-radio-content">
+            <span class="item-title">${u.primer_nombre || ''} ${u.primer_apellido || ''}</span>
+            <span class="item-subtitle"><i class="fas fa-envelope"></i> ${u.email_institucional || 'N/A'}</span>
+          </div>
+        </label>
+      `).join('');
+    };
+
+    const generarCarrerasHTML = (carreras: Carrera[]) => {
+      if (carreras.length === 0) return `<div class="swal-empty-msg">No se encontraron resultados</div>`;
+      return carreras.map(c => `
+        <label class="swal-radio-option">
+          <input type="radio" name="swal-asig-carrera-radio" value="${c.id}">
+          <div class="swal-radio-content">
+            <span class="item-title">${c.nombre}</span>
+          </div>
+        </label>
+      `).join('');
+    };
 
     Swal.fire({
       title: 'Asignar Coordinador a Carrera',
       html: `
-        <div style="display:flex; flex-direction:column; gap:1rem; text-align:left;">
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Seleccionar Usuario Coordinador *</label>
-            <select id="swal-asig-user" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-              <option value="">-- Seleccione Usuario --</option>
-              ${opcionesUsuarios}
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Seleccionar Carrera *</label>
-            <select id="swal-asig-carrera" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-              <option value="">-- Seleccione Carrera --</option>
-              ${opcionesCarreras}
-            </select>
-          </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div class="swal-form-card">
+          <div class="swal-header-banner banner-green">
+            <i class="fas fa-user-tag banner-icon icon-green"></i>
             <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Fecha Inicio *</label>
-              <input id="swal-asig-inicio" type="date" class="swal2-input" value="${hoy}" style="margin:0;width:100%;box-sizing:border-box">
+              <div class="banner-title">Asignación Académica Directa</div>
+              <div class="banner-sub">Busca y selecciona en paralelo el coordinador y la carrera de destino.</div>
             </div>
-            <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Fecha Fin (Opcional)</label>
-              <input id="swal-asig-fin" type="date" class="swal2-input" style="margin:0;width:100%;box-sizing:border-box">
+          </div>
+
+          <div class="swal-two-columns">
+            <div class="swal-field-card">
+              <div class="swal-field-header">
+                <label class="swal-form-label">1. Coordinador <span class="req">*</span></label>
+                <input id="swal-search-user" type="text" class="swal-inline-search" placeholder="🔍 Buscar nombre/correo..." />
+              </div>
+              <div id="swal-user-list" class="swal-custom-list">
+                ${generarUsuariosHTML(listaUsuarios)}
+              </div>
+            </div>
+
+            <div class="swal-field-card">
+              <div class="swal-field-header">
+                <label class="swal-form-label">2. Carrera <span class="req">*</span></label>
+                <input id="swal-search-carrera" type="text" class="swal-inline-search" placeholder="🔍 Buscar carrera..." />
+              </div>
+              <div id="swal-carrera-list" class="swal-custom-list">
+                ${generarCarrerasHTML(listaCarreras)}
+              </div>
             </div>
           </div>
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'Guardar Asignación',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '<i class="fas fa-check-circle"></i> Guardar Asignación',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       confirmButtonColor: '#10b981',
       cancelButtonColor: '#64748b',
-      width: '550px',
+      width: '820px',
       customClass: this.SWAL_CUSTOM_CLASS,
-      preConfirm: () => {
-        const usuario_id = (document.getElementById('swal-asig-user') as HTMLSelectElement).value;
-        const carrera_id = (document.getElementById('swal-asig-carrera') as HTMLSelectElement).value;
-        const fecha_inicio = (document.getElementById('swal-asig-inicio') as HTMLInputElement).value;
-        const fecha_fin = (document.getElementById('swal-asig-fin') as HTMLInputElement).value;
+      didOpen: () => {
+        const inputSearchUser = document.getElementById('swal-search-user') as HTMLInputElement;
+        const containerUser = document.getElementById('swal-user-list') as HTMLDivElement;
+        
+        const inputSearchCarrera = document.getElementById('swal-search-carrera') as HTMLInputElement;
+        const containerCarrera = document.getElementById('swal-carrera-list') as HTMLDivElement;
 
-        if (!usuario_id || !carrera_id || !fecha_inicio) {
-          Swal.showValidationMessage('Por favor completa todos los campos obligatorios (*)');
+        inputSearchUser?.addEventListener('input', () => {
+          const query = inputSearchUser.value.toLowerCase().trim();
+          const filtrados = listaUsuarios.filter(u => 
+            `${u.primer_nombre} ${u.primer_apellido} ${u.email_institucional}`.toLowerCase().includes(query)
+          );
+          containerUser.innerHTML = generarUsuariosHTML(filtrados);
+        });
+
+        inputSearchCarrera?.addEventListener('input', () => {
+          const query = inputSearchCarrera.value.toLowerCase().trim();
+          const filtrados = listaCarreras.filter(c => 
+            c.nombre.toLowerCase().includes(query)
+          );
+          containerCarrera.innerHTML = generarCarrerasHTML(filtrados);
+        });
+      },
+      preConfirm: () => {
+        const userRadio = document.querySelector('input[name="swal-asig-user-radio"]:checked') as HTMLInputElement;
+        const carreraRadio = document.querySelector('input[name="swal-asig-carrera-radio"]:checked') as HTMLInputElement;
+
+        if (!userRadio || !carreraRadio) {
+          Swal.showValidationMessage('Debes seleccionar un coordinador y una carrera de las listas.');
           return false;
         }
-        return { usuario_id, carrera_id, fecha_inicio, fecha_fin };
+        return { usuario_id: userRadio.value, carrera_id: carreraRadio.value };
       }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
@@ -190,7 +359,9 @@ export class UsuariosComponent implements OnInit {
   }
 
   private guardarAsignacion(data: any): void {
+    if (this.isSaving()) return;
     this.isSaving.set(true);
+
     this.coordinadorCarreraService.asignarCoordinador(data)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
@@ -205,6 +376,8 @@ export class UsuariosComponent implements OnInit {
   }
 
   desasignar(usuarioId: string, carreraId: string): void {
+    if (this.isSaving()) return;
+
     Swal.fire({
       title: '¿Remover asignación?',
       text: 'El usuario dejará de ser coordinador de esta carrera.',
@@ -212,29 +385,30 @@ export class UsuariosComponent implements OnInit {
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, remover',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, remover',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       customClass: this.SWAL_CUSTOM_CLASS
     }).then((result) => {
       if (result.isConfirmed) {
-        this.coordinadorCarreraService.desasignarCoordinador(usuarioId, carreraId).subscribe({
-          next: () => {
-            this.toastService.show('Asignación removida con éxito.', 'info');
-            this.cargarTodo();
-          },
-          error: (err: HttpErrorResponse) => {
-            this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar la asignación.'), 'error');
-          }
-        });
+        this.isSaving.set(true);
+        this.coordinadorCarreraService.desasignarCoordinador(usuarioId, carreraId)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Asignación removida con éxito.', 'info');
+              this.cargarTodo();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar la asignación.'), 'error');
+            }
+          });
       }
     });
   }
 
-  // ==========================================
-  // EDICIÓN TOTAL DE USUARIOS CON SWEETALERT
-  // ==========================================
   abrirModalEditar(usuario: Usuario): void {
-    // Extraemos inteligentemente los roles y sus IDs de los usuarios ya cargados
+    if (this.isSaving()) return;
+
     const rolesMap = new Map<string, string>();
     this.usuarios().forEach(u => {
       if (u.rol?.id && u.rol?.nombre) {
@@ -249,29 +423,39 @@ export class UsuariosComponent implements OnInit {
     Swal.fire({
       title: 'Editar Usuario (Modo Admin)',
       html: `
-        <div style="display:flex; flex-direction:column; gap:1rem; text-align:left;">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div class="swal-form-card">
+          <div class="swal-header-banner banner-purple">
+            <i class="fas fa-user-gear banner-icon icon-purple"></i>
             <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Primer Nombre *</label>
-              <input id="swal-edit-nombre" class="swal2-input" value="${usuario.primer_nombre || ''}" style="margin:0;width:100%;box-sizing:border-box">
-            </div>
-            <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Primer Apellido *</label>
-              <input id="swal-edit-apellido" class="swal2-input" value="${usuario.primer_apellido || ''}" style="margin:0;width:100%;box-sizing:border-box">
+              <div class="banner-title">Gestión de Perfil e Identidad</div>
+              <div class="banner-sub">Edita la información personal y los permisos del sistema.</div>
             </div>
           </div>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Correo Institucional *</label>
-            <input id="swal-edit-correo" type="email" class="swal2-input" value="${usuario.email_institucional || ''}" style="margin:0;width:100%;box-sizing:border-box">
-          </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-            <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#334155;margin-bottom:0.35rem">Cédula</label>
-              <input id="swal-edit-cedula" class="swal2-input" value="${usuario.cedula || ''}" style="margin:0;width:100%;box-sizing:border-box">
+
+          <div class="swal-form-row">
+            <div class="swal-form-group">
+              <label class="swal-form-label" for="swal-edit-nombre">Primer Nombre <span class="req">*</span></label>
+              <input id="swal-edit-nombre" class="swal-form-control" value="${usuario.primer_nombre || ''}" placeholder="Nombre">
             </div>
-            <div>
-              <label style="display:block;font-size:0.75rem;font-weight:600;color:#e11d48;margin-bottom:0.35rem">Privilegios (Rol) ⚠️</label>
-              <select id="swal-edit-rol" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box;border-color:#fca5a5;">
+            <div class="swal-form-group">
+              <label class="swal-form-label" for="swal-edit-apellido">Primer Apellido <span class="req">*</span></label>
+              <input id="swal-edit-apellido" class="swal-form-control" value="${usuario.primer_apellido || ''}" placeholder="Apellido">
+            </div>
+          </div>
+
+          <div class="swal-form-group">
+            <label class="swal-form-label" for="swal-edit-correo">Correo Institucional <span class="req">*</span></label>
+            <input id="swal-edit-correo" type="email" class="swal-form-control" value="${usuario.email_institucional || ''}" placeholder="correo@domain.edu.ec">
+          </div>
+
+          <div class="swal-form-row">
+            <div class="swal-form-group">
+              <label class="swal-form-label" for="swal-edit-cedula">Cédula de Identidad</label>
+              <input id="swal-edit-cedula" class="swal-form-control" value="${usuario.cedula || ''}" placeholder="0101010101">
+            </div>
+            <div class="swal-form-group">
+              <label class="swal-form-label label-purple" for="swal-edit-rol">Privilegios (Rol) ⚠️</label>
+              <select id="swal-edit-rol" class="swal-form-control select-purple">
                 <option value="">-- Mantener Rol Actual --</option>
                 ${opcionesRoles}
               </select>
@@ -280,11 +464,11 @@ export class UsuariosComponent implements OnInit {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'Actualizar Usuario',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '<i class="fas fa-sync-alt"></i> Actualizar Usuario',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       confirmButtonColor: '#8b5cf6',
       cancelButtonColor: '#64748b',
-      width: '550px',
+      width: '680px',
       customClass: this.SWAL_CUSTOM_CLASS,
       preConfirm: () => {
         const primer_nombre = (document.getElementById('swal-edit-nombre') as HTMLInputElement).value.trim();
@@ -307,17 +491,16 @@ export class UsuariosComponent implements OnInit {
   }
 
   private guardarEdicion(idUsuario: string, data: any): void {
+    if (this.isSaving()) return;
     this.isSaving.set(true);
 
-    // Formateamos los datos para enviarlos al backend de manera segura
     const payload: any = {
       primer_nombre: data.primer_nombre,
       primer_apellido: data.primer_apellido,
       email_institucional: data.email_institucional,
-      cedula: data.cedula ? data.cedula : null, // Evita conflictos enviando null en lugar de string vacío
+      cedula: data.cedula ? data.cedula : null
     };
 
-    // Solo enviamos el UUID del rol si se seleccionó en el SweetAlert
     if (data.rol_id) {
       payload.rol_id = data.rol_id;
     }
@@ -336,6 +519,8 @@ export class UsuariosComponent implements OnInit {
   }
 
   eliminarUsuario(id: string): void {
+    if (this.isSaving()) return;
+
     Swal.fire({
       title: '¿Desactivar usuario?',
       text: 'Esta acción limitará su acceso al sistema. ¿Deseas continuar?',
@@ -343,20 +528,23 @@ export class UsuariosComponent implements OnInit {
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, desactivar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '<i class="fas fa-user-minus"></i> Sí, desactivar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       customClass: this.SWAL_CUSTOM_CLASS
     }).then((result) => {
       if (result.isConfirmed) {
-        this.usuarioService.delete(id).subscribe({
-          next: () => {
-            this.toastService.show('Usuario desactivado con éxito.', 'info');
-            this.cargarTodo();
-          },
-          error: (err: HttpErrorResponse) => {
-            this.toastService.show(this.extraerMensajeError(err, 'Error al desactivar el usuario.'), 'error');
-          }
-        });
+        this.isSaving.set(true);
+        this.usuarioService.delete(id)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Usuario desactivado con éxito.', 'info');
+              this.cargarTodo();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(this.extraerMensajeError(err, 'Error al desactivar el usuario.'), 'error');
+            }
+          });
       }
     });
   }

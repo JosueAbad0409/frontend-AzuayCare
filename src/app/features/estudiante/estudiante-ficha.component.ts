@@ -7,7 +7,6 @@ import { HttpClient } from '@angular/common/http';
 import { debounceTime, catchError, forkJoin, of } from 'rxjs';
 import Swal from 'sweetalert2';
 
-// Core & Environments
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { FichaService } from '../../core/services/ficha.service';
@@ -19,7 +18,6 @@ import { MatricesService } from '../../core/services/matrices.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DescargaArchivosService } from '../../core/services/descarga-archivos.service';
 
-// Models
 import { Formulario, Seccion, Pregunta } from '../../core/models/formulario.model';
 import { FichaRevision, EstadoFicha } from '../../core/models/revision-ficha.model';
 import { PreguntaDependencia } from '../../core/models/dependencia.model';
@@ -27,7 +25,6 @@ import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
 
-// Estado normalizado para la UI (unifica variantes históricas del backend: ENVIADA/ENVIADO, RECHAZADA/RECHAZADO)
 export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
 
 export interface FormularioUI extends Formulario {
@@ -35,28 +32,19 @@ export interface FormularioUI extends Formulario {
 }
 
 const AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
-
-// Regex de UUID compartido (antes se recreaba en dos métodos distintos en cada llamada).
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const NUMERIC_REGEX = /^(0|[1-9]\d*)(\.\d{1,2})?$/;
 
-// Tabla de conversión a número romano (antes se recreaba en cada llamada a numeroRomano()).
 const VALORES_ROMANOS: ReadonlyArray<{ valor: number; simbolo: string }> = [
-  { valor: 1000, simbolo: 'M' },
-  { valor: 900, simbolo: 'CM' },
-  { valor: 500, simbolo: 'D' },
-  { valor: 400, simbolo: 'CD' },
-  { valor: 100, simbolo: 'C' },
-  { valor: 90, simbolo: 'XC' },
-  { valor: 50, simbolo: 'L' },
-  { valor: 40, simbolo: 'XL' },
-  { valor: 10, simbolo: 'X' },
-  { valor: 9, simbolo: 'IX' },
-  { valor: 5, simbolo: 'V' },
-  { valor: 4, simbolo: 'IV' },
+  { valor: 1000, simbolo: 'M' }, { valor: 900, simbolo: 'CM' },
+  { valor: 500, simbolo: 'D' }, { valor: 400, simbolo: 'CD' },
+  { valor: 100, simbolo: 'C' }, { valor: 90, simbolo: 'XC' },
+  { valor: 50, simbolo: 'L' }, { valor: 40, simbolo: 'XL' },
+  { valor: 10, simbolo: 'X' }, { valor: 9, simbolo: 'IX' },
+  { valor: 5, simbolo: 'V' }, { valor: 4, simbolo: 'IV' },
   { valor: 1, simbolo: 'I' }
 ];
 
-/** Normaliza las variantes de ortografía que existen en datos históricos del backend. */
 function normalizarEstado(estado?: string | null): EstadoUI {
   switch (estado) {
     case 'BORRADOR': return 'BORRADOR';
@@ -93,7 +81,6 @@ function requireAtLeastOneMatrixRowValidator() {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EstudianteFichaComponent implements OnInit, OnDestroy {
-  // Services
   readonly authService = inject(AuthService);
   private readonly fichaService = inject(FichaService);
   private readonly formularioService = inject(FormularioService);
@@ -108,11 +95,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly descargaService = inject(DescargaArchivosService);
 
-  // Signals
   isDescargandoPdf = this.descargaService.isDescargando;
   formulariosDisponibles = signal<FormularioUI[]>([]);
   vistaActual = signal<'LISTA' | 'FORMULARIO' | 'RESUMEN_FINAL'>('LISTA');
-  // Nuevos signals para manejar los datos del resumen
   alertasVulnerabilidad = signal<any[]>([]);
 
   misFichas = signal<FichaRevision[]>([]);
@@ -138,7 +123,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   totalEgresos = signal(0);
   valormap = signal<Record<string, any>>({});
 
-  // Computed
   estadoActivoUI = computed<EstadoUI>(() => normalizarEstado(this.fichaActiva()?.estado_ficha));
 
   esEditable = computed(() => {
@@ -156,12 +140,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     return this.secciones().length > 0 && this.seccionActualIndex() === this.secciones().length;
   });
 
-  
-  // El balance nunca debe mostrarse negativo: si los egresos superan a los
-// ingresos, se muestra 0 en vez de un número negativo.
-balance = computed(() => Math.max(0, this.totalIngresos() - this.totalEgresos()));
-/** true cuando los egresos superan a los ingresos */
-egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos());
+  balance = computed(() => Math.max(0, this.totalIngresos() - this.totalEgresos()));
+  egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos());
 
   seccionActualEsFinanciera = computed(() => {
     const sec = this.secciones()[this.seccionActualIndex()];
@@ -172,7 +152,22 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     this.secciones().some(s => s.tipo_seccion === 'FINANCIERA')
   );
 
-  // Form & Local Cache
+  resumenRespuestas = computed<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    const valores = this.valormap();
+    const matricesValores = this.matricesGroup.getRawValue();
+
+    for (const sec of this.secciones()) {
+      for (const p of sec.preguntas || []) {
+        map[p.id] = this.calcularTexto(p, valores, matricesValores);
+        for (const sub of this.getSubpreguntas(p.id)) {
+          map[sub.id] = this.calcularTexto(sub, valores, matricesValores);
+        }
+      }
+    }
+    return map;
+  });
+
   private autosaveData: any = null;
   private respuestasBDCache: any[] = [];
 
@@ -192,7 +187,7 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
     this.cargarDatosEstudiante();
 
     this.respuestasForm.valueChanges
-      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
+      .pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
       .subscribe(val => {
         if (!this.esEditable()) return;
 
@@ -203,7 +198,7 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
         
         const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave));
-        setTimeout(() => this.isSavingLocal.set(false), 800);
+        setTimeout(() => this.isSavingLocal.set(false), 500);
       });
   }
 
@@ -265,39 +260,36 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
   }
 
   validarSeccionActual(): boolean {
-  if (this.esPasoResumen() || !this.esEditable()) return true;
+    if (this.esPasoResumen() || !this.esEditable()) return true;
 
-  const seccionActual = this.secciones()[this.seccionActualIndex()];
-  if (!seccionActual) return true;
+    const seccionActual = this.secciones()[this.seccionActualIndex()];
+    if (!seccionActual) return true;
 
-  let esValido = true;
+    let esValido = true;
 
-  // 🔥 Validación financiera: no se puede avanzar si egresos > ingresos
-  if (seccionActual.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
-    this.toastService.show(
-      'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
-      'error'
-    );
-    return false;
-  }
+    if (seccionActual.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+      this.toastService.show(
+        'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
+        'error'
+      );
+      return false;
+    }
 
-  for (const preg of seccionActual.preguntas || []) {
-    if (!this.esPreguntaVisible(preg.id)) continue;
+    for (const preg of seccionActual.preguntas || []) {
+      if (!this.esPreguntaVisible(preg.id)) continue;
 
-    if (!this.validarPreguntaIndividual(preg)) esValido = false;
+      if (!this.validarPreguntaIndividual(preg)) esValido = false;
 
-    // Subpreguntas disparadas por dependencia
-    for (const sub of this.getSubpreguntas(preg.id)) {
-      if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
-        esValido = false;
+      for (const sub of this.getSubpreguntas(preg.id)) {
+        if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
+          esValido = false;
+        }
       }
     }
+
+    return esValido;
   }
 
-  return esValido;
-}
-
-  /** Valida una pregunta individual (respuesta, matriz y evidencia obligatoria si aplica). Reutilizable para preguntas y subpreguntas. */
   private validarPreguntaIndividual(preg: Pregunta): boolean {
     let esValido = true;
 
@@ -366,7 +358,6 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
           this.isLoading.set(false);
         },
         error: (err) => {
-          console.error('Error al cargar datos:', err);
           this.toastService.show('Error de conexión al cargar tus datos.', 'error');
           this.isLoading.set(false);
         }
@@ -374,6 +365,7 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
   }
 
   seleccionarFormulario(formularioId: string): void {
+    if (this.isLoading() || this.enviando()) return;
     const pActivo = this.periodoActivo();
     if (!pActivo) {
       this.toastService.show('No hay un periodo de matrícula activo en este momento.', 'warning');
@@ -397,11 +389,12 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
   }
 
   volverALista(): void {
+    if (this.isLoading() || this.enviando()) return;
     this.vistaActual.set('LISTA');
     this.fichaActiva.set(null);
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
-    this.mostrarBannerPrecarga.set(false); // 🔥 Limpieza añadida
+    this.mostrarBannerPrecarga.set(false);
 
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
@@ -413,115 +406,104 @@ egresosExcedenIngresos = computed(() => this.totalEgresos() > this.totalIngresos
   } 
 
   evaluarPrecarga(fichas: FichaRevision[]): void {
-  const tieneRespuestasReales = this.respuestasBDCache.length > 0;
+    const tieneRespuestasReales = this.respuestasBDCache.length > 0;
+    const tieneFichasAnteriores = fichas.some(f =>
+      (f.estado_ficha === 'VALIDADO' || f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO')
+      && f.id !== this.fichaActiva()?.id
+    );
 
-  const tieneFichasAnteriores = fichas.some(f =>
-    (f.estado_ficha === 'VALIDADO' || f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO')
-    && f.id !== this.fichaActiva()?.id
-  );
-
-  const debeMostrar = !tieneRespuestasReales && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR';
-  this.mostrarBannerPrecarga.set(debeMostrar);
-}
+    const debeMostrar = !tieneRespuestasReales && tieneFichasAnteriores && this.estadoActivoUI() === 'BORRADOR';
+    this.mostrarBannerPrecarga.set(debeMostrar);
+  }
 
   ignorarPrecarga(): void { this.mostrarBannerPrecarga.set(false); }
 
+  ejecutarPrecarga(): void {
+    const periodoNuevoId = this.fichaActiva()?.periodo_id;
+    if (!periodoNuevoId) return;
 
-  
-ejecutarPrecarga(): void {
-  const periodoNuevoId = this.fichaActiva()?.periodo_id;
-  if (!periodoNuevoId) return;
+    this.toastService.show('Importando datos, por favor espera...', 'info');
+    this.isLoading.set(true);
 
-  this.toastService.show('Importando datos, por favor espera...', 'info');
-  // NO lo ocultes todavía; solo si tiene éxito
-  // this.mostrarBannerPrecarga.set(false);
-
-  this.http
-    .post<any>(`${environment.apiUrl}/respuestas-formulario/precarga/${periodoNuevoId}`, {})
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: (data) => {
-        if (data?.respuestas_transferidas) {
-          this.mostrarBannerPrecarga.set(false); // solo aquí
+    this.http
+      .post<any>(`${environment.apiUrl}/respuestas-formulario/precarga/${periodoNuevoId}`, {})
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          if (data?.respuestas_transferidas) {
+            this.mostrarBannerPrecarga.set(false);
+            this.toastService.show(
+              data.message || '¡Respuestas importadas!',
+              'success',
+            );
+            localStorage.removeItem(AUTOSAVE_KEY);
+            this.autosaveData = null;
+            this.forzarRecarga();
+          } else {
+            this.toastService.show(
+              data?.message || 'No se encontraron datos para precargar.',
+              'info',
+            );
+            this.isLoading.set(false);
+          }
+        },
+        error: (err) => {
           this.toastService.show(
-            data.message || '¡Respuestas importadas!',
-            'success',
+            err?.error?.message || 'Error al importar las respuestas.',
+            'error',
           );
-          localStorage.removeItem(AUTOSAVE_KEY);
-          this.autosaveData = null;
-          this.forzarRecarga();
-        } else {
-          this.toastService.show(
-            data?.message || 'No se encontraron datos para precargar.',
-            'info',
-          );
-          // dejar el banner visible por si quiere reintentar
-        }
-      },
-      error: (err) => {
-        console.error('Error precarga:', err);
-        this.toastService.show(
-          err?.error?.message || 'Error al importar las respuestas.',
-          'error',
-        );
-        // el banner sigue visible para reintentar
-      },
-    });
-}
+          this.isLoading.set(false);
+        },
+      });
+  }
 
   forzarRecarga(): void {
     const ficha = this.fichaActiva();
     if (!ficha) return;
 
-    // 1. Destruimos el caché local que podría estar corrupto
     localStorage.removeItem(AUTOSAVE_KEY);
     this.autosaveData = null;
 
-    // 2. Limpiamos visualmente el formulario para evitar mezclas de datos
     this.respuestasGroup.reset({}, { emitEvent: false });
     this.matricesGroup.reset({}, { emitEvent: false });
     this.evidenciasGroup.reset({}, { emitEvent: false });
     this.valormap.set({});
 
-    // 3. Mostramos feedback al usuario
     this.toastService.show('Sincronizando con la base de datos...', 'info');
     this.isLoading.set(true); 
 
-    // 4. Volvemos a disparar tu función principal que arma todo
     this.cargarEstructuraFormulario(ficha.formulario_id);
   }
 
   crearNuevaFicha(periodoId: string, formularioId: string): void {
-  this.fichaService.crearFicha({
-    periodo_id: periodoId,
-    formulario_id: formularioId,
-    total_ingresos: 0,
-    total_egresos: 0
-  } as any)
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: (nuevaFicha: FichaRevision) => {
-        this.fichaActiva.set(nuevaFicha);
-        const fichasActualizadas = [...this.misFichas(), nuevaFicha];
-        this.misFichas.set(fichasActualizadas);
-        this.cargarEstructuraFormulario(formularioId);
-      },
-      error: (err) => {
-        this.fichaService.getMisFichas().subscribe(fichas => {
-          const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
-          if (found) {
-            this.fichaActiva.set(found);
-            this.cargarEstructuraFormulario(found.formulario_id);
-            // ✅ Quitada la llamada duplicada/vieja a evaluarPrecarga
-          } else {
-            console.error('Error al inicializar la ficha:', err);
-            this.toastService.show('Error al crear o buscar tu ficha.', 'error');
-            this.isLoading.set(false);
-          }
-        });
-      }
-    });
-}
+    this.fichaService.crearFicha({
+      periodo_id: periodoId,
+      formulario_id: formularioId,
+      total_ingresos: 0,
+      total_egresos: 0
+    } as any)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (nuevaFicha: FichaRevision) => {
+          this.fichaActiva.set(nuevaFicha);
+          const fichasActualizadas = [...this.misFichas(), nuevaFicha];
+          this.misFichas.set(fichasActualizadas);
+          this.cargarEstructuraFormulario(formularioId);
+        },
+        error: (err) => {
+          this.fichaService.getMisFichas().subscribe(fichas => {
+            const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
+            if (found) {
+              this.fichaActiva.set(found);
+              this.cargarEstructuraFormulario(found.formulario_id);
+            } else {
+              this.toastService.show('Error al crear o buscar tu ficha.', 'error');
+              this.isLoading.set(false);
+            }
+          });
+        }
+      });
+  }
 
   cargarEstructuraFormulario(formularioId: string): void {
     const fichaActual = this.fichaActiva();
@@ -624,8 +606,6 @@ ejecutarPrecarga(): void {
     this.cargarOpcionesEnBackground(preguntasTodas);
   }
 
-
-
   private cargarOpcionesEnBackground(preguntas: Pregunta[]): void {
     const deSeleccion = preguntas.filter(
       (p) =>
@@ -694,6 +674,7 @@ ejecutarPrecarga(): void {
   construirControlesPreguntas(p: Pregunta): void {
     const isMultiple = p.tipoCampo?.nombre === 'SELECCION_MULTIPLE';
     const isMatriz = p.tipoCampo?.nombre === 'MATRIZ';
+    const isNumeric = p.tipoCampo?.nombre === 'NUMERICO';
 
     if (isMultiple) {
       if (!this.respuestasGroup.contains(p.id)) {
@@ -711,6 +692,11 @@ ejecutarPrecarga(): void {
       this.cargarEstructuraMatriz(p);
     } else {
       const validators = p.es_obligatorio ? [Validators.required] : [];
+      if (isNumeric) {
+        validators.push(Validators.pattern(NUMERIC_REGEX));
+        validators.push(Validators.min(0));
+      }
+      
       if (!this.respuestasGroup.contains(p.id)) {
         const savedVal = this.autosaveData?.respuestas?.[p.id] ?? '';
         this.respuestasGroup.addControl(p.id, this.fb.control(savedVal, validators));
@@ -719,7 +705,6 @@ ejecutarPrecarga(): void {
 
     if (!this.evidenciasGroup.contains(p.id)) {
       const savedEvidencia = this.autosaveData?.evidencias?.[p.id] ?? '';
-      // 🔥 Si la pregunta (o subpregunta) requiere evidencia, se exige realmente en la validación.
       const evidenciaValidators = p.requiere_evidencia ? [Validators.required] : [];
       this.evidenciasGroup.addControl(p.id, this.fb.control(savedEvidencia, evidenciaValidators));
     }
@@ -889,21 +874,21 @@ ejecutarPrecarga(): void {
     });
   }
 
-  obtenerTextoRespuesta(pregunta: Pregunta): string {
+  private calcularTexto(pregunta: Pregunta, valores: any, matricesValores: any): string {
     if (pregunta.tipoCampo?.nombre === 'MATRIZ') {
-      const matrizValores = this.matricesGroup.getRawValue()[pregunta.id];
-      if (!matrizValores) return 'Sin responder';
+      const matrizVals = matricesValores[pregunta.id];
+      if (!matrizVals) return 'Sin responder';
 
       const resumenFilas: string[] = [];
 
-      Object.keys(matrizValores).forEach(filaId => {
-        const columnasSeleccionadas = matrizValores[filaId];
+      Object.keys(matrizVals).forEach(filaId => {
+        const cols = matrizVals[filaId];
 
-        if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+        if (Array.isArray(cols) && cols.length > 0) {
           const fila = pregunta.filasMatriz?.find((f: any) => f.id === filaId);
           const textoFila = fila ? fila.texto_fila : 'Fila';
 
-          const textosColumnas = columnasSeleccionadas.map((colId: string) => {
+          const textosColumnas = cols.map((colId: string) => {
             const col = pregunta.columnasMatriz?.find((c: any) => c.id === colId);
             return col ? col.texto_columna : colId;
           });
@@ -915,7 +900,7 @@ ejecutarPrecarga(): void {
       return resumenFilas.length > 0 ? resumenFilas.join('\n') : 'Sin responder';
     }
 
-    const val = this.respuestasGroup.getRawValue()[pregunta.id];
+    const val = valores[pregunta.id];
     if (val === null || val === undefined || val === '') return 'Sin responder';
 
     if (Array.isArray(val)) {
@@ -1033,140 +1018,136 @@ ejecutarPrecarga(): void {
     const ficha = this.fichaActiva();
     const cedula = ficha?.usuario?.cedula || fichaId.slice(0, 8);
     this.descargaService.descargar(
-      // 🔥 ASEGÚRATE DE QUE ESTA RUTA DIGA /pdf-resumen
       `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf-resumen`, 
-      `Resumen_Ficha_${cedula}.pdf`, // Cambia también el nombre para diferenciarlo
+      `Resumen_Ficha_${cedula}.pdf`,
       'Hubo un problema al generar tu comprobante PDF.'
     );
   }
 
   guardarYEnviar(esFinal: boolean = true): void {
-  const ficha = this.fichaActiva();
-  if (!ficha) return;
+    if (this.isLoading() || this.enviando() || this.isSavingLocal()) return;
+    const ficha = this.fichaActiva();
+    if (!ficha) return;
 
-  const ejecutar = () => {
-    // 1. Validar PRIMERO (antes de activar el loading)
-    if (this.egresosExcedenIngresos()) {
-      this.toastService.show(
-        'No puedes enviar la ficha: los egresos superan a los ingresos. Corrige la sección financiera.',
-        'error'
-      );
-      return;
-    }
-
-    // 2. Solo si pasó la validación, activar el loading
-    this.enviando.set(true);
-
-    const respuestasValores = this.respuestasGroup.getRawValue();
-    const evidenciasValores = this.evidenciasGroup.getRawValue();
-    const payloadRespuestas: any[] = [];
-
-    Object.keys(respuestasValores).forEach(preguntaId => {
-      if (this.esPreguntaVisible(preguntaId)) {
-        let val = respuestasValores[preguntaId];
-        const evidenciaUrl = evidenciasValores[preguntaId];
-
-        const appendEvidencia = (baseText: string | null) => {
-          if (!evidenciaUrl) return baseText;
-          return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
-        };
-
-        if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
-
-        if (Array.isArray(val) && val.length > 0) {
-          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val, valor_texto: appendEvidencia(null) });
-        } else if (typeof val === 'number') {
-          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val, valor_texto: appendEvidencia(null) });
-        } else if (typeof val === 'boolean') {
-          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val ? 'SI' : 'NO') });
-        } else if (typeof val === 'string' && val.trim() !== '') {
-          if (UUID_REGEX.test(val)) {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
-          } else {
-            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
-          }
-        } else if (evidenciaUrl) {
-          payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
-        }
+    const ejecutar = () => {
+      if (this.egresosExcedenIngresos()) {
+        this.toastService.show(
+          'No puedes enviar la ficha: los egresos superan a los ingresos. Corrige la sección financiera.',
+          'error'
+        );
+        return;
       }
-    });
 
-    const matricesValores = this.matricesGroup.getRawValue();
+      this.enviando.set(true);
 
-    Object.keys(matricesValores).forEach(preguntaId => {
-      if (this.esPreguntaVisible(preguntaId)) {
-        const filasObj = matricesValores[preguntaId];
-        const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
+      const respuestasValores = this.respuestasGroup.getRawValue();
+      const evidenciasValores = this.evidenciasGroup.getRawValue();
+      const payloadRespuestas: any[] = [];
 
-        if (filasObj && typeof filasObj === 'object') {
-          Object.keys(filasObj).forEach(filaId => {
-            const columnasSeleccionadas = filasObj[filaId];
-            if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
-              columnasSeleccionadas.forEach(columnaId => {
-                respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
-              });
+      Object.keys(respuestasValores).forEach(preguntaId => {
+        if (this.esPreguntaVisible(preguntaId)) {
+          let val = respuestasValores[preguntaId];
+          const evidenciaUrl = evidenciasValores[preguntaId];
+
+          const appendEvidencia = (baseText: string | null) => {
+            if (!evidenciaUrl) return baseText;
+            return baseText ? `${baseText} [EVIDENCIA_URL:${evidenciaUrl}]` : `[EVIDENCIA_URL:${evidenciaUrl}]`;
+          };
+
+          if ((val === null || val === undefined || val === '') && !evidenciaUrl) return;
+
+          if (Array.isArray(val) && val.length > 0) {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: val, valor_texto: appendEvidencia(null) });
+          } else if (typeof val === 'number') {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_numerico: val, valor_texto: appendEvidencia(null) });
+          } else if (typeof val === 'boolean') {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val ? 'SI' : 'NO') });
+          } else if (typeof val === 'string' && val.trim() !== '') {
+            if (UUID_REGEX.test(val)) {
+              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, opciones_seleccionadas: [val], valor_texto: appendEvidencia(null) });
+            } else {
+              payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(val) });
             }
-          });
-        }
-
-        if (respuestasMatriz.length > 0) {
-          payloadRespuestas.push({
-            ficha_id: ficha.id,
-            pregunta_id: preguntaId,
-            respuestas_matriz: respuestasMatriz
-          });
-        }
-      }
-    });
-
-    this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError(() => {
-          this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
-          this.enviando.set(false);
-          return of(null);
-        })
-      )
-      .subscribe(res => {
-        if (res !== null) {
-          if (esFinal) {
-            this.finalizarEnvio();
-          } else {
-            this.enviando.set(false);
-            this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
+          } else if (evidenciaUrl) {
+            payloadRespuestas.push({ ficha_id: ficha.id, pregunta_id: preguntaId, valor_texto: appendEvidencia(null) });
           }
         }
       });
-  };
 
-  if (esFinal) {
-    const eraCorreccion = this.estadoActivoUI() === 'RECHAZADA';
-    Swal.fire({
-      title: eraCorreccion ? '¿Enviar la corrección de tu ficha?' : '¿Seguro que quieres terminar la ficha?',
-      text: eraCorreccion
-        ? 'Tu ficha corregida será enviada nuevamente a Bienestar Estudiantil para revisión.'
-        : 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2563eb',
-      cancelButtonColor: '#e11d48',
-      confirmButtonText: eraCorreccion ? 'Sí, reenviar ficha' : 'Sí, terminar ficha',
-      cancelButtonText: 'Revisar de nuevo',
-      customClass: {
-        popup: 'rounded-2xl',
-        confirmButton: 'rounded-xl',
-        cancelButton: 'rounded-xl'
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        ejecutar();
-      }
-    });
-  } else {
-    ejecutar();
+      const matricesValores = this.matricesGroup.getRawValue();
+
+      Object.keys(matricesValores).forEach(preguntaId => {
+        if (this.esPreguntaVisible(preguntaId)) {
+          const filasObj = matricesValores[preguntaId];
+          const respuestasMatriz: { fila_id: string; columna_id: string }[] = [];
+
+          if (filasObj && typeof filasObj === 'object') {
+            Object.keys(filasObj).forEach(filaId => {
+              const columnasSeleccionadas = filasObj[filaId];
+              if (Array.isArray(columnasSeleccionadas) && columnasSeleccionadas.length > 0) {
+                columnasSeleccionadas.forEach(columnaId => {
+                  respuestasMatriz.push({ fila_id: filaId, columna_id: columnaId });
+                });
+              }
+            });
+          }
+
+          if (respuestasMatriz.length > 0) {
+            payloadRespuestas.push({
+              ficha_id: ficha.id,
+              pregunta_id: preguntaId,
+              respuestas_matriz: respuestasMatriz
+            });
+          }
+        }
+      });
+
+      this.fichaService.enviarBloqueRespuestas(payloadRespuestas, esFinal)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          catchError(() => {
+            this.toastService.show('Ocurrió un error al guardar la ficha. Reintenta por favor.', 'error');
+            this.enviando.set(false);
+            return of(null);
+          })
+        )
+        .subscribe(res => {
+          if (res !== null) {
+            if (esFinal) {
+              this.finalizarEnvio();
+            } else {
+              this.enviando.set(false);
+              this.toastService.show('Borrador guardado exitosamente en la nube.', 'info');
+            }
+          }
+        });
+    };
+
+    if (esFinal) {
+      const eraCorreccion = this.estadoActivoUI() === 'RECHAZADA';
+      Swal.fire({
+        title: eraCorreccion ? '¿Enviar la corrección de tu ficha?' : '¿Seguro que quieres terminar la ficha?',
+        text: eraCorreccion
+          ? 'Tu ficha corregida será enviada nuevamente a Bienestar Estudiantil para revisión.'
+          : 'Una vez enviada, no podrás modificar tus respuestas a menos que Bienestar Estudiantil te la reabra.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: eraCorreccion ? 'Sí, reenviar ficha' : 'Sí, terminar ficha',
+        cancelButtonText: 'Revisar de nuevo',
+        customClass: {
+          popup: 'custom-swal-popup rounded-2xl p-6 text-left',
+          confirmButton: 'custom-swal-confirm px-5 py-2.5 rounded-xl font-bold text-white shadow-md hover:-translate-y-0.5 transition-all',
+          cancelButton: 'custom-swal-cancel px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 transition-all'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          ejecutar();
+        }
+      });
+    } else {
+      ejecutar();
+    }
   }
-}
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
@@ -1175,22 +1156,20 @@ ejecutarPrecarga(): void {
     
     const fichaId = this.fichaActiva()?.id;
     
-    // Consultar las alertas al backend
     this.http.get<any>(`${environment.apiUrl}/fichas-respondidas/${fichaId}/resumen-vulnerabilidad`)
       .subscribe({
         next: (res) => {
           this.alertasVulnerabilidad.set(res.detalles || []);
-          this.vistaActual.set('RESUMEN_FINAL'); // Mostramos la pantalla del QR
+          this.vistaActual.set('RESUMEN_FINAL');
         },
         error: () => {
-          // Fallback por si falla la consulta, igual mostramos el QR
           this.vistaActual.set('RESUMEN_FINAL'); 
         }
       });
   }
 
   subirArchivoEvidencia(event: Event, preguntaId: string): void {
-    if (!this.esEditable()) return;
+    if (!this.esEditable() || this.enviando()) return;
 
     const element = event.currentTarget as HTMLInputElement;
     const fileList: FileList | null = element.files;

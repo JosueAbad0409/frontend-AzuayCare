@@ -27,11 +27,9 @@ export class EstudianteInicioComponent implements OnInit {
   private readonly fichaService = inject(FichaService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Estados Reactivos con Signals
   fichaActiva = signal<FichaRevision | null>(null);
   isLoading = signal<boolean>(true);
 
-  // Propiedades computadas para renderizado seguro
   usuario = computed(() => this.authService.user());
 
   nombreUsuario = computed(() => {

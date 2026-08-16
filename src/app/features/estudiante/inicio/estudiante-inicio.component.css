@@ -1,5 +1,4 @@
 :host {
-  /* Design Tokens Locales */
   --primary: #10b981;
   --primary-hover: #059669;
   --primary-glow: rgba(16, 185, 129, 0.25);
@@ -40,9 +39,6 @@
   box-sizing: border-box;
 }
 
-/* ==========================================
-   HERO / BANNER PRINCIPAL
-   ========================================== */
 .hero-banner {
   position: relative;
   overflow: hidden;
@@ -166,9 +162,6 @@
   outline-offset: 3px;
 }
 
-/* ==========================================
-   GRILLA DE TARJETAS
-   ========================================== */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
@@ -225,7 +218,6 @@
   color: var(--text-primary);
 }
 
-/* Estado de la Ficha */
 .status-container {
   min-height: 120px;
   display: flex;
@@ -298,7 +290,6 @@
   color: var(--text-primary);
 }
 
-/* Estado Vacío */
 .status-empty {
   width: 100%;
   display: flex;
@@ -335,7 +326,6 @@
   color: #ffffff;
 }
 
-/* Tarjeta Interactiva Mis Documentos */
 .interactive-card {
   cursor: pointer;
   outline: none;
@@ -400,7 +390,6 @@
   transform: translateX(4px);
 }
 
-/* Skeleton Loader */
 .skeleton-loader {
   width: 100%;
   display: flex;
@@ -436,4 +425,19 @@
 @keyframes pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

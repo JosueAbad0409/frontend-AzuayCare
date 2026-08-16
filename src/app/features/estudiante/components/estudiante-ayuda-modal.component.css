@@ -1,0 +1,180 @@
+.ayuda-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.ayuda-modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 88vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.ayuda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+
+.ayuda-header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #0f172a;
+}
+
+.btn-cerrar {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.ayuda-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.tab-btn.activo {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+.ayuda-contenido {
+  padding: 20px;
+  min-height: 200px;
+}
+
+.perfil-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.perfil-card h3 {
+  margin: 8px 0 2px;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.cargo {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.mensaje {
+  font-size: 0.85rem;
+  color: #334155;
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin: 0 0 10px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.badge-institucional {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.badge-carrera {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.datos-contacto {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.estado-mensaje {
+  text-align: center;
+  color: #64748b;
+  padding: 24px 0;
+}
+
+.btn-reintentar {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.skeleton-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f1f5f9 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.2s ease-in-out infinite;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-avatar {
+  width: 40%;
+  height: 20px;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

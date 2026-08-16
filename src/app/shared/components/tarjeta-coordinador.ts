@@ -9,24 +9,66 @@ import { PerfilCoordinador } from '../../core/models/perfil-coordinador.model';
   imports: [CommonModule],
   template: `
     @if (perfil()) {
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-sm my-4 text-slate-200">
-        <div class="flex items-center gap-3 mb-2">
-          <i class="fas fa-user-tie text-emerald-400 text-xl"></i>
-          <h3 class="text-md font-bold text-emerald-300 m-0">{{ perfil()?.tituloProfesional || perfil()?.['titulo_profesional'] }}</h3>
-        </div>
-        <div class="text-sm text-slate-300 space-y-1 pl-8">
-          <p class="m-0"><strong>📍 Oficina:</strong> {{ perfil()?.ubicacionOficina || perfil()?.['ubicacion_oficina'] }}</p>
-          <p class="m-0"><strong>🕒 Horarios:</strong> {{ perfil()?.horarioAtencion || perfil()?.['horario_atencion'] }}</p>
-          <p class="m-0"><strong>📞 Contacto:</strong> {{ perfil()?.telefonoContacto || perfil()?.['telefono_contacto'] }}</p>
+      <article class="surface-card">
+        <header class="card-header">
+          <i class="fas fa-user-tie text-accent"></i>
+          <h3 class="card-title">{{ perfil()?.tituloProfesional || perfil()?.['titulo_profesional'] }}</h3>
+        </header>
+        <div class="card-details">
+          <p><strong>📍 Oficina:</strong> {{ perfil()?.ubicacionOficina || perfil()?.['ubicacion_oficina'] }}</p>
+          <p><strong>🕒 Horarios:</strong> {{ perfil()?.horarioAtencion || perfil()?.['horario_atencion'] }}</p>
+          <p><strong>📞 Contacto:</strong> {{ perfil()?.telefonoContacto || perfil()?.['telefono_contacto'] }}</p>
         </div>
         @if (perfil()?.mensajeAyuda || perfil()?.['mensaje_ayuda_estudiantes']) {
-          <div class="mt-3 p-3 bg-slate-900/90 rounded-lg border border-slate-700 text-xs text-emerald-200 italic">
+          <div class="card-message">
             "{{ perfil()?.mensajeAyuda || perfil()?.['mensaje_ayuda_estudiantes'] }}"
           </div>
         }
-      </div>
+      </article>
     }
-  `
+  `,
+  styles: [`
+    .surface-card {
+      margin: 1rem 0;
+      padding: 1.25rem;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .text-accent {
+      color: var(--accent-purple);
+      font-size: 1.25rem;
+    }
+    .card-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+    .card-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    .card-details p {
+      margin: 0;
+    }
+    .card-message {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: var(--surface-1);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+  `]
 })
 export class TarjetaCoordinador implements OnInit {
   @Input({ required: true }) coordinadorUsuarioId!: string;
@@ -38,7 +80,7 @@ export class TarjetaCoordinador implements OnInit {
     if (this.coordinadorUsuarioId) {
       this.perfilService.getPerfilByUsuario(this.coordinadorUsuarioId).subscribe({
         next: (data) => this.perfil.set(data),
-        error: (err) => console.error('Error al cargar información del coordinador:', err)
+        error: (err) => console.error(err)
       });
     }
   }

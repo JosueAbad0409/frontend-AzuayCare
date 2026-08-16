@@ -1,12 +1,8 @@
 <main class="perfil-layout">
   <div class="perfil-container">
-    
-    <!-- HEADER TIPO "HERO PROFILE" CENTRADO -->
     <header class="hero-profile">
-      <!-- Portada (Cover) -->
       <div class="hero-cover"></div>
       
-      <!-- Contenido del perfil centrado -->
       <div class="hero-body">
         <div class="avatar-wrapper">
           @if (fotoUrl()) {
@@ -18,18 +14,19 @@
           <button 
             type="button" 
             class="avatar-edit-btn" 
+            [class.is-loading]="subiendoFoto()"
             (click)="abrirSelectorFoto()"
             [disabled]="subiendoFoto()" 
             aria-label="Cambiar foto de perfil"
             title="Cambiar foto de perfil"
           >
-            @if (subiendoFoto()) {
-              <span class="spinner-icon" aria-hidden="true"></span>
-            } @else {
+            @if (!subiendoFoto()) {
               <svg class="icon-camera" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
               </svg>
+            } @else {
+              <i class="fas fa-spinner fa-spin icon-camera" aria-hidden="true"></i>
             }
           </button>
           <input #fotoInput type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" (change)="onFotoSeleccionada($event)" />
@@ -57,10 +54,7 @@
       </div>
     }
 
-    <!-- STACK DE TARJETAS (1 Sola Columna Centrada) -->
     <section class="cards-stack">
-
-      <!-- 1. Tarjeta: Información de Cuenta -->
       <article class="perfil-card">
         <header class="card-header">
           <div class="header-title">
@@ -89,7 +83,6 @@
         </div>
       </article>
 
-      <!-- 2. Tarjeta: Información Académica (Estudiantes/Invitados) -->
       @if (esEstudianteOInvitado()) {
         <article class="perfil-card">
           <header class="card-header">
@@ -136,7 +129,6 @@
         </article>
       }
 
-      <!-- 3. Tarjeta: Gestión de Coordinación -->
       @if (esCoordinador()) {
         <article class="perfil-card">
           <header class="card-header header-with-action">
@@ -151,7 +143,7 @@
             @if (!cargandoPerfilCoordinador()) {
               <button 
                 type="button" 
-                class="btn-outline-small" 
+                class="btn btn-outline-small" 
                 (click)="toggleEdicionCoordinador()"
                 [attr.aria-expanded]="modoEdicionCoordinador()"
               >
@@ -172,7 +164,6 @@
             </div>
           } @else {
             
-            <!-- VISTA DE LECTURA PREMIUM -->
             @if (!modoEdicionCoordinador()) {
               <div class="coordinator-view-grid">
                 <div class="data-block">
@@ -182,6 +173,10 @@
                 <div class="data-block">
                   <span class="info-label">Teléfono de contacto</span>
                   <span class="info-value">{{ coordinadorForm.get('telefono_contacto')?.value || 'No especificado' }}</span>
+                </div>
+                <div class="data-block">
+                  <span class="info-label">Correo de contacto</span>
+                  <span class="info-value">{{ coordinadorForm.get('correo_contacto')?.value || 'No especificado' }}</span>
                 </div>
                 <div class="data-block">
                   <span class="info-label">Ubicación de oficina</span>
@@ -204,33 +199,104 @@
                 </div>
               }
 
-            <!-- FORMULARIO DE EDICIÓN -->
             } @else {
-              <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador()" class="coordinator-form" novalidate>
+              <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador($event)" class="coordinator-form" novalidate>
                 <div class="form-grid">
                   <div class="form-field">
                     <label for="titulo">Título profesional</label>
-                    <input id="titulo" type="text" formControlName="titulo_profesional" class="input-control" placeholder="Ej. Mg. Psicología Educativa" />
+                    <input 
+                      id="titulo" 
+                      type="text" 
+                      formControlName="titulo_profesional" 
+                      class="form-control" 
+                      [class.is-error]="coordinadorForm.get('titulo_profesional')?.invalid && coordinadorForm.get('titulo_profesional')?.touched"
+                      [class.is-success]="coordinadorForm.get('titulo_profesional')?.valid && coordinadorForm.get('titulo_profesional')?.touched"
+                      placeholder="Ej. Mg. Psicología Educativa" 
+                    />
+                    @if (coordinadorForm.get('titulo_profesional')?.invalid && coordinadorForm.get('titulo_profesional')?.touched) {
+                      <span class="form-error-text">Este campo es requerido.</span>
+                    }
                   </div>
 
                   <div class="form-field">
                     <label for="telefono">Teléfono de contacto</label>
-                    <input id="telefono" type="tel" formControlName="telefono_contacto" class="input-control" placeholder="Ej. 0987654321" />
+                    <input 
+                      id="telefono" 
+                      type="tel" 
+                      formControlName="telefono_contacto" 
+                      class="form-control" 
+                      [class.is-error]="coordinadorForm.get('telefono_contacto')?.invalid && coordinadorForm.get('telefono_contacto')?.touched"
+                      [class.is-success]="coordinadorForm.get('telefono_contacto')?.valid && coordinadorForm.get('telefono_contacto')?.touched"
+                      placeholder="Ej. 0987654321" 
+                    />
+                    @if (coordinadorForm.get('telefono_contacto')?.hasError('required') && coordinadorForm.get('telefono_contacto')?.touched) {
+                      <span class="form-error-text">Este campo es requerido.</span>
+                    }
+                    @if (coordinadorForm.get('telefono_contacto')?.hasError('pattern') && coordinadorForm.get('telefono_contacto')?.touched) {
+                      <span class="form-error-text">Ingrese un número telefónico válido.</span>
+                    }
+                  </div>
+
+                  <div class="form-field">
+                    <label for="correo">Correo de contacto</label>
+                    <input 
+                      id="correo" 
+                      type="email" 
+                      formControlName="correo_contacto" 
+                      class="form-control" 
+                      [class.is-error]="coordinadorForm.get('correo_contacto')?.invalid && coordinadorForm.get('correo_contacto')?.touched"
+                      [class.is-success]="coordinadorForm.get('correo_contacto')?.valid && coordinadorForm.get('correo_contacto')?.touched"
+                      placeholder="Ej. bienestar@tecazuay.edu.ec" 
+                    />
+                    @if (coordinadorForm.get('correo_contacto')?.hasError('required') && coordinadorForm.get('correo_contacto')?.touched) {
+                      <span class="form-error-text">Este campo es requerido.</span>
+                    }
+                    @if (coordinadorForm.get('correo_contacto')?.hasError('email') && coordinadorForm.get('correo_contacto')?.touched) {
+                      <span class="form-error-text">Ingresa un correo válido.</span>
+                    }
                   </div>
 
                   <div class="form-field full-row">
                     <label for="ubicacion">Ubicación de oficina</label>
-                    <input id="ubicacion" type="text" formControlName="ubicacion_oficina" class="input-control" placeholder="Ej. Bloque A - Oficina 102" />
+                    <input 
+                      id="ubicacion" 
+                      type="text" 
+                      formControlName="ubicacion_oficina" 
+                      class="form-control" 
+                      [class.is-error]="coordinadorForm.get('ubicacion_oficina')?.invalid && coordinadorForm.get('ubicacion_oficina')?.touched"
+                      [class.is-success]="coordinadorForm.get('ubicacion_oficina')?.valid && coordinadorForm.get('ubicacion_oficina')?.touched"
+                      placeholder="Ej. Bloque A - Oficina 102" 
+                    />
+                    @if (coordinadorForm.get('ubicacion_oficina')?.invalid && coordinadorForm.get('ubicacion_oficina')?.touched) {
+                      <span class="form-error-text">Este campo es requerido.</span>
+                    }
                   </div>
 
                   <div class="form-field full-row">
                     <label for="horario">Horario de atención al estudiante</label>
-                    <input id="horario" type="text" formControlName="horario_atencion" class="input-control" placeholder="Ej. Lunes a Viernes, 08h00 - 16h00" />
+                    <input 
+                      id="horario" 
+                      type="text" 
+                      formControlName="horario_atencion" 
+                      class="form-control" 
+                      [class.is-error]="coordinadorForm.get('horario_atencion')?.invalid && coordinadorForm.get('horario_atencion')?.touched"
+                      [class.is-success]="coordinadorForm.get('horario_atencion')?.valid && coordinadorForm.get('horario_atencion')?.touched"
+                      placeholder="Ej. Lunes a Viernes, 08h00 - 16h00" 
+                    />
+                    @if (coordinadorForm.get('horario_atencion')?.invalid && coordinadorForm.get('horario_atencion')?.touched) {
+                      <span class="form-error-text">Este campo es requerido.</span>
+                    }
                   </div>
 
                   <div class="form-field full-row">
                     <label for="mensaje">Mensaje institucional para estudiantes</label>
-                    <textarea id="mensaje" rows="4" formControlName="mensaje_ayuda_estudiantes" class="input-control textarea-control" placeholder="Escribe un mensaje de orientación o bienvenida para los estudiantes..."></textarea>
+                    <textarea 
+                      id="mensaje" 
+                      rows="4" 
+                      formControlName="mensaje_ayuda_estudiantes" 
+                      class="form-control textarea-control" 
+                      placeholder="Escribe un mensaje de orientación o bienvenida para los estudiantes..."
+                    ></textarea>
                   </div>
                 </div>
 
@@ -241,10 +307,15 @@
                 }
 
                 <div class="form-actions">
-                  <button type="button" class="btn-secondary" (click)="toggleEdicionCoordinador()">Cancelar</button>
-                  <button type="submit" class="btn-primary" [disabled]="guardandoCoordinador()">
+                  <button type="button" class="btn btn-secondary" (click)="toggleEdicionCoordinador()">Cancelar</button>
+                  <button 
+                    type="submit" 
+                    class="btn btn-primary" 
+                    [disabled]="guardandoCoordinador()"
+                    [class.is-loading]="guardandoCoordinador()"
+                  >
                     @if (guardandoCoordinador()) {
-                      <span class="spinner-small white" aria-hidden="true"></span>
+                      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
                       <span>Guardando...</span>
                     } @else {
                       <span>Guardar perfil</span>

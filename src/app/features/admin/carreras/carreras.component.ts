@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { Subject, Subscription, debounceTime, finalize } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { Carrera } from '../../../core/models/carrera.model';
@@ -16,48 +16,107 @@ import { ToastService } from '../../../core/services/toast.service';
   styleUrls: ['./carreras.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CarrerasComponent implements OnInit {
+export class CarrerasComponent implements OnInit, OnDestroy {
   private readonly carreraService = inject(CarreraService);
   private readonly toastService = inject(ToastService);
-  
-  // Estado base
+
   readonly carreras = signal<Carrera[]>([]);
   readonly isLoading = signal<boolean>(true);
-  
-  // Filtros
-  readonly searchTerm = signal<string>('');
-  readonly filtroEstado = signal<string>('TODOS');
+  readonly isSaving = signal<boolean>(false);
 
-  // Filtro Reactivo Multicriterio
+  readonly filterSearch = signal<string>('');
+  readonly filterCorreo = signal<string>('');
+  readonly filterEstado = signal<string>('TODOS');
+
+  private readonly searchSubject = new Subject<string>();
+  private readonly correoSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+  private correoSubscription?: Subscription;
+
+  readonly dominiosSugeridos = computed(() => {
+    const correos = this.carreras().map(c => c.correo_institucional).filter(Boolean);
+    const dominios = new Set<string>();
+    correos.forEach(email => {
+      const partes = email.split('@');
+      if (partes.length > 1) {
+        dominios.add('@' + partes[1]);
+      }
+    });
+    return Array.from(dominios);
+  });
+
   readonly carrerasFiltradas = computed(() => {
-    const term = this.searchTerm().toLowerCase().trim();
-    const estado = this.filtroEstado();
+    const term = this.filterSearch().toLowerCase().trim();
+    const correoTerm = this.filterCorreo().toLowerCase().trim();
+    const estado = this.filterEstado();
 
     return this.carreras().filter(c => {
       const coincideTexto = !term || 
         c.nombre.toLowerCase().includes(term) || 
         c.correo_institucional.toLowerCase().includes(term);
 
+      const coincideCorreo = !correoTerm || 
+        c.correo_institucional.toLowerCase().includes(correoTerm);
+
       let coincideEstado = true;
       if (estado === 'ACTIVA') coincideEstado = !c.fecha_desactivacion;
       else if (estado === 'INACTIVA') coincideEstado = !!c.fecha_desactivacion;
 
-      return coincideTexto && coincideEstado;
+      return coincideTexto && coincideCorreo && coincideEstado;
     });
   });
 
+  readonly totalCasos = computed(() => this.carrerasFiltradas().length);
+
+  readonly tieneFiltrosActivos = computed(() => {
+    return !!this.filterSearch() || !!this.filterCorreo() || this.filterEstado() !== 'TODOS';
+  });
+
   ngOnInit(): void {
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => this.filterSearch.set(val));
+
+    this.correoSubscription = this.correoSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => this.filterCorreo.set(val));
+
     this.cargarCarreras();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
+    this.correoSubscription?.unsubscribe();
   }
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchTerm.set(value);
+    this.searchSubject.next(value);
+  }
+
+  onCorreoSearchChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.correoSubject.next(value);
+  }
+
+  onCorreoSelectChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filterCorreo.set(value);
+  }
+
+  limpiarFiltroCorreo(): void {
+    this.filterCorreo.set('');
   }
 
   onEstadoChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    this.filtroEstado.set(value);
+    this.filterEstado.set(value);
+  }
+
+  limpiarFiltros(): void {
+    this.filterSearch.set('');
+    this.filterCorreo.set('');
+    this.filterEstado.set('TODOS');
   }
 
   cargarCarreras(): void {
@@ -74,33 +133,43 @@ export class CarrerasComponent implements OnInit {
   }
 
   abrirFormularioSwal(carrera?: Carrera): void {
+    if (this.isSaving()) return;
+
     const isEditing = !!carrera;
     const titleText = isEditing ? 'Editar Carrera' : 'Registrar Nueva Carrera';
-    const confirmText = isEditing ? 'Actualizar' : 'Guardar Carrera';
 
     Swal.fire({
-      title: titleText,
+      title: `<div class="swal-header-banner"><i class="fas fa-graduation-cap"></i><span>${titleText}</span></div>`,
       html: `
-        <div style="text-align: left; padding-top: 10px;">
-          <div style="margin-bottom: 1.25rem;">
-            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Nombre de la Carrera *</label>
-            <input id="swal-nombre" class="swal2-input" placeholder="Ej. Desarrollo de Software" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? carrera.nombre : ''}">
+        <div class="swal-form-card">
+          <div class="swal-form-group">
+            <label for="swal-nombre" class="swal-form-label">Nombre de la Carrera *</label>
+            <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Desarrollo de Software" value="${isEditing ? carrera.nombre : ''}">
           </div>
-          <div>
-            <label for="swal-correo" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Correo Institucional *</label>
-            <input id="swal-correo" type="email" class="swal2-input" placeholder="ejemplo@tecazuay.edu.ec" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? carrera.correo_institucional : ''}">
+          <div class="swal-form-group">
+            <label for="swal-correo" class="swal-form-label">Correo Institucional *</label>
+            <input id="swal-correo" type="email" class="swal-input-styled" placeholder="ejemplo@tecazuay.edu.ec" value="${isEditing ? carrera.correo_institucional : ''}">
           </div>
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: confirmText,
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6', // var(--primary-color)
-      cancelButtonColor: '#64748b',  // var(--text-muted)
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: isEditing 
+        ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>' 
+        : '<i class="fas fa-floppy-disk" aria-hidden="true"></i> <span>Guardar Carrera</span>',
+      cancelButtonText: '<i class="fas fa-xmark" aria-hidden="true"></i> <span>Cancelar</span>',
       preConfirm: () => {
-        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
-        const correo = (document.getElementById('swal-correo') as HTMLInputElement).value.trim();
+        const nombreEl = document.getElementById('swal-nombre') as HTMLInputElement;
+        const correoEl = document.getElementById('swal-correo') as HTMLInputElement;
+
+        const nombre = nombreEl ? nombreEl.value.trim() : '';
+        const correo = correoEl ? correoEl.value.trim() : '';
 
         if (!nombre) {
           Swal.showValidationMessage('El nombre es obligatorio.');
@@ -126,7 +195,9 @@ export class CarrerasComponent implements OnInit {
   }
 
   guardarCarreraEnDb(formData: any, id: string | null): void {
-    // Alerta de carga mientras se guarda
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+
     Swal.fire({
       title: 'Guardando...',
       text: 'Por favor, espera un momento.',
@@ -142,7 +213,7 @@ export class CarrerasComponent implements OnInit {
 
     peticion$.subscribe({
       next: () => {
-        // Cierra el Swal de carga e informa éxito usando el toast original
+        this.isSaving.set(false);
         Swal.close();
         this.toastService.show(
           id ? 'Carrera actualizada correctamente.' : 'Carrera registrada correctamente.',
@@ -151,35 +222,49 @@ export class CarrerasComponent implements OnInit {
         this.cargarCarreras();
       },
       error: (err: HttpErrorResponse) => {
+        this.isSaving.set(false);
         console.error('Error al guardar carrera:', err);
         Swal.fire({
           icon: 'error',
           title: 'Error',
           text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
-          confirmButtonColor: '#8b5cf6'
+          customClass: {
+            popup: 'custom-swal-popup',
+            confirmButton: 'custom-swal-confirm custom-swal-danger'
+          },
+          buttonsStyling: false
         });
       }
     });
   }
 
   eliminarCarrera(id: string): void {
+    if (this.isSaving()) return;
+
     Swal.fire({
       title: '¿Estás seguro?',
       text: '¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm custom-swal-danger',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, eliminar</span>',
+      cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>'
     }).then((result) => {
       if (result.isConfirmed) {
+        this.isSaving.set(true);
         this.carreraService.deleteCarrera(id).subscribe({
           next: () => {
+            this.isSaving.set(false);
             this.toastService.show('Carrera eliminada con éxito.', 'info');
             this.cargarCarreras();
           },
           error: (err: HttpErrorResponse) => {
+            this.isSaving.set(false);
             console.error('Error al eliminar carrera:', err);
             this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
           }

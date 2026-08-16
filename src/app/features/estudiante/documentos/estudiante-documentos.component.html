@@ -1,6 +1,4 @@
 <main class="docs-container animate-fade-in">
-
-  <!-- Header -->
   <header class="docs-header">
     <div class="docs-header-content">
       <h1 class="docs-title">
@@ -13,16 +11,16 @@
     </div>
   </header>
 
-  <!-- Dropzone -->
   <section
     class="dropzone"
     [class.dropzone--drag-over]="isDragging()"
+    [class.dropzone--disabled]="isUploading()"
     tabindex="0"
     role="region"
     aria-label="Zona para subir archivos. Haz clic o arrastra un archivo aquí"
-    (click)="fileInput.click()"
-    (keydown.enter)="fileInput.click()"
-    (keydown.space)="$event.preventDefault(); fileInput.click()"
+    (click)="!isUploading() && fileInput.click()"
+    (keydown.enter)="!isUploading() && fileInput.click()"
+    (keydown.space)="$event.preventDefault(); !isUploading() && fileInput.click()"
     (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)"
     (drop)="onDrop($event)">
@@ -34,19 +32,21 @@
       accept=".pdf,.png,.jpg,.jpeg"
       class="sr-only"
       tabindex="-1"
+      [disabled]="isUploading()"
       aria-hidden="true" />
 
     <div class="dropzone-icon" aria-hidden="true">
-      <i class="fas fa-cloud-upload-alt"></i>
+      <i class="fas" [ngClass]="isUploading() ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'"></i>
     </div>
 
     <div class="dropzone-text">
-      <h2 class="dropzone-title">Haz clic o arrastra un archivo aquí</h2>
+      <h2 class="dropzone-title">
+        {{ isUploading() ? 'Subiendo archivo al servidor...' : 'Haz clic o arrastra un archivo aquí' }}
+      </h2>
       <p class="dropzone-hint">Formatos soportados: PDF, JPG, PNG (Máx. 10MB)</p>
     </div>
   </section>
 
-  <!-- Galería -->
   <section class="gallery" aria-labelledby="gallery-heading">
     <header class="gallery-header">
       <h2 id="gallery-heading" class="gallery-title">
@@ -123,7 +123,6 @@
   </section>
 </main>
 
-<!-- Modal de Previsualización sin opacar fondo -->
 @if (docPreview()) {
   <div class="modal-backdrop modal-backdrop--preview" role="presentation">
     <div
@@ -193,7 +192,6 @@
   </div>
 }
 
-<!-- Modal de Eliminación sin opacar fondo -->
 @if (docAEliminar()) {
   <div class="modal-backdrop modal-backdrop--alert" role="presentation">
     <div
@@ -210,7 +208,7 @@
       aria-describedby="alert-desc">
 
       <div class="alert-icon" aria-hidden="true">
-        <i class="fas fa-trash-alt"></i>
+        <i class="fas" [ngClass]="isDeleting() ? 'fa-spinner fa-spin' : 'fa-trash-alt'"></i>
       </div>
 
       <h2 id="alert-title" class="alert-title">¿Estás seguro?</h2>
@@ -219,11 +217,16 @@
       </p>
 
       <footer class="alert-actions">
-        <button type="button" class="btn btn--secondary" (click)="cancelarEliminacion()">
+        <button type="button" class="btn btn--secondary" [disabled]="isDeleting()" (click)="cancelarEliminacion()">
           Cancelar
         </button>
-        <button type="button" class="btn btn--danger" (click)="confirmarEliminacion()">
-          Sí, eliminar
+        <button type="button" class="btn btn--danger" [disabled]="isDeleting()" (click)="confirmarEliminacion()">
+          @if (isDeleting()) {
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            <span>Eliminando...</span>
+          } @else {
+            <span>Sí, eliminar</span>
+          }
         </button>
       </footer>
     </dialog>

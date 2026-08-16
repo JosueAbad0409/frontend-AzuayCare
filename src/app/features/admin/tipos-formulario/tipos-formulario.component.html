@@ -5,56 +5,115 @@
       <p class="subtitle">Administra las categorías de fichas disponibles. Cada tipo puede tener un solo formulario activo por periodo.</p>
     </div>
 
-    <button type="button" class="btn btn-purple" (click)="abrirFormularioSwal()">
-      <i class="fas fa-plus" aria-hidden="true"></i> Nuevo Tipo de Formulario
+    <button 
+      type="button" 
+      class="btn btn-purple" 
+      (click)="abrirFormularioSwal()"
+      [disabled]="isSaving()"
+    >
+      <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-plus'" aria-hidden="true"></i>
+      <span>{{ isSaving() ? 'Procesando...' : 'Nuevo Tipo de Formulario' }}</span>
     </button>
   </div>
 
-  <div class="search-bar-wrapper">
-    <div class="search-input-box">
-      <i class="fas fa-search search-icon" aria-hidden="true"></i>
-      <input 
-        type="text" 
-        class="search-control" 
-        placeholder="Buscar tipo de formulario..." 
-        [value]="searchTerm()"
-        (input)="onSearchChange($event)"
-      >
+  @if (!loading()) {
+    <div class="search-bar-wrapper">
+      <div class="count-badge" role="status" aria-live="polite">
+        <i class="fas fa-shapes title-icon" aria-hidden="true"></i>
+        <span>Resultados: <strong>{{ tiposFiltrados().length }} tipo(s)</strong></span>
+      </div>
+
+      @if (tieneFiltrosActivos()) {
+        <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
+          <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+          <span>Limpiar Filtros</span>
+        </button>
+      }
     </div>
-    <span class="count-badge">{{ tiposFiltrados().length }} tipo(s)</span>
-  </div>
+  }
 
   @if (loading()) {
-    <div class="loading-state">
-      <i class="fas fa-circle-notch fa-spin spinner-icon" aria-hidden="true"></i>
-      <p>Cargando tipos de formulario...</p>
+    <div class="table-container">
+      <div class="skeleton-wrapper">
+        <div class="skeleton-row skeleton-header"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+      </div>
     </div>
   } @else {
     <div class="table-container">
       <table class="admin-table">
         <thead>
-          <tr>
-            <th scope="col">Tipo</th>
-            <th scope="col">Descripción</th>
-            <th scope="col" class="text-right">Acciones</th>
+          <tr class="header-titles">
+            <th scope="col" class="col-tipo">Tipo de Formulario</th>
+            <th scope="col" class="col-desc">Descripción</th>
+            <th scope="col" class="col-acc text-right">Acciones</th>
+          </tr>
+          <tr class="header-filters">
+            <th class="col-tipo">
+              <div class="filter-input-wrap">
+                <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  class="table-column-input" 
+                  placeholder="Filtrar por tipo..." 
+                  [value]="filterNombre()"
+                  (input)="onColumnFilterInput('nombre', $event)" 
+                  aria-label="Filtrar por Tipo de Formulario"
+                />
+              </div>
+            </th>
+            <th class="col-desc">
+              <div class="filter-input-wrap">
+                <i class="fas fa-align-left search-micro-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  class="table-column-input" 
+                  placeholder="Filtrar descripción..." 
+                  [value]="filterDescripcion()"
+                  (input)="onColumnFilterInput('descripcion', $event)" 
+                  aria-label="Filtrar por Descripción"
+                />
+              </div>
+            </th>
+            <th class="col-acc text-right"></th>
           </tr>
         </thead>
         <tbody>
           @for (tipo of tiposFiltrados(); track tipo.id) {
             <tr>
-              <td>
+              <td class="col-tipo" data-label="Tipo de Formulario">
                 <span class="tipo-chip" [style.background]="(tipo.color || '#8b5cf6') + '1A'" [style.color]="tipo.color || '#8b5cf6'">
                   <i class="fas" [ngClass]="tipo.icono || 'fa-file-alt'" aria-hidden="true"></i>
                   <strong>{{ tipo.nombre }}</strong>
                 </span>
               </td>
-              <td><small class="text-muted">{{ tipo.descripcion || 'Sin descripción' }}</small></td>
-              <td class="text-right">
+              <td class="col-desc text-ellipsis" data-label="Descripción">
+                <span class="text-muted" [title]="tipo.descripcion || 'Sin descripción'">
+                  {{ tipo.descripcion || 'Sin descripción' }}
+                </span>
+              </td>
+              <td class="col-acc text-right" data-label="Acciones">
                 <div class="actions-cell">
-                  <button type="button" class="btn-icon text-blue" (click)="abrirFormularioSwal(tipo)" title="Editar">
+                  <button 
+                    type="button" 
+                    class="btn-icon text-blue" 
+                    (click)="abrirFormularioSwal(tipo)" 
+                    [disabled]="isSaving()"
+                    title="Editar Registro"
+                    [attr.aria-label]="'Editar tipo ' + tipo.nombre"
+                  >
                     <i class="fas fa-edit" aria-hidden="true"></i>
                   </button>
-                  <button type="button" class="btn-icon text-red" (click)="eliminarTipo(tipo.id)" title="Desactivar">
+                  <button 
+                    type="button" 
+                    class="btn-icon text-red" 
+                    (click)="eliminarTipo(tipo.id)" 
+                    [disabled]="isSaving()"
+                    title="Desactivar Registro"
+                    [attr.aria-label]="'Desactivar tipo ' + tipo.nombre"
+                  >
                     <i class="fas fa-trash-alt" aria-hidden="true"></i>
                   </button>
                 </div>
@@ -64,7 +123,13 @@
             <tr>
               <td colspan="3" class="empty-state">
                 <i class="fas fa-shapes empty-icon" aria-hidden="true"></i>
-                <p>No hay tipos de formulario registrados. Crea el primero (ej. "Ficha Socioeconómica").</p>
+                <p class="empty-title">No se encontraron tipos de formulario</p>
+                <p class="empty-desc">Ajusta los términos de búsqueda o registra una nueva categoría.</p>
+                @if (tieneFiltrosActivos()) {
+                  <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                    <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                  </button>
+                }
               </td>
             </tr>
           }

@@ -4,10 +4,11 @@ import {
   OnDestroy,
   inject,
   signal,
-  computed, // <-- ¡Importamos computed!
+  computed,
   ElementRef,
   ViewChild,
-  ChangeDetectorRef
+  ChangeDetectorRef,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -34,6 +35,7 @@ interface CondicionCount {
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly reportesService = inject(ReportesService);
@@ -41,43 +43,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly cdRef = inject(ChangeDetectorRef);
   private readonly revisionService = inject(RevisionService);
 
-  // KPIs
-  totalCarreras = signal(0);
-  totalFormularios = signal(0);
-  totalFichas = signal(0);
-  totalFichasEvaluadas = signal(0);
-  fichasBorrador = signal(0);
-  fichasEnviadas = signal(0);
-  fichasValidadas = signal(0);
-  fichasRechazadas = signal(0);
+  readonly totalCarreras = signal<number>(0);
+  readonly totalFormularios = signal<number>(0);
+  readonly totalFichas = signal<number>(0);
+  readonly totalFichasEvaluadas = signal<number>(0);
+  readonly fichasBorrador = signal<number>(0);
+  readonly fichasEnviadas = signal<number>(0);
+  readonly fichasValidadas = signal<number>(0);
+  readonly fichasRechazadas = signal<number>(0);
 
-  // NEE / Vulnerabilidad
-  totalNee = signal(0);
-  totalConRiesgo = signal(0);
-  condiciones = signal<CondicionCount[]>([]);
-  periodoActivo = signal<PeriodoMatricula | null>(null);
-  isLoading = signal(true);
+  readonly totalNee = signal<number>(0);
+  readonly totalConRiesgo = signal<number>(0);
+  readonly condiciones = signal<CondicionCount[]>([]);
+  readonly periodoActivo = signal<PeriodoMatricula | null>(null);
+  readonly isLoading = signal<boolean>(true);
 
-  // Datos Gráficos Originales
-  carrerasLabels = signal<string[]>([]);
-  carrerasEnviadas = signal<number[]>([]);
-  carrerasValidadas = signal<number[]>([]);
-  economiaLabels = signal<string[]>([]);
-  economiaData = signal<number[]>([]);
+  readonly carrerasLabels = signal<string[]>([]);
+  readonly carrerasEnviadas = signal<number[]>([]);
+  readonly carrerasValidadas = signal<number[]>([]);
+  readonly economiaLabels = signal<string[]>([]);
+  readonly economiaData = signal<number[]>([]);
 
-  // Memoria de fichas
-  todasLasFichas = signal<any[]>([]);
-  tipoGraficoCarrera = signal<string>('bar');
-  tipoGraficoEstado = signal<string>('doughnut');
+  readonly todasLasFichas = signal<any[]>([]);
+  readonly tipoGraficoCarrera = signal<string>('bar');
+  readonly tipoGraficoEstado = signal<string>('doughnut');
 
-  // --- KPI DINÁMICO CON SIGNALS COMPUTADOS ---
-  ingresoMin = signal<number | null>(null);
-  ingresoMax = signal<number | null>(null);
-  egresoMin = signal<number | null>(null);
-  egresoMax = signal<number | null>(null);
+  readonly ingresoMin = signal<number | null>(null);
+  readonly ingresoMax = signal<number | null>(null);
+  readonly egresoMin = signal<number | null>(null);
+  readonly egresoMax = signal<number | null>(null);
 
-  // La magia de Angular: Esto se recalcula SOLO sin necesidad de llamar funciones
-  estudiantesFiltrados = computed(() => {
+  readonly estudiantesFiltrados = computed(() => {
     const minIng = this.ingresoMin() ?? -Infinity;
     const maxIng = this.ingresoMax() ?? Infinity;
     const minEgr = this.egresoMin() ?? -Infinity;
@@ -90,7 +86,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }).length;
   });
 
-  // Referencias Canvas
   @ViewChild('estadoChartCanvas', { static: false }) estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('economiaChartCanvas', { static: false }) economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('carreraChartCanvas', { static: false }) carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
@@ -100,7 +95,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cargarTodo();
-    // Configuración global de fuentes para Chart.js
     Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
     Chart.defaults.color = '#64748b';
   }
@@ -147,7 +141,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           error: () => this.finalizarCarga()
         });
       },
-      error: (err) => { console.error('Error dashboard:', err); this.isLoading.set(false); }
+      error: (err) => {
+        console.error('Error dashboard:', err);
+        this.isLoading.set(false);
+        this.cdRef.markForCheck();
+      }
     });
   }
 
@@ -159,17 +157,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   cambiarTipoGrafico(grafico: string, nuevoTipo: string): void {
-  if (grafico === 'carrera') {
-    this.tipoGraficoCarrera.set(nuevoTipo);
-    this.charts.carrera?.destroy();
-    this.dibujarGraficoCarrera();
-  } else if (grafico === 'estado') {
-    this.tipoGraficoEstado.set(nuevoTipo);
-    this.charts.estado?.destroy();
-    this.dibujarGraficoEstado();
+    if (grafico === 'carrera') {
+      this.tipoGraficoCarrera.set(nuevoTipo);
+      this.charts.carrera?.destroy();
+      this.dibujarGraficoCarrera();
+    } else if (grafico === 'estado') {
+      this.tipoGraficoEstado.set(nuevoTipo);
+      this.charts.estado?.destroy();
+      this.dibujarGraficoEstado();
+    }
   }
-}
-
 
   private calcularNivelesEconomicos(lista: any[]): void {
     const utiles = lista.filter(f => ['ENVIADA', 'ENVIADO', 'VALIDADO', 'RECHAZADO', 'RECHAZADA'].includes(String(f.estado_ficha || '').toUpperCase()));
@@ -223,11 +220,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private finalizarCarga(): void {
     this.isLoading.set(false);
-    this.cdRef.detectChanges();
+    this.cdRef.markForCheck();
     setTimeout(() => { this.dibujarTodosLosGraficos(); }, 150);
   }
 
-  // --- ARQUITECTURA MODULAR DE GRÁFICOS ---
   private dibujarTodosLosGraficos(): void {
     this.destruirGraficos();
     this.dibujarGraficoEstado();
@@ -283,12 +279,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const tipo = this.tipoGraficoCarrera() as any;
     const esCircular = tipo === 'pie' || tipo === 'doughnut';
 
-    // Paleta de colores para que el pastel no se vea todo morado
     const coloresPastel = [
       '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
       '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a855f7',
       '#06b6d4', '#f97316', '#64748b', '#d946ef', '#059669',
-      '#fbbf24', '#f87171', '#34d399', '#818cf8' // Añadí más colores por si acaso
+      '#fbbf24', '#f87171', '#34d399', '#818cf8'
     ];
 
     this.charts.carrera = new Chart(ctx, {
@@ -304,13 +299,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             borderColor: '#ffffff'
           }
         ] : [
-          // Quité el 'barThickness' fijo para que el grosor se autoajuste a las 19 carreras
           { label: 'Enviadas', data: tiene ? this.carrerasEnviadas() : [0], backgroundColor: '#8b5cf6', borderRadius: 4 },
           { label: 'Validadas', data: tiene ? this.carrerasValidadas() : [0], backgroundColor: '#10b981', borderRadius: 4 }
         ]
       },
       options: {
-        // Al quitar indexAxis: 'y', las barras vuelven a ser verticales por defecto
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -338,12 +331,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           x: { display: false },
           y: { display: false }
         } : {
-          // EJE X (ABAJO): Ahora tiene las etiquetas de las carreras
           x: { 
             grid: { display: false },
             ticks: {
               font: { size: 10, weight: 600 },
-              maxRotation: 45, // Inclina el texto 45 grados para que no choquen
+              maxRotation: 45,
               minRotation: 45,
               callback: function(this: any, value: any) {
                 const label = this.getLabelForValue(value as number) || '';
@@ -351,7 +343,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
               }
             }
           },
-          // EJE Y (IZQUIERDA): Ahora tiene los números (0, 1, 2, 3...)
           y: {
             beginAtZero: true, 
             grid: { color: '#f1f5f9' }, 
@@ -392,18 +383,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ]
       },
       options: {
-        // Quitamos indexAxis: 'y' para que sea vertical igual que el otro
         responsive: true, 
         maintainAspectRatio: false,
         plugins: { 
           legend: { 
-            position: 'bottom', // Movemos la leyenda para abajo para tener más espacio visual
+            position: 'bottom',
             labels: { font: { size: 11, weight: 600 }, usePointStyle: true, padding: 14 } 
           }, 
           tooltip: { 
             mode: 'index', 
             intersect: false,
-            // Esta magia asegura que el tooltip muestre el texto COMPLETO al pasar el cursor
             callbacks: {
               title: function(tooltipItems) {
                 return tooltipItems[0].label; 
@@ -417,12 +406,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
             grid: { display: false }, 
             ticks: { 
               font: { size: 10, weight: 600 },
-              // Inclinamos el texto 45 grados para que entren las 19 carreras
               maxRotation: 45, 
               minRotation: 45,
               callback: function(this: any, value: any) { 
                 const label = this.getLabelForValue(value as number) || ''; 
-                // Visualmente cortamos a 18 caracteres, pero en el tooltip sale todo
                 return label.length > 18 ? label.substring(0, 18) + '…' : label; 
               } 
             } 

@@ -3,9 +3,6 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { perfilCompletoGuard } from './core/guards/perfil-completo.guard';
 
-/**
- * Matriz de Configuración de Rutas Principales de AzuayCare
- */
 export const routes: Routes = [
   { 
     path: '', 
@@ -21,8 +18,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/completar-perfil/completar-perfil').then(m => m.CompletarPerfilComponent),
     canActivate: [authGuard, roleGuard(['ESTUDIANTE', 'INVITADO'])]
   },
-
-  /* RUTA RAÍZ: ADMINISTRACIÓN / COORDINACIÓN */
   { 
     path: 'admin',
     loadComponent: () => import('./features/admin/layout/admin-layout.component').then(m => m.AdminLayoutComponent),
@@ -78,11 +73,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/usuarios/usuarios.component').then(m => m.UsuariosComponent)
       },
       {
-        path: 'auditoria',
-        loadComponent: () => import('./features/admin/auditoria/auditoria.component').then(m => m.AuditoriaComponent),
-        canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
-      },
-      {
         path: 'prioridad-atencion',
         loadComponent: () => import('./features/admin/prioridad-atencion/prioridad-atencion').then(m => m.PrioridadAtencionComponent),
         canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
@@ -98,8 +88,6 @@ export const routes: Routes = [
       }
     ]
   },
-
-  /* RUTA RAÍZ: ESTUDIANTE */
   {
     path: 'estudiante',
     loadComponent: () => import('./features/estudiante/layout/estudiante-layout.component').then(m => m.EstudianteLayoutComponent),
@@ -128,8 +116,6 @@ export const routes: Routes = [
       }
     ]
   },
-
-  /* RUTA COMODÍN (RUTAS NO EXISTENTES) */
   { 
     path: '**', 
     redirectTo: 'login' 

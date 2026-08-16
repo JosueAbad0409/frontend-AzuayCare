@@ -1,6 +1,5 @@
 <div class="reportes-page animate-fade-in">
 
-  <!-- ========== HEADER ========== -->
   <header class="rep-header">
     <div>
       <p class="rep-eyebrow">BIENESTAR ESTUDIANTIL · ISTA</p>
@@ -13,26 +12,27 @@
     <div class="rep-header-actions">
       <button type="button" class="btn-ghost" (click)="descargarMatrizExcel()"
         [disabled]="!filterForm.get('periodo_id')?.value">
-        <i class="fas fa-file-excel"></i> Excel base
+        <i class="fas fa-file-excel" aria-hidden="true"></i> Excel base
       </button>
       <button type="button" class="btn-primary" (click)="exportarExcelFiltrado()"
         [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
-        <i class="fas fa-download"></i> Exportar Excel
+        <i class="fas fa-download" aria-hidden="true"></i> Exportar Excel
       </button>
       <button type="button" class="btn-dark" (click)="exportarPdfFiltrado()"
         [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
-        <i class="fas fa-file-pdf"></i> Exportar PDF
+        <i class="fas fa-file-pdf" aria-hidden="true"></i> Exportar PDF
       </button>
     </div>
   </header>
 
-  <!-- ========== KPIs ========== -->
   <section class="rep-kpis">
     @if (isLoadingStats()) {
-    <div class="rep-kpi skeleton"></div>
-    <div class="rep-kpi skeleton"></div>
-    <div class="rep-kpi skeleton"></div>
-    <div class="rep-kpi skeleton"></div>
+    <div class="skeleton-wrapper">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
     } @else {
     <div class="rep-kpi">
       <span class="rep-kpi-label">Total fichas</span>
@@ -57,7 +57,6 @@
     }
   </section>
 
-  <!-- ========== FILTROS GENERALES ========== -->
   <section class="rep-card">
     <div class="rep-card-head">
       <div>
@@ -67,17 +66,17 @@
       <button type="button" class="btn-primary" (click)="aplicarFiltros()"
         [disabled]="isAplicandoFiltros() || !filterForm.get('periodo_id')?.value">
         @if (isAplicandoFiltros()) {
-        <i class="fas fa-spinner fa-spin"></i> Procesando...
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Procesando...
         } @else {
-        <i class="fas fa-search"></i> Consultar
+        <i class="fas fa-search" aria-hidden="true"></i> Consultar
         }
       </button>
     </div>
 
     <form [formGroup]="filterForm" class="rep-filters">
       <div class="rep-field">
-        <label>Periodo académico *</label>
-        <select formControlName="periodo_id">
+        <label for="periodo_id_select">Periodo académico *</label>
+        <select id="periodo_id_select" formControlName="periodo_id">
           <option value="" disabled>Seleccione periodo</option>
           @for (p of periodos(); track p.id) {
           <option [value]="p.id">{{ p.nombre }}{{ p.activo ? ' · Activo' : '' }}</option>
@@ -86,8 +85,8 @@
       </div>
 
       <div class="rep-field">
-        <label>Carrera</label>
-        <select formControlName="carrera_id">
+        <label for="carrera_id_select">Carrera</label>
+        <select id="carrera_id_select" formControlName="carrera_id">
           <option value="">Todas</option>
           @for (c of carreras(); track c.id) {
           <option [value]="c.id">{{ c.nombre }}</option>
@@ -96,8 +95,8 @@
       </div>
 
       <div class="rep-field">
-        <label>Ciclo</label>
-        <select formControlName="ciclo_id" [disabled]="!filterForm.get('carrera_id')?.value">
+        <label for="ciclo_id_select">Ciclo</label>
+        <select id="ciclo_id_select" formControlName="ciclo_id" [disabled]="!filterForm.get('carrera_id')?.value">
           <option value="">Todos</option>
           @for (c of ciclos(); track c.id) {
           <option [value]="c.id">{{ c.nombre }}</option>
@@ -106,8 +105,8 @@
       </div>
 
       <div class="rep-field">
-        <label>Estado</label>
-        <select formControlName="estado_ficha">
+        <label for="estado_ficha_select">Estado</label>
+        <select id="estado_ficha_select" formControlName="estado_ficha">
           <option value="TODOS">Todos</option>
           <option value="ENVIADA">Enviada</option>
           <option value="VALIDADO">Validado</option>
@@ -117,8 +116,8 @@
       </div>
 
       <div class="rep-field rep-field-wide">
-        <label>Formulario (opcional, habilita filtros por pregunta)</label>
-        <select formControlName="formulario_id">
+        <label for="formulario_id_select">Formulario (opcional, habilita filtros por pregunta)</label>
+        <select id="formulario_id_select" formControlName="formulario_id">
           <option value="">Sin formulario específico</option>
           @for (f of formularios(); track f.id) {
           <option [value]="f.id">{{ f.titulo }}</option>
@@ -128,16 +127,15 @@
     </form>
   </section>
 
-  <!-- ========== FILTROS AVANZADOS (colapsable) ========== -->
   @if (filtrosDisponibles().length) {
   <section class="rep-card">
     <button type="button" class="rep-collapse-btn" (click)="toggleAvanzado()">
       <span>
-        <i class="fas fa-sliders-h"></i>
+        <i class="fas fa-sliders-h" aria-hidden="true"></i>
         Filtros avanzados por pregunta
         <small>{{ filtrosDisponibles().length }} disponibles</small>
       </span>
-      <i class="fas" [class.fa-chevron-down]="!mostrarAvanzado()" [class.fa-chevron-up]="mostrarAvanzado()"></i>
+      <i class="fas" [class.fa-chevron-down]="!mostrarAvanzado()" [class.fa-chevron-up]="mostrarAvanzado()" aria-hidden="true"></i>
     </button>
 
     @if (mostrarAvanzado()) {
@@ -170,14 +168,13 @@
     </div>
     <div class="rep-advanced-foot">
       <button type="button" class="btn-primary" (click)="aplicarFiltros()" [disabled]="isAplicandoFiltros()">
-        <i class="fas fa-filter"></i> Aplicar filtros avanzados
+        <i class="fas fa-filter" aria-hidden="true"></i> Aplicar filtros avanzados
       </button>
     </div>
     }
   </section>
   }
 
-  <!-- ========== RANGOS (si existen) ========== -->
   @if (estadisticas()?.distribucion_rangos?.length) {
   <section class="rep-card">
     <h2>Distribución por rango socioeconómico</h2>
@@ -192,41 +189,119 @@
   </section>
   }
 
-  <!-- ========== RESULTADOS ========== -->
   @if (datasetFiltrado()) {
   <section class="rep-card">
     <div class="rep-card-head">
       <div>
         <h2>Resultado del reporte</h2>
-        <p>{{ datasetFiltrado()?.total_registros || 0 }} registro(s) encontrados</p>
+        <p role="status" aria-live="polite">Total: <strong>{{ totalRegistrosTabla() }}</strong> registro(s) coincidentes</p>
       </div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        @if (tableSearchTerm() || tableEstadoFiltro() !== 'TODOS') {
+        <button type="button" class="btn-ghost" (click)="limpiarFiltrosTabla()">
+          <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i> Limpiar Filtros Tabla
+        </button>
+        }
         <button type="button" class="btn-primary" (click)="exportarExcelFiltrado()"
           [disabled]="!filterForm.get('periodo_id')?.value">
-          <i class="fas fa-file-excel"></i> Excel
+          <i class="fas fa-file-excel" aria-hidden="true"></i> Excel
         </button>
         <button type="button" class="btn-dark" (click)="exportarPdfResultado()"
-          [disabled]="!(datasetFiltrado()?.registros || []).length">
-          <i class="fas fa-file-pdf"></i> PDF del resultado
+          [disabled]="!totalRegistrosTabla()">
+          <i class="fas fa-file-pdf" aria-hidden="true"></i> PDF del resultado
         </button>
       </div>
     </div>
 
-    @if ((datasetFiltrado()?.registros || []).length) {
-    <div class="rep-table-wrap">
-      <app-ui-table [headers]="datasetFiltrado()?.columnas || []" [rows]="datasetFiltrado()?.registros || []">
-      </app-ui-table>
+    @if (totalRegistrosTabla() > 0) {
+    <div class="table-responsive-wrapper">
+      <table class="admin-table">
+        <thead>
+          <tr class="header-titles">
+            @for (col of datasetFiltrado()?.columnas || []; track col) {
+              <th scope="col">{{ col }}</th>
+            }
+          </tr>
+          <tr class="header-filters">
+            @for (col of datasetFiltrado()?.columnas || []; track col) {
+              <th>
+                @if (col === 'estado_ficha' || col === 'estado') {
+                  <select 
+                    [value]="tableEstadoFiltro()" 
+                    (change)="onTableEstadoChange($event)"
+                    class="table-column-select table-column-select-centered"
+                    aria-label="Filtrar por estado"
+                  >
+                    <option value="TODOS">TODOS</option>
+                    <option value="ENVIADA">ENVIADA</option>
+                    <option value="VALIDADO">VALIDADO</option>
+                    <option value="RECHAZADO">RECHAZADO</option>
+                    <option value="BORRADOR">BORRADOR</option>
+                  </select>
+                } @else {
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      [placeholder]="'Filtrar ' + col + '...'" 
+                      [value]="tableSearchTerm()"
+                      (input)="onTableSearchChange($event)"
+                      [attr.aria-label]="'Filtrar columna ' + col"
+                    />
+                  </div>
+                }
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of registrosProcesados(); track $index) {
+            <tr>
+              @for (col of datasetFiltrado()?.columnas || []; track col) {
+                <td [attr.data-label]="col">
+                  @if (col === 'estado_ficha' || col === 'estado') {
+                    <span class="badge" [ngClass]="{
+                      'badge-success': row[col] === 'VALIDADO',
+                      'badge-blue': row[col] === 'ENVIADA' || row[col] === 'ENVIADO',
+                      'badge-danger': row[col] === 'RECHAZADO' || row[col] === 'RECHAZADA'
+                    }">
+                      {{ row[col] ?? '—' }}
+                    </span>
+                  } @else {
+                    <span class="text-ellipsis">{{ row[col] ?? '—' }}</span>
+                  }
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td [attr.colspan]="(datasetFiltrado()?.columnas || []).length || 1">
+                <div class="state-card empty-state">
+                  <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+                  <p class="state-title">No hay registros coincidentes</p>
+                  <p class="state-desc">No se encontraron datos que cumplan los filtros aplicados en la tabla.</p>
+                  @if (tableSearchTerm() || tableEstadoFiltro() !== 'TODOS') {
+                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltrosTabla()">
+                      <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
     } @else {
     <div class="rep-empty">
-      <i class="fas fa-inbox"></i>
+      <i class="fas fa-inbox" aria-hidden="true"></i>
       <p>No hay registros para la combinación seleccionada.</p>
     </div>
     }
   </section>
   }
 
-  <!-- ========== AGREGADOS ========== -->
   @if (agregadosPorPregunta().length) {
   <section class="rep-card">
     <h2>Resumen por pregunta</h2>
@@ -255,7 +330,7 @@
 
   @if (!datasetFiltrado() && !isAplicandoFiltros() && !isLoadingStats()) {
   <section class="rep-empty-hero">
-    <i class="fas fa-chart-bar"></i>
+    <i class="fas fa-chart-bar" aria-hidden="true"></i>
     <h2>Genera un reporte institucional</h2>
     <p>Selecciona periodo (y opcionalmente carrera, estado o formulario) y pulsa <strong>Generar reporte</strong>.</p>
   </section>

@@ -1,6 +1,3 @@
-/* ==========================================
-   ESTUDIANTE LAYOUT - VARIABLES Y BASE
-   ========================================== */
 :host {
   --primary: #8b5cf6;
   --primary-hover: #7c3aed;
@@ -14,12 +11,12 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background-color: transparent;
 }
 
-/* ==========================================
-   HEADER SUPERIOR (DESKTOP)
-   ========================================== */
 .top-header {
   display: flex;
   align-items: center;
@@ -32,9 +29,10 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* --- LADO IZQUIERDO (MARCA) --- */
 .brand {
   display: flex;
   align-items: center;
@@ -58,6 +56,7 @@
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .brand-info span {
@@ -66,9 +65,9 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-/* --- CENTRO (NAVEGACIÓN DESKTOP) --- */
 .desktop-nav {
   display: flex;
   gap: 0.5rem;
@@ -85,9 +84,10 @@
   padding: 0.6rem 1rem;
   border-radius: 8px;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.nav-link:hover, 
+.nav-link:hover,
 .nav-link:focus-visible {
   background: var(--primary-light);
   color: var(--primary);
@@ -100,7 +100,6 @@
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
-/* --- LADO DERECHO (ACCIONES) --- */
 .header-actions {
   display: flex;
   align-items: center;
@@ -111,6 +110,10 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .user-greeting strong {
@@ -131,6 +134,7 @@
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-logout:hover,
@@ -141,26 +145,22 @@
   outline: none;
 }
 
-/* ==========================================
-   CONTENEDOR PRINCIPAL
-   ========================================== */
 .main-content {
   flex: 1;
   display: flex;
   justify-content: center;
   padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .content-wrapper {
   width: 100%;
-  max-width: 1200px; 
+  max-width: 1200px;
 }
 
-/* ==========================================
-   NAVEGACIÓN INFERIOR (MÓVIL)
-   ========================================== */
 .bottom-nav {
-  display: none; 
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -174,6 +174,7 @@
   align-items: center;
   z-index: 9999;
   padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
 }
 
 .bottom-nav-item {
@@ -188,7 +189,6 @@
   width: 100%;
   height: 100%;
   transition: color 0.2s;
-  /* Área de toque mínima de 44px para accesibilidad móvil */
   min-width: 44px;
 }
 
@@ -201,33 +201,88 @@
   color: var(--primary);
 }
 
-/* ==========================================
-   MEDIA QUERIES (MOBILE FIRST)
-   ========================================== */
+.custom-swal-popup {
+  overflow: hidden !important;
+  border-radius: 20px !important;
+  padding: 1.5rem !important;
+  max-width: 480px !important;
+  width: 92% !important;
+}
+
+.custom-swal-confirm {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35) !important;
+  border-radius: 12px !important;
+  padding: 0.65rem 1.25rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-swal-confirm:hover {
+  transform: translateY(-2px) !important;
+}
+
+.custom-swal-cancel {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 0.65rem 1.25rem !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-swal-cancel:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.fab-ayuda {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, var(--primary) 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+  cursor: pointer;
+  z-index: 600;
+  display: grid;
+  place-items: center;
+}
+
 @media (max-width: 768px) {
   .top-header {
     padding: 0.75rem 1.25rem;
-    justify-content: center; 
+    justify-content: space-between;
   }
-  
-  .desktop-nav, 
+
+  .desktop-nav,
   .user-greeting,
   .logout-text {
-    display: none; 
+    display: none;
   }
 
   .btn-logout {
-    position: absolute;
-    right: 1.25rem;
+    position: static;
     padding: 0.5rem;
   }
 
   .bottom-nav {
-    display: flex; 
+    display: flex;
   }
 
   .main-content {
-    padding: 1rem; 
+    padding: 1rem;
     padding-bottom: calc(1.5rem + var(--nav-bottom-height) + env(safe-area-inset-bottom));
+  }
+
+  .fab-ayuda {
+    bottom: calc(var(--nav-bottom-height) + 16px + env(safe-area-inset-bottom));
   }
 }

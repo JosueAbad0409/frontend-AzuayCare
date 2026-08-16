@@ -1,231 +1,292 @@
 @if (isLoading()) {
-<div class="loading-state">
-    <i class="fas fa-circle-notch fa-spin"></i>
-    <p>Cargando ficha...</p>
-</div>
+  <div class="detalle-page animate-fade-in">
+    <div class="skeleton-wrapper">
+      <div class="skeleton-row skeleton-header"></div>
+      <div class="skeleton-row skeleton-card"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  </div>
 } @else if (ficha()) {
-<div class="detalle-page animate-fade-in">
+  <div class="detalle-page animate-fade-in">
 
-    <!-- CABECERA -->
     <header class="page-header">
-        <div class="header-left">
-            <button type="button" class="btn-back" (click)="volver()">
-                <i class="fas fa-arrow-left"></i> Volver a lista
-            </button>
-            <div>
-                <h2>Evaluación y Auditoría de Ficha</h2>
-                <p class="subtitle">Revisa respuestas, balances y decide el estado</p>
-            </div>
+      <div class="header-left">
+        <button type="button" class="btn-back" (click)="volver()" aria-label="Volver a la lista de fichas">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> Volver a lista
+        </button>
+        <div>
+          <h2>Evaluación y Auditoría de Ficha</h2>
+          <p class="subtitle">Revisa respuestas, balances y decide el estado</p>
         </div>
-        <span class="estado-badge" [attr.data-estado]="ficha()!.estado_ficha">
-            {{ ficha()!.estado_ficha }}
-        </span>
+      </div>
+      <span class="estado-badge" [attr.data-estado]="ficha()!.estado_ficha" role="status">
+        {{ ficha()!.estado_ficha }}
+      </span>
     </header>
 
-    <!-- TABS -->
-    <div class="tabs-nav">
-        <button type="button" class="tab-btn" [class.active]="tabActiva() === 'DETALLE'" (click)="setTab('DETALLE')">
-            <i class="fas fa-file-alt"></i> Detalle de Ficha
-        </button>
-        <button type="button" class="tab-btn" [class.active]="tabActiva() === 'HISTORIAL'"
-            (click)="setTab('HISTORIAL')">
-            <i class="fas fa-history"></i> Línea de Tiempo
-        </button>
+    <div class="tabs-nav" role="tablist">
+      <button 
+        type="button" 
+        class="tab-btn" 
+        [class.active]="tabActiva() === 'DETALLE'" 
+        (click)="setTab('DETALLE')"
+        role="tab"
+        [attr.aria-selected]="tabActiva() === 'DETALLE'"
+      >
+        <i class="fas fa-file-alt" aria-hidden="true"></i> Detalle de Ficha
+      </button>
+      <button 
+        type="button" 
+        class="tab-btn" 
+        [class.active]="tabActiva() === 'HISTORIAL'"
+        (click)="setTab('HISTORIAL')"
+        role="tab"
+        [attr.aria-selected]="tabActiva() === 'HISTORIAL'"
+      >
+        <i class="fas fa-history" aria-hidden="true"></i> Línea de Tiempo
+      </button>
     </div>
 
-    <!-- CONTENIDO -->
     <div class="page-body">
 
-        @if (tabActiva() === 'DETALLE') {
-        <!-- Estudiante + balances -->
+      @if (tabActiva() === 'DETALLE') {
         <div class="student-card">
-            <div class="student-main">
-                <div class="student-avatar"><i class="fas fa-user-graduate"></i></div>
-                <div>
-                    <p class="student-name">
-                        {{ ficha()?.usuario?.primer_nombre }} {{ ficha()?.usuario?.primer_apellido }}
-                    </p>
-                    <p class="student-meta">
-                        Cédula: <strong>{{ ficha()?.usuario?.cedula || 'N/A' }}</strong>
-                        @if (ficha()?.periodo) {
-                        · Periodo: <strong>{{ ficha()?.periodo?.nombre }}</strong>
-                        }
-                    </p>
-                </div>
+          <div class="student-main">
+            <div class="student-avatar" aria-hidden="true"><i class="fas fa-user-graduate"></i></div>
+            <div>
+              <p class="student-name">
+                {{ ficha()?.usuario?.primer_nombre }} {{ ficha()?.usuario?.primer_apellido }}
+              </p>
+              <p class="student-meta">
+                Cédula: <strong>{{ ficha()?.usuario?.cedula || 'N/A' }}</strong>
+                @if (ficha()?.periodo) {
+                  · Periodo: <strong>{{ ficha()?.periodo?.nombre }}</strong>
+                }
+              </p>
             </div>
+          </div>
 
-            <div class="balance-grid">
-                <div class="balance-item">
-                    <span class="balance-label">Ingresos</span>
-                    <span class="balance-value">${{ ficha()?.total_ingresos | number:'1.2-2' }}</span>
-                </div>
-                <div class="balance-item">
-                    <span class="balance-label">Egresos</span>
-                    <span class="balance-value">${{ ficha()?.total_egresos | number:'1.2-2' }}</span>
-                </div>
-                <div class="balance-item">
-                    <span class="balance-label">Balance</span>
-                    <span class="balance-value text-success">${{ ficha()?.balance_final | number:'1.2-2' }}</span>
-                </div>
+          <div class="balance-grid">
+            <div class="balance-item">
+              <span class="balance-label">Ingresos</span>
+              <span class="balance-value">${{ ficha()?.total_ingresos | number:'1.2-2' }}</span>
             </div>
+            <div class="balance-item">
+              <span class="balance-label">Egresos</span>
+              <span class="balance-value">${{ ficha()?.total_egresos | number:'1.2-2' }}</span>
+            </div>
+            <div class="balance-item">
+              <span class="balance-label">Balance</span>
+              <span class="balance-value text-success">${{ ficha()?.balance_final | number:'1.2-2' }}</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Respuestas organizadas por secciones -->
+        <div class="filter-bar">
+          <div class="search-input-wrap">
+            <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+            <input 
+              type="text" 
+              class="table-column-input" 
+              placeholder="Buscar en preguntas o respuestas..." 
+              [value]="filterPregunta()"
+              (input)="onFilterInput($event)"
+              aria-label="Filtrar preguntas o respuestas"
+            />
+          </div>
+
+          <select 
+            class="table-column-input" 
+            style="max-width: 200px;" 
+            [value]="filterEvidencias()"
+            (change)="onEvidenciaFilterChange($event)"
+            aria-label="Filtrar por archivo o evidencia"
+          >
+            <option value="TODAS">Todos los archivos</option>
+            <option value="CON_EVIDENCIA">Con Archivo / Evidencia</option>
+            <option value="SIN_EVIDENCIA">Sin Archivo</option>
+          </select>
+
+          @if (filterPregunta() || filterEvidencias() !== 'TODAS') {
+            <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltro()">
+              <i class="fas fa-times" aria-hidden="true"></i> Limpiar Filtros
+            </button>
+          }
+        </div>
+
         <h3 class="section-title">Respuestas Registradas</h3>
 
-        @if (secciones().length === 0) {
-        <p class="empty-text">Cargando estructura de la ficha...</p>
+        @if (seccionesFiltradas().length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-search-minus empty-icon" aria-hidden="true"></i>
+            <p class="empty-title">Sin coincidencias</p>
+            <p class="empty-desc">No se encontraron preguntas o respuestas que coincidan con la búsqueda.</p>
+          </div>
         } @else {
-        @for (sec of secciones(); track sec.id; let idx = $index) {
-        <div class="mb-8">
-            <h4
-                class="text-sm font-bold text-blue-900 uppercase border-l-4 border-blue-600 pl-3 mb-4 py-1 bg-slate-50 rounded-r">
+          @for (sec of seccionesFiltradas(); track sec.id; let idx = $index) {
+            <div class="mb-8">
+              <h4 class="text-sm font-bold text-blue-900 uppercase border-l-4 border-blue-600 pl-3 mb-4 py-1 bg-slate-50 rounded-r">
                 {{ numeroRomano(idx + 1) }}. {{ sec.nombre }}
-            </h4>
+              </h4>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @for (preg of sec.preguntas; track preg.id) {
-                @if (!esPreguntaDependiente(preg.id)) {
-                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase mb-1">{{ preg.enunciado }}</p>
-                    <p class="text-sm font-semibold text-slate-800 whitespace-pre-line break-words">
+                  @if (!esPreguntaDependiente(preg.id)) {
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <p class="text-[11px] font-bold text-slate-400 uppercase mb-1">{{ preg.enunciado }}</p>
+                      <p class="text-sm font-semibold text-slate-800 whitespace-pre-line break-words">
                         {{ obtenerTextoRespuesta(preg) }}
-                    </p>
+                      </p>
 
-                    @if (tieneEvidencia(preg.id)) {
-                    <div class="evidencias-box">
-                        <p class="evidencias-titulo">
-                            <i class="fas fa-paperclip"></i>
-                            Evidencia adjunta ({{ obtenerEvidencias(preg.id).length }})
-                        </p>
-                        <div class="evidencias-lista">
-                            @for (ev of obtenerEvidencias(preg.id); track ev.url) {
-                            <div class="evidencia-item">
-                                @if (ev.esImagen) {
-                                <a [href]="ev.url" target="_blank" rel="noopener">
-                                    <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
-                                </a>
-                                <span class="evidencia-nombre">{{ ev.nombre }}</span>
-                                } @else {
-                                <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
-                                    <i class="fas fa-file"></i>
-                                    {{ ev.nombre }}
-                                </a>
-                                }
-                            </div>
-                            }
-                        </div>
-                    </div>
-                    }
-
-                    @for (sub of getSubpreguntas(preg.id); track sub.id) {
-                    <div class="mt-3 ml-2 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-3">
-                        <p class="text-[10px] font-extrabold text-emerald-700 uppercase mb-1">
-                            <i class="fas fa-level-down-alt"></i> Subpregunta
-                        </p>
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
-                        <p class="text-sm font-semibold text-slate-800">{{ obtenerTextoRespuesta(sub) }}</p>
-
-                        <!-- Evidencias de la subpregunta -->
-                        @if (tieneEvidencia(sub.id)) {
+                      @if (tieneEvidencia(preg.id)) {
                         <div class="evidencias-box">
-                            <p class="evidencias-titulo">
-                                <i class="fas fa-paperclip"></i>
-                                Evidencia ({{ obtenerEvidencias(sub.id).length }})
-                            </p>
-                            <div class="evidencias-lista">
-                                @for (ev of obtenerEvidencias(sub.id); track ev.url) {
-                                <div class="evidencia-item">
-                                    @if (ev.esImagen) {
-                                    <a [href]="ev.url" target="_blank" rel="noopener">
-                                        <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
-                                    </a>
-                                    <span class="evidencia-nombre">{{ ev.nombre }}</span>
-                                    } @else {
-                                    <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
-                                        <i class="fas fa-file"></i>
-                                        {{ ev.nombre }}
-                                    </a>
-                                    }
-                                </div>
+                          <p class="evidencias-titulo">
+                            <i class="fas fa-paperclip" aria-hidden="true"></i>
+                            Evidencia adjunta ({{ obtenerEvidencias(preg.id).length }})
+                          </p>
+                          <div class="evidencias-lista">
+                            @for (ev of obtenerEvidencias(preg.id); track ev.url) {
+                              <div class="evidencia-item">
+                                @if (ev.esImagen) {
+                                  <a [href]="ev.url" target="_blank" rel="noopener">
+                                    <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
+                                  </a>
+                                  <span class="evidencia-nombre">{{ ev.nombre }}</span>
+                                } @else {
+                                  <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
+                                    <i class="fas fa-file" aria-hidden="true"></i>
+                                    {{ ev.nombre }}
+                                  </a>
                                 }
-                            </div>
+                              </div>
+                            }
+                          </div>
                         </div>
-                        }
+                      }
+
+                      @for (sub of getSubpreguntas(preg.id); track sub.id) {
+                        <div class="mt-3 ml-2 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-3">
+                          <p class="text-[10px] font-extrabold text-emerald-700 uppercase mb-1">
+                            <i class="fas fa-level-down-alt" aria-hidden="true"></i> Subpregunta
+                          </p>
+                          <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
+                          <p class="text-sm font-semibold text-slate-800 break-words">{{ obtenerTextoRespuesta(sub) }}</p>
+
+                          @if (tieneEvidencia(sub.id)) {
+                            <div class="evidencias-box">
+                              <p class="evidencias-titulo">
+                                <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                Evidencia ({{ obtenerEvidencias(sub.id).length }})
+                              </p>
+                              <div class="evidencias-lista">
+                                @for (ev of obtenerEvidencias(sub.id); track ev.url) {
+                                  <div class="evidencia-item">
+                                    @if (ev.esImagen) {
+                                      <a [href]="ev.url" target="_blank" rel="noopener">
+                                        <img [src]="ev.url" [alt]="ev.nombre" class="evidencia-img" />
+                                      </a>
+                                      <span class="evidencia-nombre">{{ ev.nombre }}</span>
+                                    } @else {
+                                      <a [href]="ev.url" target="_blank" rel="noopener" class="evidencia-link">
+                                        <i class="fas fa-file" aria-hidden="true"></i>
+                                        {{ ev.nombre }}
+                                      </a>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
                     </div>
-                    }
-                </div>
+                  }
                 }
-                }
+              </div>
             </div>
-        </div>
-        }
+          }
         }
 
-        <!-- Acciones de revisión (solo si está ENVIADA) -->
         @if (puedeRevisar()) {
-        <div class="review-panel">
-            <label class="form-label">Comentario de Revisión / Justificación</label>
-            <textarea class="form-control" rows="3" [value]="comentario()"
-                (input)="comentario.set($any($event.target).value)"
-                placeholder="Escriba la razón de aprobación o rechazo..."></textarea>
+          <div class="review-panel">
+            <label class="form-label" for="txt-comentario">Comentario de Revisión / Justificación</label>
+            <textarea 
+              id="txt-comentario"
+              class="form-control" 
+              rows="3" 
+              [value]="comentario()"
+              (input)="comentario.set($any($event.target).value)"
+              placeholder="Escriba la razón de aprobación o rechazo..."
+              [disabled]="guardando()"
+            ></textarea>
 
             <div class="actions-row">
-                <button type="button" class="btn btn-outline" (click)="cambiarEstado('RECHAZADO')"
-                    [disabled]="guardando()">
-                    @if (guardando()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i
-                        class="fas fa-times-circle"></i> }
-                    Rechazar
-                </button>
-                <button type="button" class="btn btn-purple" (click)="cambiarEstado('VALIDADO')"
-                    [disabled]="guardando()">
-                    @if (guardando()) { <i class="fas fa-spinner fa-spin"></i> } @else { <i
-                        class="fas fa-check-circle"></i> }
-                    Validar Ficha
-                </button>
+              <button 
+                type="button" 
+                class="btn btn-outline" 
+                (click)="cambiarEstado('RECHAZADO')"
+                [disabled]="guardando()"
+              >
+                <i class="fas" [ngClass]="guardando() ? 'fa-spinner fa-spin' : 'fa-times-circle'" aria-hidden="true"></i>
+                <span>Rechazar</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-purple" 
+                (click)="cambiarEstado('VALIDADO')"
+                [disabled]="guardando()"
+              >
+                <i class="fas" [ngClass]="guardando() ? 'fa-spinner fa-spin' : 'fa-check-circle'" aria-hidden="true"></i>
+                <span>Validar Ficha</span>
+              </button>
             </div>
-        </div>
+          </div>
         } @else {
-        <div class="review-panel" style="opacity: 0.85;">
-            <div style="display:flex; align-items:center; gap:12px; color:#475569;">
-                <i class="fas fa-lock" style="font-size:1.2rem;"></i>
-                <div>
-                    <p style="font-weight:700; margin:0;">Ficha ya procesada</p>
-                    <p style="font-size:0.875rem; margin:4px 0 0;">
-                        Esta ficha está en estado <strong>{{ ficha()!.estado_ficha }}</strong>.
-                        Solo se podrá volver a evaluar cuando el estudiante la reenvíe.
-                    </p>
-                </div>
+          <div class="review-panel locked-panel">
+            <div class="locked-content">
+              <i class="fas fa-lock locked-icon" aria-hidden="true"></i>
+              <div>
+                <p class="locked-title">Ficha ya procesada</p>
+                <p class="locked-desc">
+                  Esta ficha está en estado <strong>{{ ficha()!.estado_ficha }}</strong>.
+                  Solo se podrá volver a evaluar cuando el estudiante la reenvíe.
+                </p>
+              </div>
             </div>
-        </div>
+          </div>
         }
-        }
+      }
 
-        @if (tabActiva() === 'HISTORIAL') {
+      @if (tabActiva() === 'HISTORIAL') {
         <div class="timeline">
-            @for (h of historial(); track h.id) {
+          @for (h of historial(); track h.id) {
             <div class="timeline-item">
-                <div class="timeline-badge" [class.bg-green]="h.estado_nuevo === 'VALIDADO'"
-                    [class.bg-red]="h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA'"
-                    [class.bg-blue]="h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO'"
-                    [class.bg-yellow]="h.estado_nuevo === 'BORRADOR'">
+              <div 
+                class="timeline-badge" 
+                [class.bg-green]="h.estado_nuevo === 'VALIDADO'"
+                [class.bg-red]="h.estado_nuevo === 'RECHAZADO' || h.estado_nuevo === 'RECHAZADA'"
+                [class.bg-blue]="h.estado_nuevo === 'ENVIADA' || h.estado_nuevo === 'ENVIADO'"
+                [class.bg-yellow]="h.estado_nuevo === 'BORRADOR'"
+              ></div>
+              <div class="timeline-card">
+                <div class="timeline-header">
+                  <strong>Transición a {{ h.estado_nuevo }}</strong>
+                  <span>{{ h.created_at | date:'medium' }}</span>
                 </div>
-                <div class="timeline-card">
-                    <div class="timeline-header">
-                        <strong>Transición a {{ h.estado_nuevo }}</strong>
-                        <span>{{ h.created_at | date:'medium' }}</span>
-                    </div>
-                    <p>{{ h.comentario || 'Sin comentario registrado' }}</p>
-                </div>
+                <p>{{ h.comentario || 'Sin comentario registrado' }}</p>
+              </div>
             </div>
-            } @empty {
-            <p class="empty-text" style="text-align:center;padding:2rem 0">
-                No existen registros históricos para esta ficha.
-            </p>
-            }
+          } @empty {
+            <div class="empty-state">
+              <i class="fas fa-history empty-icon" aria-hidden="true"></i>
+              <p class="empty-title">Sin historial</p>
+              <p class="empty-desc">No existen registros históricos para esta ficha.</p>
+            </div>
+          }
         </div>
-        }
+      }
 
     </div>
-</div>
+  </div>
 }

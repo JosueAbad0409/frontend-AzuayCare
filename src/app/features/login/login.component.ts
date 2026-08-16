@@ -18,9 +18,12 @@ export class LoginComponent implements OnInit {
 
   isLoading = signal(false);
   error = signal('');
+  isServerWarming = signal(false);
 
   ngOnInit(): void {
     this.loadGoogleScript();
+    this.isServerWarming.set(true);
+    this.auth.warmUpBackend().finally(() => this.isServerWarming.set(false));
   }
 
   private loadGoogleScript(): void {
@@ -29,7 +32,11 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    if (document.getElementById('gsi-client-script')) return;
+    const existingScript = document.getElementById('gsi-client-script');
+    if (existingScript) {
+      this.waitForGoogleReady();
+      return;
+    }
 
     const script = document.createElement('script');
     script.id = 'gsi-client-script';
@@ -39,6 +46,18 @@ export class LoginComponent implements OnInit {
     script.onload = () => this.initGsi();
     script.onerror = () => this.error.set('No se pudo establecer conexión con los servidores de Google.');
     document.head.appendChild(script);
+  }
+
+  private waitForGoogleReady(retries = 20): void {
+    if ((window as any).google?.accounts?.id) {
+      this.initGsi();
+      return;
+    }
+    if (retries <= 0) {
+      this.error.set('No se pudo inicializar el acceso con Google. Recarga la página.');
+      return;
+    }
+    setTimeout(() => this.waitForGoogleReady(retries - 1), 250);
   }
 
   private initGsi(): void {

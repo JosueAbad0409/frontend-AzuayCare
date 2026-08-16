@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { Subject, Subscription, finalize, debounceTime } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { PeriodoMatricula } from '../../../core/models/periodo.model';
@@ -16,46 +16,113 @@ import { ToastService } from '../../../core/services/toast.service';
   styleUrls: ['./periodos.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PeriodosComponent implements OnInit {
+export class PeriodosComponent implements OnInit, OnDestroy {
   private readonly periodoService = inject(PeriodoService);
   private readonly toastService = inject(ToastService);
   
-  // Estado base
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly isSaving = signal<boolean>(false);
   
-  // Filtros
   readonly searchTerm = signal<string>('');
+  readonly filtroNombreSelect = signal<string>('TODOS');
+  readonly filtroFechaInicio = signal<string>('');
+  readonly filtroFechaFin = signal<string>('');
   readonly filtroEstado = signal<string>('TODOS');
   
-  // Filtro Reactivo Computado
+  private readonly searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+
+  readonly nombresPeriodosDisponibles = computed(() => {
+    const set = new Set<string>();
+    this.periodos().forEach(p => {
+      if (p.nombre) set.add(p.nombre);
+    });
+    return Array.from(set);
+  });
+
   readonly periodosFiltrados = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
+    const nombreSel = this.filtroNombreSelect();
+    const fInicio = this.filtroFechaInicio();
+    const fFin = this.filtroFechaFin();
     const estado = this.filtroEstado();
 
     return this.periodos().filter(p => {
       const coincideTexto = !term || p.nombre.toLowerCase().includes(term);
+      const coincideNombreCombo = nombreSel === 'TODOS' || p.nombre === nombreSel;
 
       let coincideEstado = true;
       if (estado === 'ACTIVO') coincideEstado = !!p.activo;
       else if (estado === 'INACTIVO') coincideEstado = !p.activo;
 
-      return coincideTexto && coincideEstado;
+      let coincideFechas = true;
+      if (fInicio) {
+        const pInicio = p.fecha_inicio ? new Date(p.fecha_inicio.split('T')[0]) : null;
+        const filtroInicio = new Date(fInicio);
+        if (pInicio && pInicio < filtroInicio) coincideFechas = false;
+      }
+      if (fFin && coincideFechas) {
+        const pFin = p.fecha_fin ? new Date(p.fecha_fin.split('T')[0]) : null;
+        const filtroFin = new Date(fFin);
+        if (pFin && pFin > filtroFin) coincideFechas = false;
+      }
+
+      return coincideTexto && coincideNombreCombo && coincideEstado && coincideFechas;
     });
   });
 
+  readonly tieneFiltrosActivos = computed(() => {
+    return !!this.searchTerm() || 
+           this.filtroNombreSelect() !== 'TODOS' || 
+           !!this.filtroFechaInicio() || 
+           !!this.filtroFechaFin() || 
+           this.filtroEstado() !== 'TODOS';
+  });
+
   ngOnInit(): void {
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => this.searchTerm.set(val));
+
     this.cargarPeriodos();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
   }
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchTerm.set(value);
+    this.searchSubject.next(value);
+  }
+
+  onNombreSelectChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filtroNombreSelect.set(value);
+  }
+
+  onFechaInicioChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.filtroFechaInicio.set(value);
+  }
+
+  onFechaFinChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.filtroFechaFin.set(value);
   }
 
   onEstadoChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.filtroEstado.set(value);
+  }
+
+  limpiarFiltros(): void {
+    this.searchTerm.set('');
+    this.filtroNombreSelect.set('TODOS');
+    this.filtroFechaInicio.set('');
+    this.filtroFechaFin.set('');
+    this.filtroEstado.set('TODOS');
   }
 
   cargarPeriodos(): void {
@@ -83,37 +150,52 @@ export class PeriodosComponent implements OnInit {
 
     Swal.fire({
       title: titleText,
-      width: '600px',
+      width: '550px',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel'
+      },
       html: `
-        <div style="text-align: left; padding-top: 10px;">
-          <div style="margin-bottom: 1.25rem;">
-            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Nombre del Periodo *</label>
-            <input id="swal-nombre" type="text" class="swal2-input" placeholder="Ej. Abril - Agosto 2026" style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? periodo.nombre : ''}">
-          </div>
-          
-          <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem;">
-            <div style="flex: 1;">
-              <label for="swal-inicio" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Fecha de Inicio *</label>
-              <input id="swal-inicio" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" value="${fechaInicioVal}">
-            </div>
-            <div style="flex: 1;">
-              <label for="swal-fin" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #0f172a;">Fecha de Fin *</label>
-              <input id="swal-fin" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box;" value="${fechaFinVal}">
+        <div class="swal-form-card">
+          <div class="swal-header-banner">
+            <i class="fas ${isEditing ? 'fa-calendar-check' : 'fa-calendar-plus'} swal-banner-icon"></i>
+            <div>
+              <p class="swal-banner-title">${titleText}</p>
+              <p class="swal-banner-sub">Configura las fechas de apertura y cierre del ciclo académico</p>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding-bottom: 0.25rem;">
-            <input type="checkbox" id="swal-activo" style="width: 1.2rem; height: 1.2rem; accent-color: #8b5cf6; cursor: pointer;" ${activoVal}>
-            <label for="swal-activo" style="font-size: 0.875rem; font-weight: 700; color: #334155; margin: 0; cursor: pointer;">Establecer como periodo ACTIVO</label>
+          <div class="swal-field-group">
+            <label for="swal-nombre" class="swal-form-label">Nombre del Periodo *</label>
+            <input id="swal-nombre" type="text" class="swal-form-input" placeholder="Ej. Abril - Agosto 2026" value="${isEditing ? periodo.nombre : ''}">
+          </div>
+          
+          <div class="swal-form-row">
+            <div class="swal-form-col">
+              <label for="swal-inicio" class="swal-form-label">Fecha de Inicio *</label>
+              <input id="swal-inicio" type="date" class="swal-form-input" value="${fechaInicioVal}">
+            </div>
+            <div class="swal-form-col">
+              <label for="swal-fin" class="swal-form-label">Fecha de Fin *</label>
+              <input id="swal-fin" type="date" class="swal-form-input" value="${fechaFinVal}">
+            </div>
+          </div>
+
+          <div class="swal-checkbox-card">
+            <input type="checkbox" id="swal-activo" class="swal-checkbox-input" ${activoVal}>
+            <label for="swal-activo" class="swal-checkbox-label">
+              <span>Establecer como periodo ACTIVO</span>
+              <small class="swal-checkbox-sub">Permitirá el ingreso de nuevas fichas estudiantiles</small>
+            </label>
           </div>
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: confirmText,
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#64748b',
+      confirmButtonText: `<i class="fas fa-check" aria-hidden="true"></i> <span>${confirmText}</span>`,
+      cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>',
+      buttonsStyling: false,
       preConfirm: () => {
         const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
         const fecha_inicio = (document.getElementById('swal-inicio') as HTMLInputElement).value;
@@ -121,7 +203,7 @@ export class PeriodosComponent implements OnInit {
         const activo = (document.getElementById('swal-activo') as HTMLInputElement).checked;
 
         if (!nombre) {
-          Swal.showValidationMessage('El nombre es obligatorio.');
+          Swal.showValidationMessage('El nombre del periodo es obligatorio.');
           return false;
         }
         if (!fecha_inicio || !fecha_fin) {
@@ -143,8 +225,11 @@ export class PeriodosComponent implements OnInit {
   }
 
   guardarPeriodoEnDb(formData: any, id: string | null): void {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+
     Swal.fire({
-      title: 'Guardando...',
+      title: 'Guardando Periodo...',
       text: 'Por favor, espera un momento.',
       allowOutsideClick: false,
       didOpen: () => {
@@ -156,7 +241,7 @@ export class PeriodosComponent implements OnInit {
       ? this.periodoService.updatePeriodo(id, formData)
       : this.periodoService.createPeriodo(formData);
 
-    peticion$.subscribe({
+    peticion$.pipe(finalize(() => this.isSaving.set(false))).subscribe({
       next: () => {
         Swal.close();
         this.toastService.show(
@@ -169,36 +254,48 @@ export class PeriodosComponent implements OnInit {
         console.error('Error al guardar periodo:', err);
         Swal.fire({
           icon: 'error',
-          title: 'Error',
+          title: 'Error al Guardar',
           text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
-          confirmButtonColor: '#8b5cf6'
+          customClass: {
+            confirmButton: 'custom-swal-confirm'
+          },
+          buttonsStyling: false
         });
       }
     });
   }
 
   eliminarPeriodo(id: string): void {
+    if (this.isSaving()) return;
+
     Swal.fire({
-      title: '¿Estás seguro?',
-      text: '¿Estás seguro de eliminar este periodo? Los formularios asociados podrían verse afectados.',
+      title: '¿Eliminar este periodo?',
+      text: 'Esta acción no se puede deshacer. Los formularios asociados podrían verse afectados.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm custom-swal-danger',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, eliminar</span>',
+      cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.periodoService.deletePeriodo(id).subscribe({
-          next: () => {
-            this.toastService.show('Periodo eliminado con éxito.', 'info');
-            this.cargarPeriodos();
-          },
-          error: (err: HttpErrorResponse) => {
-            console.error('Error al eliminar periodo:', err);
-            this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar el periodo.'), 'error');
-          }
-        });
+        this.isSaving.set(true);
+        this.periodoService.deletePeriodo(id)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Periodo eliminado con éxito.', 'info');
+              this.cargarPeriodos();
+            },
+            error: (err: HttpErrorResponse) => {
+              console.error('Error al eliminar periodo:', err);
+              this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar el periodo.'), 'error');
+            }
+          });
       }
     });
   }

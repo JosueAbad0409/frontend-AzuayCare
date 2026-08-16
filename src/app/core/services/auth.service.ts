@@ -118,11 +118,29 @@ export class AuthService {
   }
 
   async loginWithBackend(googleIdToken: string): Promise<LoginGoogleResponse> {
-    const res = await fetch(`${this.apiUrl}/login-google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: googleIdToken }),
-    });
+    // 🔧 FIX: AbortController para evitar espera indefinida si el backend 
+    // está "frío" o la conexión queda colgada a nivel de red/proxy.
+    const controller = new AbortController();
+    const timeoutMs = 20000; // 20s es razonable incluso con cold start
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let res: Response;
+    try {
+      res = await fetch(`${this.apiUrl}/login-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: googleIdToken }),
+        signal: controller.signal, // 🔧 conecta el abort con el fetch
+      });
+    } catch (err: any) {
+      // 🔧 Distinguimos timeout de otros errores de red
+      if (err?.name === 'AbortError') {
+        throw new Error('El servidor está tardando más de lo normal en responder. Intenta nuevamente en unos segundos.');
+      }
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.');
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -130,6 +148,7 @@ export class AuthService {
     }
 
     const data: LoginGoogleResponse = await res.json();
+
     if (data?.accessToken) {
       this.setToken(data.accessToken);
     }
@@ -155,6 +174,17 @@ export class AuthService {
     localStorage.setItem(PERFIL_COMPLETO_KEY, String(completo));
 
     return data;
+  }
+
+  // 🔧 NUEVO: método liviano para "despertar" al backend en segundo plano.
+  // No bloquea la UI, solo dispara la conexión temprano.
+  async warmUpBackend(): Promise<void> {
+    try {
+      await fetch(`${environment.apiUrl}/health`, { method: 'GET' });
+    } catch {
+      // Silencioso a propósito: si falla, el flujo normal de login
+      // igual mostrará el error correspondiente.
+    }
   }
 
   // Se llama al terminar de guardar el pequeño formulario de registro

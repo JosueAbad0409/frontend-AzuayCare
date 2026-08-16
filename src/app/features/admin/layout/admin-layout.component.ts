@@ -43,19 +43,18 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
   private readonly prioridadService = inject(PrioridadAtencionService);
   private readonly http = inject(HttpClient);
 
-  isSidebarCollapsed = signal(false);
-  isSidebarOpenMobile = signal(false);
-  casosAltoCount = signal(0);
+  readonly isSidebarCollapsed = signal<boolean>(false);
+  readonly isSidebarOpenMobile = signal<boolean>(false);
+  readonly casosAltoCount = signal<number>(0);
 
-  chatAbierto = signal(false);
-  iaCargando = signal(false);
-  mensajes = signal<MensajeChat[]>([]);
+  readonly chatAbierto = signal<boolean>(false);
+  readonly iaCargando = signal<boolean>(false);
+  readonly mensajes = signal<MensajeChat[]>([]);
   promptActual = '';
 
-  private chatMessagesRef = viewChild<ElementRef<HTMLDivElement>>('chatMessages');
+  private readonly chatMessagesRef = viewChild<ElementRef<HTMLDivElement>>('chatMessages');
 
-  /** Unifica rol string u objeto { nombre } */
-  esCoordinadorBienestar = computed(() => {
+  readonly esCoordinadorBienestar = computed(() => {
     const rol = this.authService.user()?.rol as any;
     return rol === 'COORDINADOR_BIENESTAR' || rol?.nombre === 'COORDINADOR_BIENESTAR';
   });
@@ -91,45 +90,45 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
   }
 
   enviarMensaje(): void {
-  const texto = this.promptActual.trim();
-  if (!texto || this.iaCargando()) return;
+    const texto = this.promptActual.trim();
+    if (!texto || this.iaCargando()) return;
 
-  this.mensajes.update((m) => [...m, { rol: 'user', texto }]);
-  this.promptActual = '';
-  this.iaCargando.set(true);
-  this.scrollChatAlFinal();
+    this.mensajes.update((m) => [...m, { rol: 'user', texto }]);
+    this.promptActual = '';
+    this.iaCargando.set(true);
+    this.scrollChatAlFinal();
 
-  this.http
-    .post<{ response: string; fuentes?: any[] }>(
-      `${environment.apiUrl}/ia/chat`, // ajusta si tu ruta es /api/ia/chat
-      { prompt: texto },
-    )
-    .subscribe({
-      next: (res) => {
-        this.mensajes.update((m) => [
-          ...m,
-          {
-            rol: 'bot',
-            texto: res.response || 'Sin respuesta',
-            fuentes: res.fuentes || [],
-          },
-        ]);
-        this.iaCargando.set(false);
-        this.scrollChatAlFinal();
-      },
-      error: () => {
-        this.mensajes.update((m) => [
-          ...m,
-          {
-            rol: 'bot',
-            texto: 'No pude conectar con el asistente. Revisa la API o intenta de nuevo.',
-          },
-        ]);
-        this.iaCargando.set(false);
-        this.scrollChatAlFinal();
-      },
-    });
-}
+    this.http
+      .post<{ response: string; fuentes?: any[] }>(
+        `${environment.apiUrl}/ia/chat`,
+        { prompt: texto },
+      )
+      .subscribe({
+        next: (res) => {
+          this.mensajes.update((m) => [
+            ...m,
+            {
+              rol: 'bot',
+              texto: res.response || 'Sin respuesta',
+              fuentes: res.fuentes || [],
+            },
+          ]);
+          this.iaCargando.set(false);
+          this.scrollChatAlFinal();
+        },
+        error: () => {
+          this.mensajes.update((m) => [
+            ...m,
+            {
+              rol: 'bot',
+              texto: 'No pude conectar con el asistente. Revisa la API o intenta de nuevo.',
+            },
+          ]);
+          this.iaCargando.set(false);
+          this.scrollChatAlFinal();
+        },
+      });
+  }
 
   private scrollChatAlFinal(): void {
     setTimeout(() => {

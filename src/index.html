@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#0f172a" />
     
-    <!-- Metadatos Primarios y SEO -->
     <title>AzuayCare - Plataforma Socioeconómica ISTA</title>
     <meta name="title" content="AzuayCare - Plataforma Socioeconómica ISTA" />
     <meta name="description" content="Plataforma institucional para la gestión y evaluación de vulnerabilidad socioeconómica estudiantil del Instituto Superior Tecnológico Azuay." />
@@ -13,36 +12,29 @@
     <meta name="robots" content="index, follow" />
     <meta name="author" content="Instituto Superior Tecnológico Azuay" />
 
-    <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://azuaycare.tecazuay.edu.ec/" />
     <meta property="og:title" content="AzuayCare - Plataforma Socioeconómica ISTA" />
     <meta property="og:description" content="Gestión integral de vulnerabilidad socioeconómica, fichas estudiantiles y bienestar institucional." />
     <meta property="og:image" content="https://azuaycare.tecazuay.edu.ec/assets/images/og-preview.jpg" />
 
-    <!-- Twitter Card -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:title" content="AzuayCare - Plataforma Socioeconómica ISTA" />
     <meta property="twitter:description" content="Gestión integral de vulnerabilidad socioeconómica del Instituto Superior Tecnológico Azuay." />
     <meta property="twitter:image" content="https://azuaycare.tecazuay.edu.ec/assets/images/og-preview.jpg" />
 
-    <!-- Favicon & Ruta Base -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <base href="/" />
 
-    <!-- Preconnect & Carga Eficiente de Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-    <!-- Iconos FontAwesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <!-- SDKs Externos (Carga Asíncrona) -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <!-- Estilos Inline de Carga Crítica para Pantalla Splash -->
     <style>
       .app-initial-splash {
         position: fixed;
@@ -68,7 +60,6 @@
         box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
         margin-bottom: 1.25rem;
         animation: pulseLogo 2s infinite ease-in-out;
-        will-change: transform;
       }
       .splash-spinner {
         width: 32px;
@@ -78,7 +69,6 @@
         border-top-color: #10b981;
         animation: spin 0.8s linear infinite;
         margin-top: 1rem;
-        will-change: transform;
       }
       .splash-text {
         font-size: 0.85rem;
@@ -93,17 +83,31 @@
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.06); }
       }
+      
+      .noscript-warning {
+        position: fixed;
+        top: 0; left: 0; width: 100%;
+        background-color: #ef4444;
+        color: white; text-align: center;
+        padding: 1rem; font-family: sans-serif;
+        font-weight: bold; z-index: 10000;
+      }
     </style>
   </head>
   <body>
-    <!-- Punto de Montaje del Componente Raíz de Angular -->
+    <noscript>
+      <div class="noscript-warning">
+        ⚠️ AzuayCare requiere JavaScript habilitado para funcionar correctamente. Por favor, actívelo en su navegador.
+      </div>
+    </noscript>
+
     <app-root>
-      <div class="app-initial-splash" aria-label="Cargando aplicación">
+      <div class="app-initial-splash" aria-label="Cargando aplicación AzuayCare">
         <div class="splash-logo-box">
           <i class="fas fa-heartbeat" aria-hidden="true"></i>
         </div>
         <div class="splash-text">Cargando AzuayCare...</div>
-        <div class="splash-spinner" role="status"></div>
+        <div class="splash-spinner" role="status" aria-live="polite"></div>
       </div>
     </app-root>
   </body>

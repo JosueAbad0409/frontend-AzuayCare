@@ -1,9 +1,10 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, DestroyRef, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ReactiveFormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, finalize } from 'rxjs';
+import { forkJoin, finalize, Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { FormularioService } from '../../../core/services/formulario.service';
@@ -22,15 +23,14 @@ import { TipoFormulario } from '../../../core/models/tipo-formulario.model';
   styleUrls: ['./formularios.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FormulariosComponent {
+export class FormulariosComponent implements OnInit {
   private readonly formularioService = inject(FormularioService);
   private readonly periodoService = inject(PeriodoService);
   private readonly tipoFormularioService = inject(TipoFormularioService);
   private readonly toastService = inject(ToastService);
-  private readonly fb = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  // Estado Base
   readonly formularios = signal<Formulario[]>([]);
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly tiposFormulario = signal<TipoFormulario[]>([]);
@@ -39,23 +39,21 @@ export class FormulariosComponent {
   readonly isCloning = signal<boolean>(false);
   readonly isTogglingState = signal<boolean>(false);
 
-  // Filtros
   readonly searchTerm = signal<string>('');
   readonly filtroTipo = signal<string>('TODOS');
   readonly filtroVersion = signal<string>('TODOS');
   readonly filtroEstado = signal<string>('TODOS');
 
-  // Modales
   readonly isEditMode = signal<boolean>(false);
   readonly selectedFormularioId = signal<string | null>(null);
 
-  // Lista de versiones ordenada
+  private readonly searchSubject = new Subject<string>();
+
   readonly versionesDisponibles = computed(() => {
     const versiones = this.formularios().map(f => f.version);
     return Array.from(new Set(versiones)).sort((a, b) => b - a);
   });
 
-  // Filtro Reactivo Computado
   readonly formulariosFiltrados = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
     const tipo = this.filtroTipo();
@@ -79,16 +77,27 @@ export class FormulariosComponent {
     });
   });
 
-  constructor() {
+  readonly hayFiltrosActivos = computed(() => {
+    return this.searchTerm() !== '' || 
+           this.filtroTipo() !== 'TODOS' || 
+           this.filtroVersion() !== 'TODOS' || 
+           this.filtroEstado() !== 'TODOS';
+  });
+
+  ngOnInit(): void {
+    this.searchSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(term => {
+      this.searchTerm.set(term);
+    });
+
     this.cargarDatos();
   }
 
-  // ==========================================
-  // FILTROS
-  // ==========================================
-  
   onSearchChange(event: Event): void {
-    this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.searchSubject.next((event.target as HTMLInputElement).value);
   }
 
   onTipoChange(event: Event): void {
@@ -101,6 +110,17 @@ export class FormulariosComponent {
 
   onEstadoChange(event: Event): void {
     this.filtroEstado.set((event.target as HTMLSelectElement).value);
+  }
+
+  limpiarFiltros(): void {
+    this.searchTerm.set('');
+    this.filtroTipo.set('TODOS');
+    this.filtroVersion.set('TODOS');
+    this.filtroEstado.set('TODOS');
+    this.searchSubject.next('');
+    
+    const searchInput = document.getElementById('search-title-input') as HTMLInputElement;
+    if (searchInput) searchInput.value = '';
   }
 
   cargarDatos(): void {
@@ -118,15 +138,10 @@ export class FormulariosComponent {
         this.tiposFormulario.set(tiposFormulario || []);
       },
       error: (err: HttpErrorResponse) => {
-        console.error('Error al cargar datos:', err);
         this.toastService.show(this.extraerMensajeError(err, 'Error al cargar los datos iniciales.'), 'error');
       }
     });
   }
-
-  // ==========================================
-  // CREACIÓN Y EDICIÓN CON SWEETALERT
-  // ==========================================
 
   abrirModalCrear(): void {
     this.isEditMode.set(false);
@@ -135,11 +150,11 @@ export class FormulariosComponent {
   }
 
   abrirModalEditar(form: Formulario, e: Event): void {
-  e.stopPropagation();
-  this.isEditMode.set(true);
-  this.selectedFormularioId.set(form.id);
-  this.abrirSwalFicha(form);
-}
+    e.stopPropagation();
+    this.isEditMode.set(true);
+    this.selectedFormularioId.set(form.id);
+    this.abrirSwalFicha(form);
+  }
 
   private abrirSwalFicha(form?: Formulario): void {
     const esEdicion = this.isEditMode();
@@ -158,43 +173,48 @@ export class FormulariosComponent {
     Swal.fire({
       title: esEdicion ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica',
       html: `
-        <div style="text-align:left; display:flex; flex-direction:column; gap:1rem;">
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Título de la Ficha *</label>
-            <input id="swal-titulo" class="swal2-input" placeholder="Ej. Ficha Socioeconómica ISTA 2026"
-              value="${esEdicion && form ? this.escapeHtml(form.titulo) : ''}"
-              style="margin:0;width:100%;box-sizing:border-box">
-          </div>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Periodo Académico *</label>
-            <select id="swal-periodo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-              <option value="">-- Selecciona un Periodo --</option>
-              ${opcionesPeriodo}
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Tipo de Formulario *</label>
-            <select id="swal-tipo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box"
-              ${esEdicion ? 'disabled' : ''}>
-              <option value="">-- Selecciona un Tipo de Formulario --</option>
-              ${opcionesTipo}
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción / Objetivo</label>
-            <textarea id="swal-desc" class="swal2-textarea" rows="2" placeholder="Instrucciones generales..."
-              style="margin:0;width:100%;box-sizing:border-box">${esEdicion && form ? this.escapeHtml(form.descripcion || '') : ''}</textarea>
+        <div class="swal-form-card">
+          <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; padding-top:0.5rem;">
+            <div>
+              <label class="swal-form-label">Título de la Ficha *</label>
+              <input id="swal-titulo" class="swal2-input custom-input" placeholder="Ej. Ficha Socioeconómica ISTA 2026"
+                value="${esEdicion && form ? this.escapeHtml(form.titulo) : ''}"
+                style="margin:0;width:100%;box-sizing:border-box">
+            </div>
+            <div>
+              <label class="swal-form-label">Periodo Académico *</label>
+              <select id="swal-periodo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
+                <option value="">-- Selecciona un Periodo --</option>
+                ${opcionesPeriodo}
+              </select>
+            </div>
+            <div>
+              <label class="swal-form-label">Tipo de Formulario *</label>
+              <select id="swal-tipo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box"
+                ${esEdicion ? 'disabled' : ''}>
+                <option value="">-- Selecciona un Tipo de Formulario --</option>
+                ${opcionesTipo}
+              </select>
+            </div>
+            <div>
+              <label class="swal-form-label">Descripción / Objetivo</label>
+              <textarea id="swal-desc" class="swal2-textarea custom-textarea" rows="2" placeholder="Instrucciones generales..."
+                style="margin:0;width:100%;box-sizing:border-box">${esEdicion && form ? this.escapeHtml(form.descripcion || '') : ''}</textarea>
+            </div>
           </div>
         </div>
       `,
       showCancelButton: true,
       focusConfirm: false,
-      confirmButtonText: esEdicion ? 'Actualizar' : 'Crear y Diseñar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#64748b',
-      width: '520px',
-      customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' },
+      confirmButtonText: esEdicion ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-magic"></i> Crear y Diseñar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      width: '560px',
+      customClass: { 
+        popup: 'custom-swal-popup', 
+        confirmButton: 'custom-swal-confirm', 
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
       didOpen: () => { (document.getElementById('swal-titulo') as HTMLInputElement | null)?.focus(); },
       preConfirm: () => {
         const titulo = (document.getElementById('swal-titulo') as HTMLInputElement)?.value?.trim() || '';
@@ -215,6 +235,7 @@ export class FormulariosComponent {
   }
 
   private guardarFichaDesdeSwal(data: { titulo: string; periodo_id: string; tipo_formulario_id: string; descripcion: string; }): void {
+    if(this.isSaving()) return;
     this.isSaving.set(true);
     const id = this.selectedFormularioId();
 
@@ -245,10 +266,6 @@ export class FormulariosComponent {
     }
   }
 
-  // ==========================================
-  // CLONACIÓN CON SWEETALERT
-  // ==========================================
-
   abrirModalClonar(formId: string, e: Event): void {
     e.stopPropagation();
     const periodoActivo = this.periodos().find(p => p.activo);
@@ -259,24 +276,29 @@ export class FormulariosComponent {
     Swal.fire({
       title: 'Clonar Formulario',
       html: `
-        <div style="text-align:left; display:flex; flex-direction:column; gap:1rem;">
-          <p style="margin:0; font-size:0.85rem; color:#64748b;">Selecciona el periodo destino para la nueva versión de esta ficha.</p>
-          <div>
-            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Periodo Destino *</label>
-            <select id="swal-clone-periodo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-              <option value="">-- Selecciona un Periodo --</option>
-              ${opcionesPeriodo}
-            </select>
+        <div class="swal-form-card">
+          <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; padding-top:0.5rem;">
+            <p style="margin:0; font-size:0.85rem; color:#64748b;">Selecciona el periodo destino para la nueva versión de esta ficha.</p>
+            <div>
+              <label class="swal-form-label">Periodo Destino *</label>
+              <select id="swal-clone-periodo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
+                <option value="">-- Selecciona un Periodo --</option>
+                ${opcionesPeriodo}
+              </select>
+            </div>
           </div>
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'Clonar Ficha',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#3b82f6',
-      cancelButtonColor: '#64748b',
-      width: '450px',
-      customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' },
+      confirmButtonText: '<i class="fas fa-copy"></i> Clonar Ficha',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      width: '500px',
+      customClass: { 
+        popup: 'custom-swal-popup', 
+        confirmButton: 'custom-swal-confirm', 
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
       preConfirm: () => {
         const periodo_destino_id = (document.getElementById('swal-clone-periodo') as HTMLSelectElement)?.value || '';
         if (!periodo_destino_id) {
@@ -293,6 +315,7 @@ export class FormulariosComponent {
   }
 
   private ejecutarClonacion(id: string, periodoDestinoId: string): void {
+    if(this.isCloning()) return;
     this.isCloning.set(true);
     this.formularioService.clonarFormulario(id, periodoDestinoId)
       .pipe(finalize(() => this.isCloning.set(false)))
@@ -307,10 +330,6 @@ export class FormulariosComponent {
       });
   }
 
-  // ==========================================
-  // PUBLICAR / ELIMINAR CON SWEETALERT
-  // ==========================================
-
   togglePublicacion(form: Formulario, e: Event): void {
     e.stopPropagation();
     if (this.isTogglingState()) return;
@@ -324,11 +343,14 @@ export class FormulariosComponent {
         : 'Volverá a estado borrador y los estudiantes no podrán verla.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: esPublicar ? '#10b981' : '#f59e0b',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: esPublicar ? 'Sí, publicar' : 'Sí, despublicar',
-      cancelButtonText: 'Cancelar',
-      customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+      confirmButtonText: esPublicar ? '<i class="fas fa-check"></i> Sí, publicar' : '<i class="fas fa-eye-slash"></i> Sí, despublicar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: { 
+        popup: 'custom-swal-popup', 
+        confirmButton: esPublicar ? 'custom-swal-confirm-success' : 'custom-swal-confirm-warning', 
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      }
     }).then((result) => {
       if (result.isConfirmed) {
         this.isTogglingState.set(true);
@@ -353,20 +375,27 @@ export class FormulariosComponent {
 
   eliminarFormulario(id: string, e: Event): void {
     e.stopPropagation();
+    if (this.isTogglingState()) return;
 
     Swal.fire({
       title: '¿Eliminar borrador?',
       text: 'Esta acción no se puede deshacer.',
       icon: 'error',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: { 
+        popup: 'custom-swal-popup', 
+        confirmButton: 'custom-swal-confirm-danger', 
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      }
     }).then((result) => {
       if (result.isConfirmed) {
-        this.formularioService.deleteFormulario(id).subscribe({
+        this.isTogglingState.set(true);
+        this.formularioService.deleteFormulario(id)
+        .pipe(finalize(() => this.isTogglingState.set(false)))
+        .subscribe({
           next: () => {
             this.toastService.show('Formulario eliminado correctamente.', 'info');
             this.cargarDatos();
@@ -381,10 +410,6 @@ export class FormulariosComponent {
       }
     });
   }
-
-  // ==========================================
-  // UTILERÍAS
-  // ==========================================
 
   getNombreTipoFormulario(form: Formulario): string {
     return form.tipoFormulario?.nombre

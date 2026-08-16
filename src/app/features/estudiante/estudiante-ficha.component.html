@@ -1,26 +1,26 @@
-<!-- Contenedor Principal con HTML5 Semántico y Accesibilidad -->
-<main class="bg-slate-50 min-h-screen text-slate-800 p-4 md:p-8 font-sans">
-  <div class="max-w-6xl mx-auto">
+<main class="bg-slate-50 min-h-screen text-slate-800 p-4 md:p-8 font-sans w-full max-w-full overflow-hidden">
+  <div class="max-w-6xl mx-auto w-full">
 
-    <!-- ESTADO DE CARGA -->
     @if (isLoading()) {
-    <section class="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm" aria-live="polite">
-      <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4 block" aria-hidden="true"></i>
-      <p class="text-slate-500 font-semibold">Cargando información académica...</p>
+    <section class="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm w-full max-w-2xl mx-auto" aria-live="polite">
+      <div class="skeleton-wrapper text-left space-y-4 w-full px-8 mx-auto">
+        <div class="skeleton-row h-8 bg-slate-200 rounded-lg w-2/4 mb-6"></div>
+        <div class="skeleton-row h-4 bg-slate-100 rounded w-full"></div>
+        <div class="skeleton-row h-4 bg-slate-100 rounded w-5/6"></div>
+        <div class="skeleton-row h-32 bg-slate-50 rounded-xl w-full mt-6"></div>
+      </div>
     </section>
     }
 
-    <!-- VISTA: LISTA DE FORMULARIOS -->
     @else if (vistaActual() === 'LISTA') {
     @if (formulariosDisponibles().length > 0) {
-    <section class="mb-6 animate-fade-in max-w-5xl mx-auto" aria-labelledby="lista-formularios-title">
+    <section class="mb-6 animate-fade-in max-w-5xl mx-auto w-full" aria-labelledby="lista-formularios-title">
       <header class="mb-8">
-        <h2 id="lista-formularios-title" class="text-3xl font-black text-slate-800 mb-2">Formularios Disponibles</h2>
-        <p class="text-slate-500">Selecciona la ficha que deseas llenar o revisa el estado de las que ya has enviado.
-        </p>
+        <h2 id="lista-formularios-title" class="text-2xl md:text-3xl font-black text-slate-800 mb-2">Formularios Disponibles</h2>
+        <p class="text-slate-500 text-sm">Selecciona la ficha que deseas llenar o revisa el estado de las que ya has enviado.</p>
       </header>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
         @for (form of formulariosDisponibles(); track form.id) {
         <article (click)="seleccionarFormulario(form.id)" tabindex="0" (keydown.enter)="seleccionarFormulario(form.id)"
           class="rounded-2xl border-2 p-6 transition-all duration-300 ease-in-out cursor-pointer group flex flex-col justify-between h-full bg-white relative overflow-hidden focus-visible:ring-4 focus-visible:ring-blue-400 focus-visible:outline-none"
@@ -33,7 +33,6 @@
             'border-slate-300 bg-slate-100/60 hover:shadow-md cursor-default': form.estado_ui === 'CERRADA_POR_PLAZO'
           }">
 
-          <!-- Etiqueta de Estado en la esquina superior -->
           @if (form.estado_ui !== 'NUEVA') {
           <div
             class="absolute top-0 right-0 px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-bl-xl rounded-tr-xl flex items-center gap-1 shadow-sm"
@@ -80,13 +79,11 @@
             </div>
 
             <header>
-              <h3 class="text-lg font-black text-slate-800 mb-2 group-hover:text-blue-700 transition-colors">{{
-                form.titulo }}</h3>
+              <h3 class="text-lg font-black text-slate-800 mb-2 group-hover:text-blue-700 transition-colors">{{ form.titulo }}</h3>
               <p class="text-xs text-slate-500 line-clamp-3 mb-6 leading-relaxed">{{ form.descripcion }}</p>
             </header>
           </div>
 
-          <!-- Botón de acción adaptativo -->
           <footer class="flex items-center justify-between border-t border-slate-100/50 pt-4 mt-auto">
             <span class="text-xs font-black uppercase tracking-wider" [ngClass]="{
                 'text-blue-600': form.estado_ui === 'NUEVA' || form.estado_ui === 'ENVIADA',
@@ -114,189 +111,150 @@
       </div>
     </section>
     } @else {
-    <section class="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in"
-      aria-live="polite">
+    <section class="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in" aria-live="polite">
       <i class="fas fa-folder-open text-6xl text-slate-200 mb-4 block" aria-hidden="true"></i>
       <h3 class="font-extrabold text-slate-800 text-xl mb-1">No hay fichas disponibles</h3>
-      <p class="text-xs md:text-sm text-slate-500 max-w-md mx-auto">Actualmente no existe ningún formulario publicado
-        activo para el periodo académico en curso.</p>
+      <p class="text-xs md:text-sm text-slate-500 max-w-md mx-auto">Actualmente no existe ningún formulario publicado activo para el periodo académico en curso.</p>
     </section>
     }
     }
 
-    <!-- VISTA: FORMULARIO DETALLADO Y RESUMEN -->
     @else if (vistaActual() === 'FORMULARIO' && fichaActiva() && formularioActivo()) {
-    <div class="animate-fade-in max-w-6xl mx-auto">
+    <div class="animate-fade-in max-w-6xl mx-auto w-full">
 
-      <button (click)="volverALista()" type="button"
-        class="mb-5 px-4 py-2 bg-white text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer shadow-sm w-fit hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+      <button (click)="volverALista()" type="button" [disabled]="isLoading() || enviando() || isSavingLocal()"
+        class="mb-5 px-4 py-2 bg-white text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer shadow-sm w-fit hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
         <i class="fas fa-arrow-left" aria-hidden="true"></i> Volver a los formularios
       </button>
 
-      <!-- BANNERS INFORMATIVOS DE ESTADO -->
       @if (estadoActivoUI() === 'RECHAZADA') {
-      <div
-        class="bg-amber-50 border border-amber-200 p-4 md:p-5 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center mb-6 animate-fade-in shadow-sm"
-        role="alert">
+      <div class="bg-amber-50 border border-amber-200 p-4 md:p-5 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center mb-6 animate-fade-in shadow-sm" role="alert">
         <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
           <i class="fas fa-exclamation-triangle text-lg" aria-hidden="true"></i>
         </div>
         <div>
           <h4 class="text-amber-900 font-extrabold text-base md:text-lg">Tu ficha fue rechazada</h4>
-          <p class="text-sm text-amber-700 mt-1">Bienestar Estudiantil encontró inconsistencias. Puedes corregir tus
-            respuestas ahora mismo y volver a enviarla.</p>
+          <p class="text-sm text-amber-700 mt-1">Bienestar Estudiantil encontró inconsistencias. Puedes corregir tus respuestas ahora mismo y volver a enviarla.</p>
         </div>
       </div>
       } @else if (!esEditable()) {
-      <div
-        class="bg-blue-50 border border-blue-200 p-4 md:p-5 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center mb-6 animate-fade-in shadow-sm"
-        role="status">
+      <div class="bg-blue-50 border border-blue-200 p-4 md:p-5 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center mb-6 animate-fade-in shadow-sm" role="status">
         <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
           <i class="fas fa-lock text-lg" aria-hidden="true"></i>
         </div>
         <div>
           <h4 class="text-blue-900 font-extrabold text-base md:text-lg">Modo de Solo Lectura Activo</h4>
           <p class="text-sm text-blue-700 mt-1">
-            Esta ficha ya fue <strong>{{ estadoActivoUI() }}</strong> y se encuentra bloqueada por seguridad. Puedes
-            revisar tus respuestas o descargar el comprobante en PDF en el último paso.
+            Esta ficha ya fue <strong>{{ estadoActivoUI() }}</strong> y se encuentra bloqueada por seguridad. Puedes revisar tus respuestas o descargar el comprobante en PDF en el último paso.
           </p>
         </div>
       </div>
       }
 
       @if (mostrarBannerPrecarga()) {
-      <div
-        class="bg-blue-50 border border-blue-200 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center mb-6 animate-fade-in">
+      <div class="bg-blue-50 border border-blue-200 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center mb-6 animate-fade-in">
         <div class="mb-4 md:mb-0">
           <h4 class="text-blue-700 font-extrabold text-lg flex items-center gap-2">
             <i class="fas fa-magic" aria-hidden="true"></i> Precarga a 1-Click
           </h4>
-          <p class="text-sm text-blue-600 mt-1">Hemos detectado una ficha del periodo anterior. ¿Deseas importar tus
-            respuestas automáticamente?</p>
+          <p class="text-sm text-blue-600 mt-1">Hemos detectado una ficha del periodo anterior. ¿Deseas importar tus respuestas automáticamente?</p>
         </div>
         <div class="flex gap-3 w-full md:w-auto">
-          <button (click)="ignorarPrecarga()" type="button"
-            class="px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition duration-200 w-full md:w-auto cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+          <button (click)="ignorarPrecarga()" type="button" [disabled]="isLoading()"
+            class="px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition duration-200 w-full md:w-auto cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
             No, gracias
           </button>
-          <button (click)="ejecutarPrecarga()" type="button"
-            class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-sm hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2 w-full md:w-auto cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+          <button (click)="ejecutarPrecarga()" type="button" [disabled]="isLoading()"
+            class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-sm hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2 w-full md:w-auto cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
             <i class="fas fa-cloud-download-alt" aria-hidden="true"></i> Importar Datos
           </button>
         </div>
       </div>
       }
 
-      <!-- LAYOUT PRINCIPAL -->
-      <div class="flex flex-col lg:flex-row gap-6 items-start">
+      <div class="flex flex-col lg:flex-row gap-6 items-start w-full">
 
-        <!-- BARRA LATERAL (NAVEGACIÓN) -->
-        <aside class="w-full lg:w-72 shrink-0 lg:sticky lg:top-8">
-          <nav class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4"
-            aria-label="Navegación por secciones de la ficha">
+        <aside class="w-full lg:w-72 shrink-0 lg:sticky lg:top-8 max-w-full">
+          <nav class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4" aria-label="Navegación por secciones de la ficha">
             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Secciones ficha</h3>
             <ul class="space-y-1">
               @for (sec of secciones(); track sec.id; let i = $index) {
               <li>
-                <button type="button" (click)="irAPaso(i)"
-                  class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                <button type="button" (click)="irAPaso(i)" [disabled]="enviando() || isLoading()"
+                  class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer disabled:opacity-50"
                   [ngClass]="seccionActualIndex() === i ? 'text-blue-900 font-bold bg-blue-50' : 'text-slate-500 hover:bg-slate-50'">
-                  <span class="flex items-center gap-2 text-left">
-                    <i class="fas fa-folder w-5 text-center" aria-hidden="true"
+                  <span class="flex items-center gap-2 text-left overflow-hidden">
+                    <i class="fas fa-folder w-5 text-center shrink-0" aria-hidden="true"
                       [ngClass]="seccionActualIndex() === i ? 'text-blue-500' : 'text-slate-300'"></i>
-                    {{ i + 1 }}. {{ sec.nombre }}
+                    <span class="truncate whitespace-nowrap overflow-hidden text-ellipsis">{{ i + 1 }}. {{ sec.nombre }}</span>
                   </span>
                   @if (!esEditable() || seccionActualIndex() > i) {
-                  <i class="fas fa-check-circle text-emerald-500" aria-label="Sección completada"></i>
+                  <i class="fas fa-check-circle text-emerald-500 shrink-0 ml-2" aria-label="Sección completada"></i>
                   }
                 </button>
               </li>
               }
               <li class="pt-2 mt-2 border-t border-slate-100">
-                <button type="button" (click)="irAPaso(secciones().length)"
-                  class="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-bold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                <button type="button" (click)="irAPaso(secciones().length)" [disabled]="enviando() || isLoading()"
+                  class="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-bold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer disabled:opacity-50"
                   [ngClass]="esPasoResumen() ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'">
                   <span class="flex items-center gap-2">
-                    <i class="fas fa-eye" [ngClass]="esPasoResumen() ? 'text-white' : 'text-slate-400'"
-                      aria-hidden="true"></i>
-                    {{ secciones().length + 1 }}. Vista PDF / Impresión
+                    <i class="fas fa-eye shrink-0" [ngClass]="esPasoResumen() ? 'text-white' : 'text-slate-400'" aria-hidden="true"></i>
+                    {{ secciones().length + 1 }}. Vista PDF
                   </span>
                 </button>
               </li>
             </ul>
           </nav>
 
-          <!-- WIDGET DE PROGRESO -->
           @if (secciones().length > 0) {
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4">
             <div class="flex justify-between text-xs text-slate-500 mb-2 font-bold">
-              <span class="flex items-center gap-1.5"><i class="fas fa-layer-group text-blue-500"
-                  aria-hidden="true"></i>Progreso</span>
+              <span class="flex items-center gap-1.5"><i class="fas fa-layer-group text-blue-500" aria-hidden="true"></i>Progreso</span>
               <span class="text-blue-600">{{ progreso() | number:'1.0-0' }}%</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-              <div
-                class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500 ease-out"
-                [style.width.%]="progreso()"></div>
+              <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500 ease-out" [style.width.%]="progreso()"></div>
             </div>
           </div>
           }
 
-          <!-- BALANCE EN VIVO (SIDEBAR) -->
-          <!-- BALANCE EN VIVO (SIDEBAR) -->
           @if (haySeccionFinanciera() && esEditable() && !esPasoResumen()) {
-          <div class="rounded-2xl border p-4 mb-4 transition-colors" [ngClass]="egresosExcedenIngresos() 
-      ? 'bg-red-50 border-red-200' 
-      : 'bg-amber-50 border-amber-200'" role="status" aria-live="polite">
-
-            <h4 class="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"
-              [ngClass]="egresosExcedenIngresos() ? 'text-red-800' : 'text-amber-900'">
-              <i class="fas" [ngClass]="egresosExcedenIngresos() ? 'fa-exclamation-triangle' : 'fa-coins'"
-                aria-hidden="true"></i>
-              Balance en vivo
+          <div class="rounded-2xl border p-4 mb-4 transition-colors overflow-hidden" [ngClass]="egresosExcedenIngresos() ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'" role="status" aria-live="polite">
+            <h4 class="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5" [ngClass]="egresosExcedenIngresos() ? 'text-red-800' : 'text-amber-900'">
+              <i class="fas" [ngClass]="egresosExcedenIngresos() ? 'fa-exclamation-triangle' : 'fa-coins'" aria-hidden="true"></i> Balance en vivo
             </h4>
-
-            <p class="text-xs text-emerald-700 font-bold">Ingresos: ${{ totalIngresos() | number:'1.2-2' }}</p>
-            <p class="text-xs text-rose-700 font-bold">Egresos: ${{ totalEgresos() | number:'1.2-2' }}</p>
-
-            <p class="text-sm font-black mt-1" [class.text-emerald-700]="!egresosExcedenIngresos()"
-              [class.text-red-700]="egresosExcedenIngresos()">
+            <p class="text-xs text-emerald-700 font-bold truncate">Ingresos: ${{ totalIngresos() | number:'1.2-2' }}</p>
+            <p class="text-xs text-rose-700 font-bold truncate">Egresos: ${{ totalEgresos() | number:'1.2-2' }}</p>
+            <p class="text-sm font-black mt-1 truncate" [class.text-emerald-700]="!egresosExcedenIngresos()" [class.text-red-700]="egresosExcedenIngresos()">
               Balance: ${{ balance() | number:'1.2-2' }}
             </p>
-
             @if (egresosExcedenIngresos()) {
-            <p class="text-[10px] text-red-700 font-semibold mt-2 leading-tight">
-              Los egresos superan a los ingresos. Corrige los montos.
-            </p>
+            <p class="text-[10px] text-red-700 font-semibold mt-2 leading-tight">Los egresos superan a los ingresos. Corrige los montos.</p>
             }
           </div>
           }
 
-          <!-- AYUDA INSTITUCIONAL -->
-          <div class="bg-blue-50/60 rounded-2xl border border-blue-100 p-5">
+          <div class="bg-blue-50/60 rounded-2xl border border-blue-100 p-5 hidden lg:block">
             <h4 class="text-sm font-bold text-blue-800 flex items-center gap-2 mb-2">
               <i class="far fa-question-circle" aria-hidden="true"></i> ¿Necesitas ayuda?
             </h4>
             <p class="text-xs text-slate-600 leading-relaxed">
-              Toda la ficha es obligatoria según lineamientos del instituto. En caso de cometer un error en la carrera o
-              el ciclo, recuerda que puedes solicitar corregirlo al coordinador.
+              Toda la ficha es obligatoria según lineamientos del instituto. En caso de cometer un error en la carrera o el ciclo, recuerda que puedes solicitar corregirlo al coordinador.
             </p>
           </div>
         </aside>
 
-        <!-- ÁREA PRINCIPAL -->
-        <main class="flex-1 w-full bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in relative">
+        <main class="flex-1 w-full bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in relative min-w-0 max-w-full overflow-hidden">
 
           <header class="p-6 md:p-8 border-b border-slate-100">
             <div class="flex flex-wrap justify-between items-start gap-4">
-              <div>
-                <h2 id="form-title" class="text-xl md:text-2xl font-black text-slate-800">{{ formularioActivo()?.titulo
-                  }}</h2>
-                <p class="text-xs md:text-sm text-slate-500 mt-1">{{ formularioActivo()?.descripcion }}</p>
+              <div class="max-w-[70%]">
+                <h2 id="form-title" class="text-xl md:text-2xl font-black text-slate-800 break-words">{{ formularioActivo()?.titulo }}</h2>
+                <p class="text-xs md:text-sm text-slate-500 mt-1 line-clamp-2">{{ formularioActivo()?.descripcion }}</p>
               </div>
-              <div class="flex flex-col items-end gap-2 z-20">
-                <span
-                  class="px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest whitespace-nowrap border"
+              <div class="flex flex-col items-end gap-2 z-20 shrink-0">
+                <span class="px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest whitespace-nowrap border"
                   [ngClass]="{
                     'bg-amber-50 text-amber-700 border-amber-200': estadoActivoUI() === 'BORRADOR',
                     'bg-blue-50 text-blue-700 border-blue-200': estadoActivoUI() === 'ENVIADA',
@@ -304,18 +262,14 @@
                     'bg-red-50 text-red-700 border-red-200': estadoActivoUI() === 'RECHAZADA',
                     'bg-slate-100 text-slate-600 border-slate-200': estadoActivoUI() === 'CERRADA_POR_PLAZO'
                   }">
-                  <i class="fas fa-circle text-[8px] mr-1.5" [ngClass]="{'animate-pulse': esEditable()}"
-                    aria-hidden="true"></i>
+                  <i class="fas fa-circle text-[8px] mr-1.5" [ngClass]="{'animate-pulse': esEditable()}" aria-hidden="true"></i>
                   {{ estadoActivoUI() }}
                 </span>
 
                 @if (esEditable()) {
-                <div
-                  class="text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5"
-                  [ngClass]="isSavingLocal() ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'"
-                  aria-live="polite">
-                  <i class="fas" [ngClass]="isSavingLocal() ? 'fa-sync-alt fa-spin' : 'fa-check-double'"
-                    aria-hidden="true"></i>
+                <div class="text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  [ngClass]="isSavingLocal() ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'" aria-live="polite">
+                  <i class="fas" [ngClass]="isSavingLocal() ? 'fa-sync-alt fa-spin' : 'fa-check-double'" aria-hidden="true"></i>
                   {{ isSavingLocal() ? 'Guardando borrador...' : 'Borrador sincronizado' }}
                 </div>
                 }
@@ -325,12 +279,11 @@
 
           <form [formGroup]="respuestasForm" (ngSubmit)="guardarYEnviar()">
 
-            <!-- VISTA: PREGUNTAS Y SECCIONES DEL FORMULARIO -->
             @if (!esPasoResumen() && secciones().length > 0 && secciones()[seccionActualIndex()]) {
-            <div class="p-6 md:p-8 relative z-20">
-              <header class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <h3 class="text-xl font-bold text-blue-900">{{ secciones()[seccionActualIndex()].nombre }}</h3>
-                <span class="text-xs font-bold px-3 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-200">
+            <div class="p-4 md:p-8 relative z-20">
+              <header class="flex flex-wrap justify-between items-center mb-6 border-b border-slate-100 pb-4 gap-2">
+                <h3 class="text-xl font-bold text-blue-900 break-words max-w-[70%]">{{ secciones()[seccionActualIndex()].nombre }}</h3>
+                <span class="text-xs font-bold px-3 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 whitespace-nowrap">
                   Paso {{ seccionActualIndex() + 1 }} de {{ secciones().length }}
                 </span>
               </header>
@@ -339,41 +292,37 @@
                 @for (p of secciones()[seccionActualIndex()].preguntas; track p.id) {
                 @if (!esPreguntaDependiente(p.id) && esPreguntaVisible(p.id)) {
 
-                <!-- PREGUNTA PADRE (AGRUPADA CON FIELDSET) -->
-                <fieldset
-                  class="flex flex-col gap-2.5 p-5 rounded-xl border transition-all duration-300 relative overflow-hidden"
+                <fieldset class="flex flex-col gap-2.5 p-4 md:p-5 rounded-xl border transition-all duration-300 relative max-w-full"
                   [ngClass]="!esEditable() ? 'bg-slate-50/80 border-slate-200 opacity-90' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm focus-within:border-blue-400 focus-within:shadow-md'">
 
-                  <legend class="text-sm font-bold text-slate-700 w-full mb-2">
+                  <legend class="text-sm font-bold text-slate-700 w-full mb-2 break-words">
                     {{ p.enunciado }}
                     @if (p.es_obligatorio && esEditable()) {
-                    <span class="text-red-500" aria-label="Obligatorio">*</span>
+                    <span class="text-red-500 ml-1" aria-label="Obligatorio">*</span>
                     }
                   </legend>
 
-                  <!-- TIPO: MATRIZ -->
                   @if (p.tipoCampo?.nombre === 'MATRIZ' && p.filasMatriz && p.columnasMatriz) {
-                  <div class="overflow-x-auto mt-2 rounded-xl border border-slate-200 shadow-inner">
-                    <table class="w-full text-xs text-left text-slate-600">
-                      <thead class="bg-slate-100 text-slate-500 uppercase font-extrabold border-b border-slate-200">
+                  <div class="overflow-x-auto mt-2 rounded-xl border border-slate-200 shadow-inner w-full max-w-full">
+                    <table class="w-full text-xs text-left text-slate-600 responsive-table">
+                      <thead class="bg-slate-100 text-slate-500 uppercase font-extrabold border-b border-slate-200 hidden md:table-header-group">
                         <tr>
-                          <th scope="col" class="p-3">Criterios</th>
+                          <th scope="col" class="p-3 min-w-[120px]">Criterios</th>
                           @for (col of p.columnasMatriz; track col.id) {
-                          <th scope="col" class="p-3 text-center">{{ col.texto_columna }}</th>
+                          <th scope="col" class="p-3 text-center min-w-[80px]">{{ col.texto_columna }}</th>
                           }
                         </tr>
                       </thead>
-                      <tbody [formGroup]="$any(matricesGroup.get(p.id))">
+                      <tbody [formGroup]="$any(matricesGroup.get(p.id))" class="flex flex-col md:table-row-group">
                         @for (fila of p.filasMatriz; track fila.id) {
-                        <tr class="border-b border-slate-100 transition-colors"
-                          [ngClass]="{'hover:bg-slate-50': esEditable()}">
-                          <td class="p-3 font-semibold text-slate-700">{{ fila.texto_fila }}</td>
+                        <tr class="border-b border-slate-200 transition-colors md:table-row flex flex-col mb-4 md:mb-0 bg-white rounded-lg p-2 md:p-0 md:bg-transparent" [ngClass]="{'hover:bg-slate-50': esEditable()}">
+                          <td class="p-3 font-bold text-slate-800 md:text-slate-700 border-b md:border-0 bg-slate-50 md:bg-transparent rounded-t-lg md:rounded-none mb-2 md:mb-0">{{ fila.texto_fila }}</td>
                           @for (col of p.columnasMatriz; track col.id) {
-                          <td class="p-3 text-center">
+                          <td class="p-2 md:p-3 text-right md:text-center flex justify-between items-center md:table-cell" [attr.data-label]="col.texto_columna">
                             <input type="checkbox" [checked]="esColumnaMatrizSeleccionada(p.id, fila.id, col.id)"
                               (change)="onToggleMatrizMultiple(p.id, fila.id, col.id, $event)"
                               [disabled]="!esEditable()"
-                              class="w-4 h-4 accent-blue-600 cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+                              class="w-5 h-5 md:w-4 md:h-4 accent-blue-600 cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
                           </td>
                           }
                         </tr>
@@ -383,11 +332,10 @@
                   </div>
                   }
 
-                  <!-- TIPO: SELECCIÓN ÚNICA -->
                   @else if (p.tipoCampo?.nombre === 'SELECCION_UNICA' && p.opciones) {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <select [formControlName]="p.id"
-                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100 cursor-pointer"
+                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100 cursor-pointer appearance-none truncate"
                       [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                       <option value="">-- Seleccionar opción --</option>
                       @for (op of p.opciones; track op.id) {
@@ -397,116 +345,102 @@
                   </div>
                   }
 
-                  <!-- TIPO: SELECCIÓN MÚLTIPLE -->
                   @else if (p.tipoCampo?.nombre === 'SELECCION_MULTIPLE' && p.opciones) {
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 w-full">
                     @for (op of p.opciones; track op.id) {
-                    <label
-                      class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all duration-200"
+                    <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all duration-200 w-full"
                       [ngClass]="esEditable() ? 'cursor-pointer hover:border-blue-300 focus-within:border-blue-500' : 'opacity-80 cursor-not-allowed bg-slate-50'">
                       <input type="checkbox" [disabled]="!esEditable()"
                         [checked]="esOpcionMultipleSeleccionada(p.id, op.id!)"
                         (change)="onToggleSeleccionMultiple(p.id, op.id!, $event)"
-                        class="w-4 h-4 accent-blue-600 rounded focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
-                      <span>{{ op.texto_opcion }}</span>
+                        class="w-4 h-4 accent-blue-600 rounded focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none shrink-0">
+                      <span class="truncate">{{ op.texto_opcion }}</span>
                     </label>
                     }
                   </div>
                   }
 
-                  <!-- TIPO: NUMÉRICO -->
                   @else if (p.tipoCampo?.nombre === 'NUMERICO') {
-                  <div [formGroup]="respuestasGroup">
-                    <input type="number" [formControlName]="p.id" placeholder="0.00"
+                  <div [formGroup]="respuestasGroup" class="w-full">
+                    <input type="number" [formControlName]="p.id" placeholder="0.00" min="0" step="0.01"
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100"
                       [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                   </div>
                   }
 
-                  <!-- TIPO: FECHA -->
                   @else if (p.tipoCampo?.nombre === 'FECHA') {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <input type="date" [formControlName]="p.id"
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100"
                       [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                   </div>
                   }
 
-                  <!-- TIPO: TEXTO POR DEFECTO -->
                   @else {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <input type="text" [formControlName]="p.id" placeholder="Escribe tu respuesta..."
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100"
                       [ngClass]="{'border-red-400 bg-red-50': respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched}">
                   </div>
                   }
 
-                  <!-- FEEDBACK DE VALIDACIÓN -->
                   @if ((respuestasGroup.get(p.id)?.invalid && respuestasGroup.get(p.id)?.touched) ||
                   (p.tipoCampo?.nombre === 'MATRIZ' && matricesGroup.get(p.id)?.invalid &&
                   matricesGroup.get(p.id)?.touched)) {
                   <span class="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1" role="alert">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Este campo es obligatorio para
-                    continuar.
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Este campo es obligatorio o tiene formato inválido.
                   </span>
                   }
 
-                  <!-- ADJUNCIÓN DE EVIDENCIAS Y ADJUNTOS -->
                   @if (p.requiere_evidencia) {
-                  <div
-                    class="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
-                    <div class="flex items-center gap-2 font-semibold whitespace-nowrap">
+                  <div class="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200 w-full">
+                    <div class="flex items-center gap-2 font-semibold whitespace-nowrap shrink-0">
                       <i class="fas fa-paperclip text-amber-500" aria-hidden="true"></i>
                       <span>Adjuntar respaldo (PDF/JPG):</span>
                     </div>
                     @if (esEditable()) {
-                    <input type="file" (change)="subirArchivoEvidencia($event, p.id)"
-                      class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-200 file:text-slate-700 file:font-semibold file:cursor-pointer w-full focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+                    <input type="file" (change)="subirArchivoEvidencia($event, p.id)" [disabled]="enviando()"
+                      class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-200 file:text-slate-700 file:font-semibold file:cursor-pointer w-full focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none truncate disabled:opacity-50">
                     } @else {
-                    <span class="text-slate-500 italic flex items-center gap-1">
+                    <span class="text-slate-500 italic flex items-center gap-1 truncate w-full">
                       <i class="fas fa-check text-emerald-500" aria-hidden="true"></i> Archivo guardado correctamente.
                     </span>
                     }
                   </div>
 
                   @if (evidenciasGroup.get(p.id)?.value) {
-                  <div
-                    class="mt-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2">
-                    <i class="fas fa-check-circle" aria-hidden="true"></i> Archivo guardado
+                  <div class="mt-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2 max-w-full">
+                    <i class="fas fa-check-circle shrink-0" aria-hidden="true"></i> <span class="truncate">Archivo guardado</span>
                     <a [href]="evidenciasGroup.get(p.id)?.value" target="_blank"
-                      class="text-blue-600 underline ml-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">Ver
-                      archivo adjunto</a>
+                      class="text-blue-600 underline ml-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none shrink-0">Ver adjunto</a>
                   </div>
                   } @else if (evidenciasGroup.get(p.id)?.invalid && evidenciasGroup.get(p.id)?.touched) {
                   <span class="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1" role="alert">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Debes adjuntar el archivo de respaldo
-                    para continuar.
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Debes adjuntar el archivo de respaldo para continuar.
                   </span>
                   }
                   }
                 </fieldset>
 
-                <!-- SUBPREGUNTAS ANIDADAS (DISPARADAS POR DEPENDENCIAS) -->
                 @for (sub of getSubpreguntas(p.id); track sub.id) {
                 @if (esPreguntaVisible(sub.id)) {
-                <fieldset
-                  class="ml-4 md:ml-8 mt-1 flex flex-col gap-2.5 p-4 rounded-xl border-l-4 border-emerald-400 bg-emerald-50/40 border border-emerald-100 transition-all">
+                <fieldset class="ml-4 md:ml-8 mt-1 flex flex-col gap-2.5 p-4 rounded-xl border-l-4 border-emerald-400 bg-emerald-50/40 border-y border-r border-emerald-100 transition-all max-w-full">
                   <legend class="text-sm font-bold text-slate-700 flex items-center gap-2 w-full mb-1">
                     <i class="fas fa-level-down-alt text-emerald-600" aria-hidden="true"></i>
                     <span class="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wide">Subpregunta</span>
                   </legend>
 
-                  <span class="text-sm font-semibold text-slate-800 -mt-1">
+                  <span class="text-sm font-semibold text-slate-800 -mt-1 break-words">
                     {{ sub.enunciado }}
                     @if (sub.es_obligatorio && esEditable()) {
-                    <span class="text-red-500" aria-label="Obligatorio">*</span>
+                    <span class="text-red-500 ml-1" aria-label="Obligatorio">*</span>
                     }
                   </span>
 
                   @if (sub.tipoCampo?.nombre === 'SELECCION_UNICA' && sub.opciones) {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <select [formControlName]="sub.id"
-                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100">
+                      class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100 cursor-pointer appearance-none truncate">
                       <option value="">-- Seleccionar opción --</option>
                       @for (op of sub.opciones; track op.id) {
                       <option [value]="op.id">{{ op.texto_opcion }}</option>
@@ -514,29 +448,29 @@
                     </select>
                   </div>
                   } @else if (sub.tipoCampo?.nombre === 'SELECCION_MULTIPLE' && sub.opciones) {
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                     @for (op of sub.opciones; track op.id) {
-                    <label class="flex items-center gap-2 p-2 bg-white border rounded-lg text-xs font-semibold">
+                    <label class="flex items-center gap-2 p-2 bg-white border rounded-lg text-xs font-semibold cursor-pointer w-full">
                       <input type="checkbox" [disabled]="!esEditable()"
                         [checked]="esOpcionMultipleSeleccionada(sub.id, op.id!)"
                         (change)="onToggleSeleccionMultiple(sub.id, op.id!, $event)"
-                        class="w-4 h-4 accent-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none">
-                      {{ op.texto_opcion }}
+                        class="w-4 h-4 accent-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none shrink-0">
+                      <span class="truncate">{{ op.texto_opcion }}</span>
                     </label>
                     }
                   </div>
                   } @else if (sub.tipoCampo?.nombre === 'NUMERICO') {
-                  <div [formGroup]="respuestasGroup">
-                    <input type="number" [formControlName]="sub.id" placeholder="0"
+                  <div [formGroup]="respuestasGroup" class="w-full">
+                    <input type="number" [formControlName]="sub.id" placeholder="0" min="0" step="0.01"
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100">
                   </div>
                   } @else if (sub.tipoCampo?.nombre === 'FECHA') {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <input type="date" [formControlName]="sub.id"
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100">
                   </div>
                   } @else {
-                  <div [formGroup]="respuestasGroup">
+                  <div [formGroup]="respuestasGroup" class="w-full">
                     <input type="text" [formControlName]="sub.id" placeholder="Escribe tu respuesta..."
                       class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none transition-all disabled:opacity-70 disabled:bg-slate-100">
                   </div>
@@ -544,40 +478,35 @@
 
                   @if (respuestasGroup.get(sub.id)?.invalid && respuestasGroup.get(sub.id)?.touched) {
                   <span class="text-xs font-semibold text-red-500 flex items-center gap-1" role="alert">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Campo obligatorio.
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Campo obligatorio o formato incorrecto.
                   </span>
                   }
 
-                  <!-- ADJUNCIÓN DE EVIDENCIA DE LA SUBPREGUNTA (ej: certificado de discapacidad) -->
                   @if (sub.requiere_evidencia) {
-                  <div
-                    class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
-                    <div class="flex items-center gap-2 font-semibold whitespace-nowrap">
+                  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200 w-full">
+                    <div class="flex items-center gap-2 font-semibold whitespace-nowrap shrink-0">
                       <i class="fas fa-paperclip text-amber-500" aria-hidden="true"></i>
                       <span>Adjuntar respaldo (PDF/JPG):</span>
                     </div>
                     @if (esEditable()) {
-                    <input type="file" (change)="subirArchivoEvidencia($event, sub.id)"
-                      class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-200 file:text-slate-700 file:font-semibold file:cursor-pointer w-full focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+                    <input type="file" (change)="subirArchivoEvidencia($event, sub.id)" [disabled]="enviando()"
+                      class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-200 file:text-slate-700 file:font-semibold file:cursor-pointer w-full focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none truncate disabled:opacity-50">
                     } @else {
-                    <span class="text-slate-500 italic flex items-center gap-1">
+                    <span class="text-slate-500 italic flex items-center gap-1 truncate w-full">
                       <i class="fas fa-check text-emerald-500" aria-hidden="true"></i> Archivo guardado correctamente.
                     </span>
                     }
                   </div>
 
                   @if (evidenciasGroup.get(sub.id)?.value) {
-                  <div
-                    class="mt-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2">
-                    <i class="fas fa-check-circle" aria-hidden="true"></i> Archivo guardado
+                  <div class="mt-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2 max-w-full">
+                    <i class="fas fa-check-circle shrink-0" aria-hidden="true"></i> <span class="truncate">Archivo guardado</span>
                     <a [href]="evidenciasGroup.get(sub.id)?.value" target="_blank"
-                      class="text-blue-600 underline ml-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">Ver
-                      archivo adjunto</a>
+                      class="text-blue-600 underline ml-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none shrink-0">Ver adjunto</a>
                   </div>
                   } @else if (evidenciasGroup.get(sub.id)?.invalid && evidenciasGroup.get(sub.id)?.touched) {
                   <span class="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1" role="alert">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Debes adjuntar el archivo de respaldo
-                    para continuar.
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Debes adjuntar el archivo de respaldo para continuar.
                   </span>
                   }
                   }
@@ -589,125 +518,109 @@
                 }
               </div>
 
-              <!-- PANEL BALANCE EN TIEMPO REAL (SOLO SECCIÓN FINANCIERA) -->
               @if (seccionActualEsFinanciera() && esEditable()) {
-              <section class="mt-6 p-4 rounded-2xl border shadow-sm animate-fade-in transition-colors" [ngClass]="egresosExcedenIngresos() 
-      ? 'border-red-300 bg-red-50/80' 
-      : 'border-amber-200 bg-amber-50/80'" aria-live="polite">
-
-                <h4 class="text-xs font-black uppercase tracking-wider mb-3 flex items-center gap-2"
-                  [ngClass]="egresosExcedenIngresos() ? 'text-red-800' : 'text-amber-900'">
-                  <i class="fas" [ngClass]="egresosExcedenIngresos() ? 'fa-exclamation-triangle' : 'fa-calculator'"
-                    aria-hidden="true"></i>
-                  Resumen económico (en vivo)
+              <section class="mt-6 p-4 rounded-2xl border shadow-sm animate-fade-in transition-colors w-full" [ngClass]="egresosExcedenIngresos() ? 'border-red-300 bg-red-50/80' : 'border-amber-200 bg-amber-50/80'" aria-live="polite">
+                <h4 class="text-xs font-black uppercase tracking-wider mb-3 flex items-center gap-2" [ngClass]="egresosExcedenIngresos() ? 'text-red-800' : 'text-amber-900'">
+                  <i class="fas" [ngClass]="egresosExcedenIngresos() ? 'fa-exclamation-triangle' : 'fa-calculator'" aria-hidden="true"></i> Resumen económico (en vivo)
                 </h4>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div class="bg-white rounded-xl border border-emerald-100 p-3 text-center">
+                  <div class="bg-white rounded-xl border border-emerald-100 p-3 text-center overflow-hidden">
                     <p class="text-[10px] font-bold text-slate-500 uppercase">Ingresos</p>
-                    <p class="text-lg font-black text-emerald-700">${{ totalIngresos() | number:'1.2-2' }}</p>
+                    <p class="text-lg font-black text-emerald-700 truncate">${{ totalIngresos() | number:'1.2-2' }}</p>
                   </div>
-                  <div class="bg-white rounded-xl border border-rose-100 p-3 text-center">
+                  <div class="bg-white rounded-xl border border-rose-100 p-3 text-center overflow-hidden">
                     <p class="text-[10px] font-bold text-slate-500 uppercase">Egresos</p>
-                    <p class="text-lg font-black text-rose-700">${{ totalEgresos() | number:'1.2-2' }}</p>
+                    <p class="text-lg font-black text-rose-700 truncate">${{ totalEgresos() | number:'1.2-2' }}</p>
                   </div>
-                  <div class="bg-white rounded-xl border p-3 text-center"
-                    [ngClass]="egresosExcedenIngresos() ? 'border-red-200' : 'border-blue-100'">
+                  <div class="bg-white rounded-xl border p-3 text-center overflow-hidden" [ngClass]="egresosExcedenIngresos() ? 'border-red-200' : 'border-blue-100'">
                     <p class="text-[10px] font-bold text-slate-500 uppercase">Balance</p>
-                    <p class="text-lg font-black" [class.text-emerald-700]="!egresosExcedenIngresos()"
-                      [class.text-red-700]="egresosExcedenIngresos()">
+                    <p class="text-lg font-black truncate" [class.text-emerald-700]="!egresosExcedenIngresos()" [class.text-red-700]="egresosExcedenIngresos()">
                       ${{ balance() | number:'1.2-2' }}
                     </p>
                   </div>
                 </div>
 
                 @if (egresosExcedenIngresos()) {
-                <div
-                  class="mt-3 p-3 rounded-xl bg-red-100 border border-red-200 text-red-800 text-xs font-semibold flex items-start gap-2">
-                  <i class="fas fa-exclamation-triangle mt-0.5" aria-hidden="true"></i>
-                  <span>Los egresos no pueden ser mayores que los ingresos. Corrige los montos para poder
-                    continuar.</span>
+                <div class="mt-3 p-3 rounded-xl bg-red-100 border border-red-200 text-red-800 text-xs font-semibold flex items-start gap-2">
+                  <i class="fas fa-exclamation-triangle mt-0.5 shrink-0" aria-hidden="true"></i>
+                  <span>Los egresos no pueden ser mayores que los ingresos. Corrige los montos para poder continuar.</span>
                 </div>
                 } @else {
                 <p class="text-[10px] text-amber-800/80 mt-2">
-                  Se actualiza solo mientras escribes los montos. El cálculo oficial lo confirma el sistema al enviar la
-                  ficha.
+                  Se actualiza solo mientras escribes los montos. El cálculo oficial lo confirma el sistema al enviar la ficha.
                 </p>
                 }
               </section>
               }
 
-              <!-- BOTONERA DE NAVEGACIÓN PASO A PASO -->
-              <footer class="mt-8 pt-6 border-t border-slate-100 flex justify-between">
-                <button type="button" (click)="anterior()" [disabled]="seccionActualIndex() === 0"
-                  class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 hover:text-blue-600 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+              <footer class="mt-8 pt-6 border-t border-slate-100 flex flex-wrap-reverse sm:flex-nowrap justify-between gap-4">
+                <button type="button" (click)="anterior()" [disabled]="seccionActualIndex() === 0 || enviando()"
+                  class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 hover:text-blue-600 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer w-full sm:w-auto">
                   <i class="fas fa-arrow-left" aria-hidden="true"></i> Atrás
                 </button>
-                <button type="button" (click)="siguiente()"
-                  class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-sm transition-all duration-300 hover:shadow-md flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none hover:-translate-y-0.5">
+                <button type="button" (click)="siguiente()" [disabled]="enviando()"
+                  class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-sm transition-all duration-300 hover:shadow-md flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                   Siguiente <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
               </footer>
             </div>
             }
 
-            <!-- VISTA RESUMEN / PDF IMPRESO -->
             @if (esPasoResumen()) {
-            <div>
-              <header
-                class="flex justify-between items-center p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+            <div class="w-full max-w-full overflow-hidden">
+              <header class="flex flex-wrap justify-between items-center gap-4 p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <i class="far fa-file-alt text-blue-600 text-xl" aria-hidden="true"></i> Vista Impresa de la Ficha
+                  <i class="far fa-file-alt text-blue-600 text-xl" aria-hidden="true"></i> Vista de la Ficha
                 </h2>
                 @if (fichaActiva()?.id && !esEditable()) {
-                <button type="button" (click)="descargarPdfResumen(fichaActiva()!.id)"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-300 shadow-sm hover:shadow focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
-                  <i class="fas fa-file-pdf" aria-hidden="true"></i> Descargar PDF
+                <button type="button" (click)="descargarPdfResumen(fichaActiva()!.id)" [disabled]="isDescargandoPdf()"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer disabled:opacity-50 w-full sm:w-auto">
+                  @if(isDescargandoPdf()) {
+                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Generando PDF...
+                  } @else {
+                    <i class="fas fa-file-pdf" aria-hidden="true"></i> Descargar PDF
+                  }
                 </button>
                 }
               </header>
 
-              <div class="p-6 md:p-10">
-                <header class="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-                  <div>
-                    <h1 class="text-lg md:text-xl font-bold text-blue-900 tracking-tight leading-tight">INSTITUTO
-                      SUPERIOR TECNOLÓGICO DEL AZUAY</h1>
-                    <h2 class="text-xs md:text-sm font-bold text-slate-700 mt-1">UNIDAD DE BIENESTAR ESTUDIANTIL Y APOYO
-                      SOCIAL</h2>
-                    <p class="text-xs text-slate-500 mt-1">Ficha Socioeconómica Institucional - Ciclo {{
-                      periodoActivo()?.nombre }}</p>
+              <div class="p-4 md:p-10 w-full">
+                <header class="flex flex-col md:flex-row justify-between items-start mb-8 gap-4 w-full">
+                  <div class="max-w-full">
+                    <h1 class="text-lg md:text-xl font-bold text-blue-900 tracking-tight leading-tight break-words">INSTITUTO SUPERIOR TECNOLÓGICO DEL AZUAY</h1>
+                    <h2 class="text-xs md:text-sm font-bold text-slate-700 mt-1 break-words">UNIDAD DE BIENESTAR ESTUDIANTIL Y APOYO SOCIAL</h2>
+                    <p class="text-xs text-slate-500 mt-1">Ficha Socioeconómica - Ciclo {{ periodoActivo()?.nombre }}</p>
                   </div>
-                  <div class="text-left md:text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                  <div class="text-left md:text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shrink-0 max-w-full">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">REGISTRO ÚNICO</p>
-                    <p class="text-sm font-bold text-blue-900 tracking-wide">F-{{ perfilEstudiante()?.cedula }}</p>
+                    <p class="text-sm font-bold text-blue-900 tracking-wide truncate">F-{{ perfilEstudiante()?.cedula }}</p>
                   </div>
                 </header>
 
-                <div
-                  class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center mb-8 flex items-center justify-center gap-2">
-                  <i class="fas fa-check-circle text-emerald-500 text-lg" aria-hidden="true"></i>
-                  <p class="text-xs font-bold text-emerald-700">
-                    Consentimiento de Confidencialidad firmado digitalmente por {{ authService.user()?.nombre }}
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center mb-8 flex items-center justify-center gap-2 overflow-hidden">
+                  <i class="fas fa-check-circle text-emerald-500 text-lg shrink-0" aria-hidden="true"></i>
+                  <p class="text-xs font-bold text-emerald-700 truncate">
+                    Consentimiento firmado digitalmente por {{ authService.user()?.nombre }}
                   </p>
                 </div>
 
                 @for (sec of secciones(); track sec.id; let idx = $index) {
-                <section class="mb-10">
-                  <h3
-                    class="text-sm font-bold text-blue-900 uppercase border-l-4 border-blue-600 pl-3 mb-5 py-1 bg-slate-50">
+                <section class="mb-10 w-full max-w-full">
+                  <h3 class="text-sm font-bold text-blue-900 uppercase border-l-4 border-blue-600 pl-3 mb-5 py-1 bg-slate-50 break-words">
                     {{ numeroRomano(idx + 1) }}. {{ sec.nombre }}
                   </h3>
 
-                  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 px-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 px-2 w-full">
                     @for (preg of sec.preguntas; track preg.id) {
                     @if (!esPreguntaDependiente(preg.id) && esPreguntaVisible(preg.id)) {
 
                     @if (preg.tipoCampo?.nombre === 'MATRIZ' && preg.filasMatriz && preg.columnasMatriz) {
-                    <div class="col-span-1 md:col-span-4 flex flex-col gap-3">
-                      <span class="text-[11px] font-bold text-slate-500 uppercase">{{ preg.enunciado }}</span>
-                      <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-                        <table class="w-full text-xs text-left text-slate-600">
-                          <thead class="bg-slate-100 text-slate-600 uppercase font-extrabold border-b border-slate-200">
+                    <div class="col-span-1 md:col-span-4 flex flex-col gap-3 w-full">
+                      <span class="text-[11px] font-bold text-slate-500 uppercase break-words">{{ preg.enunciado }}</span>
+                      <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm w-full max-w-full">
+                        <table class="w-full text-xs text-left text-slate-600 responsive-table">
+                          <thead class="bg-slate-100 text-slate-600 uppercase font-extrabold border-b border-slate-200 hidden md:table-header-group">
                             <tr>
                               <th scope="col" class="p-3">Criterios</th>
                               @for (col of preg.columnasMatriz; track col.id) {
@@ -715,19 +628,18 @@
                               }
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody class="flex flex-col md:table-row-group">
                             @for (fila of preg.filasMatriz; track fila.id) {
-                            <tr class="border-b border-slate-100 bg-white">
-                              <td class="p-3 font-semibold text-slate-700">{{ fila.texto_fila }}</td>
+                            <tr class="border-b border-slate-100 bg-white md:table-row flex flex-col mb-4 md:mb-0 rounded-lg p-2 md:p-0 md:bg-transparent">
+                              <td class="p-3 font-semibold text-slate-700 border-b md:border-0 bg-slate-50 md:bg-transparent rounded-t-lg md:rounded-none mb-2 md:mb-0">{{ fila.texto_fila }}</td>
                               @for (col of preg.columnasMatriz; track col.id) {
-                              <td class="p-3 text-center">
+                              <td class="p-2 md:p-3 text-right md:text-center flex justify-between items-center md:table-cell" [attr.data-label]="col.texto_columna">
                                 @if (esColumnaMatrizSeleccionada(preg.id, fila.id, col.id)) {
-                                <div
-                                  class="w-5 h-5 bg-blue-600 rounded shadow-sm mx-auto flex items-center justify-center">
+                                <div class="w-5 h-5 bg-blue-600 rounded shadow-sm mx-auto md:mx-auto ml-auto flex items-center justify-center">
                                   <i class="fas fa-check text-[10px] text-white" aria-hidden="true"></i>
                                 </div>
                                 } @else {
-                                <div class="w-5 h-5 bg-slate-50 border border-slate-200 rounded mx-auto"></div>
+                                <div class="w-5 h-5 bg-slate-50 border border-slate-200 rounded mx-auto md:mx-auto ml-auto"></div>
                                 }
                               </td>
                               }
@@ -738,36 +650,32 @@
                       </div>
                     </div>
                     } @else {
-                    <article class="col-span-1 md:col-span-2">
-                      <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">{{ preg.enunciado }}</p>
-                      <p
-                        class="text-sm font-semibold text-slate-800 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 whitespace-pre-line break-words min-h-[36px] flex items-center">
-                        {{ obtenerTextoRespuesta(preg) }}
+                    <article class="col-span-1 md:col-span-2 w-full">
+                      <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 break-words">{{ preg.enunciado }}</p>
+                      <p class="text-sm font-semibold text-slate-800 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 whitespace-pre-line break-words min-h-[36px] flex items-center w-full">
+                        {{ resumenRespuestas()[preg.id] || 'Sin responder' }}
                       </p>
 
                       @if (evidenciasGroup.get(preg.id)?.value) {
-                      <div class="mt-2 text-[11px] font-semibold text-emerald-700 flex items-center gap-2">
-                        <i class="fas fa-paperclip"></i>
-                        <a [href]="evidenciasGroup.get(preg.id)?.value" target="_blank" rel="noopener"
-                          class="underline text-blue-600">
+                      <div class="mt-2 text-[11px] font-semibold text-emerald-700 flex items-center gap-2 max-w-full">
+                        <i class="fas fa-paperclip shrink-0"></i>
+                        <a [href]="evidenciasGroup.get(preg.id)?.value" target="_blank" rel="noopener" class="underline text-blue-600 truncate focus-visible:outline-blue-500">
                           Ver evidencia adjunta
                         </a>
                       </div>
                       }
 
-                      <!-- SUBPREGUNTAS ANIDADAS EN EL RESUMEN -->
                       @for (sub of getSubpreguntas(preg.id); track sub.id) {
                       @if (esPreguntaVisible(sub.id)) {
-                      <div class="mt-3 ml-2 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-3">
+                      <div class="mt-3 ml-2 pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-3 w-full max-w-full">
                         <p class="text-[10px] font-extrabold text-emerald-700 uppercase mb-1 flex items-center gap-1">
-                          <i class="fas fa-level-down-alt" aria-hidden="true"></i> Subpregunta
+                          <i class="fas fa-level-down-alt shrink-0" aria-hidden="true"></i> Subpregunta
                         </p>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase mb-1">{{ sub.enunciado }}</p>
-                        <p class="text-sm font-semibold text-slate-800">{{ obtenerTextoRespuesta(sub) }}</p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase mb-1 break-words">{{ sub.enunciado }}</p>
+                        <p class="text-sm font-semibold text-slate-800 break-words">{{ resumenRespuestas()[sub.id] || 'Sin responder' }}</p>
                         @if (evidenciasGroup.get(sub.id)?.value) {
-                        <div class="mt-1 text-[11px] font-semibold text-emerald-700">
-                          <a [href]="evidenciasGroup.get(sub.id)?.value" target="_blank" rel="noopener"
-                            class="underline text-blue-600">
+                        <div class="mt-1 text-[11px] font-semibold text-emerald-700 max-w-full">
+                          <a [href]="evidenciasGroup.get(sub.id)?.value" target="_blank" rel="noopener" class="underline text-blue-600 truncate inline-block focus-visible:outline-blue-500">
                             Ver evidencia
                           </a>
                         </div>
@@ -786,14 +694,14 @@
 
                 @if (esEditable()) {
                 <footer class="mt-12 pt-6 border-t border-slate-200 flex justify-end">
-                  <button type="submit" [disabled]="enviando()"
-                    class="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all duration-300 text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+                  <button type="submit" [disabled]="enviando() || isLoading() || isSavingLocal()"
+                    class="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all duration-300 text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-full sm:w-auto gap-2 uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer">
                     @if (enviando()) {
                     <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Procesando Envío...
                     } @else if (estadoActivoUI() === 'RECHAZADA') {
-                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Reenviar Ficha Corregida
+                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Reenviar Corregida
                     } @else {
-                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Confirmar y Enviar Ficha a Bienestar
+                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar Ficha a Bienestar
                     }
                   </button>
                 </footer>
@@ -806,42 +714,44 @@
       </div>
     </div>
     }
-    <!-- VISTA: PANTALLA FINAL DE ÉXITO -->
+
     @else if (vistaActual() === 'RESUMEN_FINAL') {
-    <div class="max-w-3xl mx-auto bg-white p-8 md:p-12 rounded-2xl border border-slate-200 shadow-sm text-center animate-fade-in mt-8 md:mt-12">
-      <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-12 rounded-2xl border border-slate-200 shadow-sm text-center animate-fade-in mt-8 md:mt-12 overflow-hidden w-full">
+      <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shrink-0">
         <i class="fas fa-check"></i>
       </div>
       
-      <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-3">¡Ficha Enviada con Éxito!</h2>
+      <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-3 break-words">¡Ficha Enviada con Éxito!</h2>
       <p class="text-slate-500 mb-8 max-w-lg mx-auto">Tu información socioeconómica ha sido registrada. Descarga tu comprobante en PDF, el cual incluye el Código QR para el departamento de Bienestar Estudiantil.</p>
 
-      <!-- Botón para descargar el PDF Resumen -->
-      <div class="flex justify-center mb-10">
-        <button type="button" (click)="descargarPdfResumen(fichaActiva()!.id)"
-          class="bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-6 py-3 rounded-xl font-bold flex items-center gap-3 transition-all duration-300 shadow-sm">
-          <i class="fas fa-file-pdf text-xl" aria-hidden="true"></i> Descargar Comprobante PDF
+      <div class="flex justify-center mb-10 w-full">
+        <button type="button" (click)="descargarPdfResumen(fichaActiva()!.id)" [disabled]="isDescargandoPdf()"
+          class="bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto">
+          @if(isDescargandoPdf()){
+             <i class="fas fa-spinner fa-spin text-xl" aria-hidden="true"></i> Generando PDF...
+          } @else {
+             <i class="fas fa-file-pdf text-xl" aria-hidden="true"></i> Descargar Comprobante PDF
+          }
         </button>
       </div>
 
-      <!-- Resumen de Vulnerabilidad -->
       @if (alertasVulnerabilidad().length > 0) {
-      <div class="text-left bg-rose-50 p-6 rounded-2xl border border-rose-200 mb-10">
+      <div class="text-left bg-rose-50 p-6 rounded-2xl border border-rose-200 mb-10 max-w-full">
         <h3 class="text-sm font-black text-rose-800 uppercase tracking-wider mb-5 flex items-center gap-2">
-          <i class="fas fa-exclamation-triangle text-rose-500" aria-hidden="true"></i> Puntos de Atención Prioritaria
+          <i class="fas fa-exclamation-triangle text-rose-500 shrink-0" aria-hidden="true"></i> Puntos de Atención Prioritaria
         </h3>
         <ul class="space-y-4">
           @for (alerta of alertasVulnerabilidad(); track $index) {
           <li class="flex flex-col border-b border-rose-200/60 pb-3 last:border-0 last:pb-0">
-            <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">{{ alerta.pregunta }}</span>
-            <span class="text-sm font-semibold text-rose-700 bg-white px-3 py-2 rounded-lg border border-rose-100">{{ alerta.respuesta }}</span>
+            <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1 break-words">{{ alerta.pregunta }}</span>
+            <span class="text-sm font-semibold text-rose-700 bg-white px-3 py-2 rounded-lg border border-rose-100 break-words w-full">{{ alerta.respuesta }}</span>
           </li>
           }
         </ul>
       </div>
       }
 
-      <button (click)="volverALista()" class="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none">
+      <button (click)="volverALista()" class="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none cursor-pointer">
         Volver a mis formularios
       </button>
     </div>

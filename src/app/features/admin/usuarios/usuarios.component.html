@@ -1,53 +1,61 @@
 <main class="usuarios-container animate-fade-in">
-  <!-- CABECERA DE LA PÁGINA -->
   <header class="page-header">
     <div class="header-text">
-      <h1 class="page-title">Gestión de Usuarios y Coordinaciones</h1>
-      <p class="page-subtitle">Administra los roles del sistema y asigna coordinadores a sus respectivas carreras.</p>
+      <h1 class="page-title">Gestión de Usuarios y Roles</h1>
+      <p class="page-subtitle">Administra la comunidad institucional, sus roles y asignaciones de coordinación.</p>
     </div>
     
-    <button type="button" class="btn btn-primary" (click)="abrirModalAsignar()">
-      <i class="fas fa-user-tag" aria-hidden="true"></i>
-      <span>Asignar Coordinador a Carrera</span>
+    <button 
+      type="button" 
+      class="btn btn-primary" 
+      (click)="abrirModalAsignar()" 
+      [disabled]="isSaving()"
+    >
+      <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-user-tag'" aria-hidden="true"></i>
+      <span>{{ isSaving() ? 'Procesando...' : 'Asignar Coordinador a Carrera' }}</span>
     </button>
   </header>
 
-  <!-- BARRA DE BÚSQUEDA Y METRICAS -->
   @if (!isLoading()) {
     <div class="filter-bar">
-      <div class="search-box">
-        <i class="fas fa-search search-icon" aria-hidden="true"></i>
-        <input 
-          type="search" 
-          placeholder="Buscar por correo, nombre, apellido o cédula..." 
-          [value]="searchTerm()"
-          (input)="onSearchChange($event)"
-          class="search-input"
-          aria-label="Buscar usuarios por nombre, apellido o correo"
-        />
+      <div class="count-badge" role="status" aria-live="polite">
+        <i class="fas fa-users-viewfinder title-icon" aria-hidden="true"></i>
+        <span class="count-label">Resultados Directorio:</span>
+        <strong class="count-value">{{ usuariosFiltrados().length }} Usuario(s)</strong>
       </div>
 
       <div class="count-badge" role="status" aria-live="polite">
-        <span class="count-label">Total:</span>
-        <strong class="count-value">{{ usuariosFiltrados().length }} Usuario(s)</strong>
+        <i class="fas fa-sitemap title-icon" aria-hidden="true"></i>
+        <span class="count-label">Resultados Asignaciones:</span>
+        <strong class="count-value">{{ asignacionesFiltradas().length }} Asignación(es)</strong>
       </div>
+
+      @if (tieneFiltrosActivos()) {
+        <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
+          <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+          <span>Limpiar Todos los Filtros</span>
+        </button>
+      }
     </div>
   }
 
-  <!-- ESTADO DE CARGA -->
   @if (isLoading()) {
-    <div class="state-card loading-state" role="alert" aria-busy="true">
-      <i class="fas fa-circle-notch fa-spin spinner-icon" aria-hidden="true"></i>
-      <p class="state-title">Cargando datos del sistema...</p>
-      <p class="state-desc">Obteniendo la lista de usuarios, carreras y coordinaciones activas.</p>
-    </div>
+    <section class="table-section">
+      <div class="table-card">
+        <div class="skeleton-wrapper">
+          <div class="skeleton-row skeleton-header"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+    </section>
   } @else {
-    
-    <!-- SECCIÓN 1: DIRECTORIO DE USUARIOS -->
     <section class="table-section">
       <div class="section-header">
         <h2 class="section-title">
-          <i class="fas fa-users title-icon" aria-hidden="true"></i> Directora General de Usuarios
+          <i class="fas fa-address-book title-icon" aria-hidden="true"></i> Directorio General de Usuarios
         </h2>
       </div>
 
@@ -55,33 +63,98 @@
         <div class="table-responsive">
           <table class="data-table">
             <thead>
-              <tr>
+              <tr class="header-titles">
                 <th scope="col" class="col-usuario">Nombre Completo</th>
                 <th scope="col" class="col-correo">Correo Institucional</th>
                 <th scope="col" class="col-cedula">Cédula</th>
                 <th scope="col" class="col-rol">Rol Asignado</th>
                 <th scope="col" class="col-carrera">Carrera Asignada</th>
-                <th scope="col" class="col-acc text-right">
-                  <div class="filter-select-wrapper">
-                    <select 
-                      [value]="filtroEstado()" 
-                      (change)="onEstadoChange($event)" 
-                      class="table-filter-select" 
-                      title="Filtrar directorio por estado del usuario"
-                      aria-label="Filtrar directorio por estado"
-                    >
-                      <option value="ACTIVOS">ACTIVOS</option>
-                      <option value="INACTIVOS">INACTIVOS</option>
-                      <option value="TODOS">TODOS</option>
-                    </select>
+                <th scope="col" class="col-acc text-right">Estado / Acciones</th>
+              </tr>
+              <tr class="header-filters">
+                <th class="col-usuario">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Filtrar nombre..." 
+                      [value]="filterNombre()"
+                      (input)="onColumnFilterInput('nombre', $event)" 
+                      aria-label="Filtrar por Nombre Completo"
+                    />
                   </div>
+                </th>
+                <th class="col-correo">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-at search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Filtrar correo..." 
+                      [value]="filterCorreo()"
+                      (input)="onColumnFilterInput('correo', $event)" 
+                      aria-label="Filtrar por Correo Institucional"
+                    />
+                  </div>
+                </th>
+                <th class="col-cedula">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-id-card search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Cédula..." 
+                      [value]="filterCedula()"
+                      (input)="onColumnFilterInput('cedula', $event)" 
+                      aria-label="Filtrar por Cédula"
+                    />
+                  </div>
+                </th>
+                <th class="col-rol">
+                  <select 
+                    class="table-column-select" 
+                    [value]="filterRol()"
+                    (change)="onColumnFilterInput('rol', $event)"
+                    aria-label="Filtrar por Rol Asignado"
+                  >
+                    <option value="">Todos los Roles</option>
+                    @for (rol of rolesDisponibles(); track rol) {
+                      <option [value]="rol">{{ rol }}</option>
+                    }
+                  </select>
+                </th>
+                <th class="col-carrera">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Carrera..." 
+                      [value]="filterCarrera()"
+                      (input)="onColumnFilterInput('carrera', $event)" 
+                      aria-label="Filtrar por Carrera Asignada"
+                    />
+                  </div>
+                </th>
+                <th class="col-acc text-right">
+                  <select 
+                    class="table-column-select" 
+                    [value]="filtroEstado()" 
+                    (change)="onColumnFilterInput('estado', $event)"
+                    aria-label="Filtrar por Estado"
+                  >
+                    <option value="ACTIVOS">ACTIVOS</option>
+                    <option value="INACTIVOS">INACTIVOS</option>
+                    <option value="TODOS">TODOS</option>
+                  </select>
                 </th>
               </tr>
             </thead>
             <tbody>
               @for (u of usuariosFiltrados(); track u.id) {
                 <tr [class.is-inactive]="u.fecha_desactivacion">
-                  <td class="col-usuario">
+                  <td class="col-usuario" data-label="Nombre Completo">
                     <div class="user-identity">
                       <span class="user-fullname">{{ u.primer_nombre }} {{ u.primer_apellido }}</span>
                       @if (u.fecha_desactivacion) {
@@ -89,27 +162,27 @@
                       }
                     </div>
                   </td>
-                  <td class="col-correo text-muted">{{ u.email_institucional }}</td>
-                  <td class="col-cedula font-mono">{{ u.cedula || 'N/A' }}</td>
-                  <td class="col-rol">
+                  <td class="col-correo text-muted text-ellipsis" data-label="Correo Institucional">{{ u.email_institucional }}</td>
+                  <td class="col-cedula font-mono" data-label="Cédula">{{ u.cedula || 'N/A' }}</td>
+                  <td class="col-rol" data-label="Rol Asignado">
                     <span class="badge" [ngClass]="{
-                      'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR',
+                      'badge-purple': u.rol?.nombre === 'COORDINADOR_BIENESTAR' || u.rol?.nombre === 'ADMIN',
                       'badge-blue': u.rol?.nombre === 'COORDINADOR_CARRERA',
-                      'badge-success': u.rol?.nombre === 'ESTUDIANTE',
-                      
+                      'badge-success': u.rol?.nombre === 'ESTUDIANTE'
                     }">
                       {{ u.rol?.nombre || 'ESTUDIANTE' }}
                     </span>
                   </td>
-                  <td class="col-carrera text-muted font-medium">
+                  <td class="col-carrera text-muted font-medium text-ellipsis" data-label="Carrera Asignada">
                     {{ getCarreraNombreDeAsignacion(u) }}
                   </td>
-                  <td class="col-acc text-right">
+                  <td class="col-acc text-right" data-label="Acciones">
                     <div class="actions-wrapper">
                       <button 
                         type="button" 
                         class="btn-icon btn-icon-blue" 
                         (click)="abrirModalEditar(u)" 
+                        [disabled]="isSaving()"
                         [attr.aria-label]="'Editar usuario ' + u.primer_nombre + ' ' + u.primer_apellido"
                         title="Editar Información y Rol"
                       >
@@ -121,6 +194,7 @@
                           type="button" 
                           class="btn-icon btn-icon-red" 
                           (click)="eliminarUsuario(u.id)" 
+                          [disabled]="isSaving()"
                           [attr.aria-label]="'Desactivar usuario ' + u.primer_nombre + ' ' + u.primer_apellido"
                           title="Desactivar Usuario"
                         >
@@ -136,7 +210,12 @@
                     <div class="state-card empty-state">
                       <i class="fas fa-users-slash empty-icon" aria-hidden="true"></i>
                       <p class="state-title">No se encontraron usuarios</p>
-                      <p class="state-desc">Intenta ajustar la búsqueda o los filtros de estado aplicados.</p>
+                      <p class="state-desc">Ajusta los criterios de búsqueda en los encabezados de la tabla.</p>
+                      @if (tieneFiltrosActivos()) {
+                        <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                          <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -147,7 +226,6 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 2: ASIGNACIONES ACTIVAS -->
     <section class="table-section">
       <div class="section-header">
         <h2 class="section-title">
@@ -159,31 +237,72 @@
         <div class="table-responsive">
           <table class="data-table">
             <thead>
-              <tr>
+              <tr class="header-titles">
                 <th scope="col" class="col-asig-coord">Coordinador</th>
                 <th scope="col" class="col-asig-carr">Carrera Asignada</th>
                 <th scope="col" class="col-asig-ini">Fecha Inicio</th>
                 <th scope="col" class="col-asig-fin">Fecha Fin</th>
                 <th scope="col" class="col-asig-acc text-right">Acciones</th>
               </tr>
+              <tr class="header-filters">
+                <th class="col-asig-coord">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-user-tie search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Coordinador..." 
+                      [value]="filterAsigCoord()"
+                      (input)="onColumnFilterInput('asigCoord', $event)" 
+                      aria-label="Filtrar por Coordinador"
+                    />
+                  </div>
+                </th>
+                <th class="col-asig-carr">
+                  <div class="filter-input-wrap">
+                    <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
+                    <input 
+                      type="text" 
+                      class="table-column-input" 
+                      placeholder="Carrera..." 
+                      [value]="filterAsigCarrera()"
+                      (input)="onColumnFilterInput('asigCarrera', $event)" 
+                      aria-label="Filtrar por Carrera"
+                    />
+                  </div>
+                </th>
+                <th class="col-asig-ini" colspan="2">
+                  <div class="filter-input-wrap">
+                    <input 
+                      type="date" 
+                      class="table-column-input table-date-input" 
+                      [value]="filterAsigFecha()"
+                      (change)="onColumnFilterInput('asigFecha', $event)" 
+                      aria-label="Seleccionar Fecha para Filtrar"
+                    />
+                  </div>
+                </th>
+                <th class="col-asig-acc text-right"></th>
+              </tr>
             </thead>
             <tbody>
-              @for (asig of asignaciones(); track asig.usuario_id + '_' + asig.carrera_id) {
+              @for (asig of asignacionesFiltradas(); track asig.usuario_id + '_' + asig.carrera_id) {
                 <tr>
-                  <td class="col-asig-coord">
+                  <td class="col-asig-coord text-ellipsis" data-label="Coordinador">
                     <span class="user-fullname">{{ asig.usuario?.primer_nombre }} {{ asig.usuario?.primer_apellido }}</span>
                   </td>
-                  <td class="col-asig-carr">
+                  <td class="col-asig-carr text-ellipsis" data-label="Carrera Asignada">
                     <span class="badge badge-blue">{{ asig.carrera?.nombre }}</span>
                   </td>
-                  <td class="col-asig-ini text-muted font-mono">{{ asig.fecha_inicio | date:'dd/MM/yyyy' }}</td>
-                  <td class="col-asig-fin text-muted font-mono">{{ asig.fecha_fin ? (asig.fecha_fin | date:'dd/MM/yyyy') : 'Indefinido' }}</td>
-                  <td class="col-asig-acc text-right">
+                  <td class="col-asig-ini text-muted font-mono" data-label="Fecha Inicio">{{ asig.fecha_inicio | date:'dd/MM/yyyy' }}</td>
+                  <td class="col-asig-fin text-muted font-mono" data-label="Fecha Fin">{{ asig.fecha_fin ? (asig.fecha_fin | date:'dd/MM/yyyy') : 'Indefinido' }}</td>
+                  <td class="col-asig-acc text-right" data-label="Acciones">
                     <div class="actions-wrapper">
                       <button 
                         type="button" 
                         class="btn-icon btn-icon-red" 
                         (click)="desasignar(asig.usuario_id, asig.carrera_id)" 
+                        [disabled]="isSaving()"
                         [attr.aria-label]="'Remover asignación de ' + asig.usuario?.primer_nombre"
                         title="Remover Asignación"
                       >
@@ -198,7 +317,12 @@
                     <div class="state-card empty-state">
                       <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
                       <p class="state-title">Sin asignaciones activas</p>
-                      <p class="state-desc">No existen coordinadores asignados a carreras actualmente.</p>
+                      <p class="state-desc">No existen coordinadores asignados que coincidan con la búsqueda.</p>
+                      @if (tieneFiltrosActivos()) {
+                        <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                          <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>

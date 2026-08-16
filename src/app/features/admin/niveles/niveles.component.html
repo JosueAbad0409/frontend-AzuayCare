@@ -1,82 +1,244 @@
 <div class="carreras-card animate-fade-in">
   <div class="header-section">
     <div>
-      <h3 class="title">Niveles Socioeconómicos</h3>
+      <h1 class="title">Niveles Socioeconómicos</h1>
       <p class="subtitle">Configura los rangos de ingresos para la clasificación automática de los estudiantes.</p>
     </div>
     
     @if (!showForm()) {
-      <button class="btn btn-purple" (click)="showForm.set(true)">
-        <i class="fas fa-plus"></i> Nuevo Nivel
+      <button 
+        type="button" 
+        class="btn btn-purple" 
+        (click)="toggleForm()"
+        [disabled]="isSaving()"
+        aria-label="Registrar nuevo nivel socioeconómico"
+      >
+        <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-plus'" aria-hidden="true"></i>
+        <span>Nuevo Nivel</span>
       </button>
     }
   </div>
 
   @if (showForm()) {
     <div class="form-card animate-slide-down">
-      <h4>Registrar Rango Socioeconómico</h4>
+      <div class="form-header-banner">
+        <i class="fas fa-layer-group banner-icon" aria-hidden="true"></i>
+        <div>
+          <h2 class="form-card-title">Registrar Rango Socioeconómico</h2>
+          <p class="form-card-sub">Establece la jerarquía y los límites de ingresos mensuales en dólares</p>
+        </div>
+      </div>
+
       <form [formGroup]="nivelForm" (ngSubmit)="guardarNivel()">
         <div class="form-grid">
           <div class="form-group">
-            <label>Nombre del Nivel *</label>
-            <input type="text" formControlName="nombre" class="form-control" placeholder="Ej. NIVEL A (Vulnerable)">
+            <label for="nivel-nombre" class="form-label">Nombre del Nivel *</label>
+            <input 
+              id="nivel-nombre"
+              type="text" 
+              formControlName="nombre" 
+              class="form-control" 
+              placeholder="Ej. NIVEL A (Vulnerable)"
+            />
           </div>
+
           <div class="form-group">
-            <label>Periodo Académico *</label>
-            <select formControlName="periodo_id" class="form-control">
-              <option value="">-- Seleccionar --</option>
+            <label for="nivel-periodo" class="form-label">Periodo Académico *</label>
+            <select id="nivel-periodo" formControlName="periodo_id" class="form-control">
+              <option value="">-- Seleccionar Periodo --</option>
               @for (p of periodos(); track p.id) {
                 <option [value]="p.id">{{ p.nombre }}</option>
               }
             </select>
           </div>
+
           <div class="form-group">
-            <label>Valor Mínimo ($) *</label>
-            <input type="number" formControlName="valor_min" class="form-control" placeholder="0">
+            <label for="nivel-val-min" class="form-label">Valor Mínimo ($) *</label>
+            <input 
+              id="nivel-val-min"
+              type="number" 
+              formControlName="valor_min" 
+              class="form-control font-mono" 
+              placeholder="0"
+            />
           </div>
+
           <div class="form-group">
-            <label>Valor Máximo ($) (Opcional)</label>
-            <input type="number" formControlName="valor_max" class="form-control" placeholder="Ej. 300">
+            <label for="nivel-val-max" class="form-label">Valor Máximo ($) (Opcional)</label>
+            <input 
+              id="nivel-val-max"
+              type="number" 
+              formControlName="valor_max" 
+              class="form-control font-mono" 
+              placeholder="Ej. 300"
+            />
           </div>
+
           <div class="form-group">
-            <label>Orden de Jerarquía *</label>
-            <input type="number" formControlName="orden" class="form-control" placeholder="1">
+            <label for="nivel-orden" class="form-label">Orden de Jerarquía *</label>
+            <input 
+              id="nivel-orden"
+              type="number" 
+              formControlName="orden" 
+              class="form-control font-mono" 
+              placeholder="1"
+            />
           </div>
         </div>
+
         <div class="form-actions">
-          <button type="button" class="btn btn-outline" (click)="showForm.set(false)">Cancelar</button>
-          <button type="submit" class="btn btn-purple" [disabled]="nivelForm.invalid">Guardar Rango</button>
+          <button 
+            type="button" 
+            class="btn btn-outline" 
+            (click)="toggleForm()"
+            [disabled]="isSaving()"
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+            <span>Cancelar</span>
+          </button>
+
+          <button 
+            type="submit" 
+            class="btn btn-purple" 
+            [disabled]="nivelForm.invalid || isSaving()"
+          >
+            <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-check'" aria-hidden="true"></i>
+            <span>{{ isSaving() ? 'Guardando...' : 'Guardar Rango' }}</span>
+          </button>
         </div>
       </form>
     </div>
   }
 
-  <div class="table-container">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Jerarquía</th>
-          <th>Nombre del Nivel</th>
-          <th>Rango de Balance</th>
-          <th style="text-align: right;">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (n of niveles(); track n.id) {
-          <tr>
-            <td><span class="badge badge-blue">#{{ n.orden }}</span></td>
-            <td><strong>{{ n.nombre }}</strong></td>
-            <td>${{ n.valor_min | number:'1.2-2' }} — {{ n.valor_max ? ('$' + (n.valor_max | number:'1.2-2')) : 'En adelante' }}</td>
-            <td style="text-align: right;">
-              <button class="btn-icon text-red" (click)="eliminarNivel(n.id)" title="Eliminar">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </td>
-          </tr>
-        } @empty {
-          <tr><td colspan="4" class="empty-state">No hay niveles configurados.</td></tr>
+  @if (!isLoading()) {
+    <div class="search-bar-wrapper">
+      <div class="search-input-box">
+        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+        <input 
+          type="text" 
+          placeholder="Buscar por nombre de nivel..." 
+          [value]="filterNombre()"
+          (input)="onSearchNombreChange($event)"
+          class="search-control"
+          aria-label="Buscar nivel por nombre"
+        />
+      </div>
+
+      <div class="filter-actions">
+        <span class="count-badge" role="status" aria-live="polite">
+          Total: <strong>{{ totalCasos() }}</strong> Nivel(es)
+        </span>
+
+        @if (tieneFiltrosActivos()) {
+          <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
+            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+            <span>Limpiar Filtros</span>
+          </button>
         }
-      </tbody>
-    </table>
-  </div>
+      </div>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="skeleton-wrapper">
+      <div class="skeleton-row skeleton-header"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr class="header-titles">
+            <th scope="col" class="col-jerarquia text-center">Jerarquía</th>
+            <th scope="col" class="col-nombre">Nombre del Nivel</th>
+            <th scope="col" class="col-periodo">Periodo Académico</th>
+            <th scope="col" class="col-rango">Rango de Balance</th>
+            <th scope="col" class="col-acc text-right">Acciones</th>
+          </tr>
+          <tr class="header-filters">
+            <th class="col-jerarquia text-center"></th>
+            <th class="col-nombre">
+              <div class="filter-input-wrap">
+                <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  class="table-column-input" 
+                  placeholder="Filtrar nivel..." 
+                  [value]="filterNombre()"
+                  (input)="onSearchNombreChange($event)"
+                  aria-label="Filtrar por nombre de nivel"
+                />
+              </div>
+            </th>
+            <th class="col-periodo">
+              <select 
+                [value]="filterPeriodo()" 
+                (change)="onPeriodoFilterChange($event)" 
+                class="table-column-select" 
+                aria-label="Filtrar por periodo académico"
+              >
+                <option value="TODOS">Todos los Periodos</option>
+                @for (p of periodosDisponibles(); track p.id) {
+                  <option [value]="p.id">{{ p.nombre }}</option>
+                }
+              </select>
+            </th>
+            <th class="col-rango"></th>
+            <th class="col-acc text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (n of nivelesFiltrados(); track n.id) {
+            <tr>
+              <td class="col-jerarquia text-center" data-label="Jerarquía">
+                <span class="badge badge-purple font-mono">#{{ n.orden }}</span>
+              </td>
+              <td class="col-nombre" data-label="Nombre del Nivel">
+                <strong class="nivel-title-text">{{ n.nombre }}</strong>
+              </td>
+              <td class="col-periodo" data-label="Periodo Académico">
+                <span class="text-muted">{{ obtenerNombrePeriodo(n.periodo_id) }}</span>
+              </td>
+              <td class="col-rango" data-label="Rango de Balance">
+                <span class="font-mono text-main font-bold">
+                  ${{ n.valor_min | number:'1.2-2' }} — {{ n.valor_max ? ('$' + (n.valor_max | number:'1.2-2')) : 'En adelante' }}
+                </span>
+              </td>
+              <td class="col-acc text-right" data-label="Acciones">
+                <div class="actions-wrapper">
+                  <button 
+                    type="button" 
+                    class="btn-icon text-red" 
+                    (click)="eliminarNivel(n.id)" 
+                    [disabled]="isSaving()"
+                    [attr.aria-label]="'Dar de baja el nivel ' + n.nombre"
+                  >
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="state-card empty-state">
+                  <i class="fas fa-layer-group empty-icon" aria-hidden="true"></i>
+                  <p class="state-title">No se encontraron niveles socioeconómicos</p>
+                  <p class="state-desc">No existen rangos configurados que coincidan con los criterios de búsqueda seleccionados.</p>
+                  @if (tieneFiltrosActivos()) {
+                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                      <i class="fas fa-undo" aria-hidden="true"></i>
+                      <span>Restablecer Filtros</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>

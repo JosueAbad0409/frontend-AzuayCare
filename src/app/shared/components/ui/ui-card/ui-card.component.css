@@ -1,5 +1,0 @@
-.ui-card { background: linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%); border: 1px solid rgba(226,232,240,0.95); border-radius: var(--radius-lg); padding: 1.15rem; box-shadow: var(--shadow-subtle); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-.ui-card--elevated { box-shadow: var(--shadow-md); }
-.ui-card__header { margin-bottom: 0.85rem; }
-.ui-card__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-strong); }
-.ui-card__subtitle { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.85rem; }

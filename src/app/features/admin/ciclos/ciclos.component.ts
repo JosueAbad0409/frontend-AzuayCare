@@ -1,10 +1,12 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subject, Subscription, debounceTime } from 'rxjs';
+import Swal from 'sweetalert2';
+
 import { CiclosService } from '../../../core/services/ciclos.service';
 import { CarreraService } from '../../../core/services/carrera.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Carrera } from '../../../core/models/carrera.model';
-import Swal from 'sweetalert2';
 import { Ciclo } from '../../../core/models/ciclo.model';
 
 @Component({
@@ -15,38 +17,93 @@ import { Ciclo } from '../../../core/models/ciclo.model';
   styleUrls: ['./ciclos.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CiclosComponent implements OnInit {
+export class CiclosComponent implements OnInit, OnDestroy {
   private readonly ciclosService = inject(CiclosService);
   private readonly carreraService = inject(CarreraService);
   private readonly toastService = inject(ToastService);
 
-  ciclos = signal<Ciclo[]>([]);
-  carreras = signal<Carrera[]>([]);
-  loading = signal<boolean>(false);
-  searchTerm = signal<string>('');
+  readonly ciclos = signal<Ciclo[]>([]);
+  readonly carreras = signal<Carrera[]>([]);
+  readonly loading = signal<boolean>(false);
+  readonly isSaving = signal<boolean>(false);
 
-  ciclosFiltrados = computed(() => {
-    const term = this.searchTerm().toLowerCase().trim();
-    if (!term) return this.ciclos();
-    return this.ciclos().filter(c => 
-      c.nombre.toLowerCase().includes(term) || 
-      (c.carrera?.nombre || '').toLowerCase().includes(term)
-    );
+  readonly filterSearch = signal<string>('');
+  readonly filterCarrera = signal<string>('TODOS');
+  readonly filterEstado = signal<string>('TODOS');
+
+  private readonly searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+
+  readonly carrerasDisponibles = computed(() => {
+    return this.carreras();
+  });
+
+  readonly ciclosFiltrados = computed(() => {
+    const term = this.filterSearch().toLowerCase().trim();
+    const carreraId = this.filterCarrera();
+    const estadoStr = this.filterEstado();
+
+    return this.ciclos().filter(c => {
+      const coincideNombre = !term || 
+        c.nombre.toLowerCase().includes(term) || 
+        (c.carrera?.nombre || '').toLowerCase().includes(term);
+
+      const coincideCarrera = carreraId === 'TODOS' || String(c.carrera_id) === carreraId;
+
+      let coincideEstado = true;
+      if (estadoStr === 'ACTIVO') {
+        coincideEstado = !c.fecha_desactivacion;
+      } else if (estadoStr === 'INACTIVO') {
+        coincideEstado = !!c.fecha_desactivacion;
+      }
+
+      return coincideNombre && coincideCarrera && coincideEstado;
+    });
+  });
+
+  readonly totalCasos = computed(() => this.ciclosFiltrados().length);
+
+  readonly tieneFiltrosActivos = computed(() => {
+    return !!this.filterSearch() || this.filterCarrera() !== 'TODOS' || this.filterEstado() !== 'TODOS';
   });
 
   ngOnInit(): void {
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(400))
+      .subscribe(val => this.filterSearch.set(val));
+
     this.cargarCarreras();
     this.cargarCiclos();
   }
 
-  onSearchChange(event: Event) {
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
+  }
+
+  onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchTerm.set(value);
+    this.searchSubject.next(value);
+  }
+
+  onCarreraFilterChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filterCarrera.set(value);
+  }
+
+  onEstadoFilterChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filterEstado.set(value);
+  }
+
+  limpiarFiltros(): void {
+    this.filterSearch.set('');
+    this.filterCarrera.set('TODOS');
+    this.filterEstado.set('TODOS');
   }
 
   cargarCarreras(): void {
     this.carreraService.getCarreras().subscribe({
-      next: (data) => this.carreras.set(data),
+      next: (data) => this.carreras.set(data || []),
       error: (err) => console.error('Error al cargar carreras:', err)
     });
   }
@@ -55,7 +112,7 @@ export class CiclosComponent implements OnInit {
     this.loading.set(true);
     this.ciclosService.getCiclos().subscribe({
       next: (data) => {
-        this.ciclos.set(data);
+        this.ciclos.set(data || []);
         this.loading.set(false);
       },
       error: (err) => {
@@ -67,34 +124,35 @@ export class CiclosComponent implements OnInit {
   }
 
   openModal(ciclo?: Ciclo): void {
-    const isEditing = !!ciclo;
-    const titleText = isEditing ? 'Editar Ciclo' : 'Nuevo Ciclo Académico';
-    const confirmText = isEditing ? 'Actualizar' : 'Guardar Ciclo';
+    if (this.isSaving()) return;
 
-    let optionsHtml = `<option value="">-- Seleccione una Carrera --</option>`;
+    const isEditing = !!ciclo;
+    const titleText = isEditing ? 'Editar Ciclo Académico' : 'Nuevo Ciclo Académico';
+
+    let optionsHtml = `<option value="">-- Seleccionar Carrera --</option>`;
     this.carreras().forEach(c => {
       const isSelected = isEditing && String(ciclo.carrera_id) === String(c.id) ? 'selected' : '';
       optionsHtml += `<option value="${c.id}" ${isSelected}>${c.nombre}</option>`;
     });
 
     Swal.fire({
-      title: titleText,
+      title: `<div class="swal-header-banner"><i class="fas fa-list-ol"></i><span>${titleText}</span></div>`,
       html: `
-        <div style="text-align: left; padding-top: 10px;">
-          <div style="margin-bottom: 1.25rem;">
-            <label for="swal-nombre" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #334155;">Nombre del Ciclo <span style="color: #ef4444;">*</span></label>
-            <input id="swal-nombre" class="swal2-input" placeholder="Ej. Primer Ciclo, 1er Ciclo, etc." style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? ciclo.nombre : ''}">
+        <div class="swal-form-card">
+          <div class="swal-form-group">
+            <label for="swal-nombre" class="swal-form-label">Nombre del Ciclo *</label>
+            <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Primer Ciclo, 1er Ciclo" value="${isEditing ? ciclo.nombre : ''}">
           </div>
 
-          <div style="margin-bottom: 1.25rem;">
-            <label for="swal-orden" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #334155;">Número de Orden <span style="color: #ef4444;">*</span></label>
-            <input id="swal-orden" type="number" min="1" class="swal2-input" placeholder="Ej. 1, 2, 3..." style="width: 100%; margin: 0; box-sizing: border-box;" value="${isEditing ? (ciclo.orden ?? 1) : 1}">
-            <small style="color: #64748b; font-size: 0.75rem;">Determina la secuencia lógica de ordenamiento (1, 2, 3...).</small>
+          <div class="swal-form-group">
+            <label for="swal-orden" class="swal-form-label">Número de Orden *</label>
+            <input id="swal-orden" type="number" min="1" class="swal-input-styled" placeholder="Ej. 1, 2, 3..." value="${isEditing ? (ciclo.orden ?? 1) : 1}">
+            <small class="swal-help-text">Determina la secuencia lógica de ordenamiento (1, 2, 3...).</small>
           </div>
 
-          <div>
-            <label for="swal-carrera" style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.4rem; color: #334155;">Carrera a la que pertenece <span style="color: #ef4444;">*</span></label>
-            <select id="swal-carrera" class="swal2-select" style="width: 100%; margin: 0; box-sizing: border-box; cursor: pointer;">
+          <div class="swal-form-group">
+            <label for="swal-carrera" class="swal-form-label">Carrera Perteneciente *</label>
+            <select id="swal-carrera" class="swal-select-styled">
               ${optionsHtml}
             </select>
           </div>
@@ -102,15 +160,24 @@ export class CiclosComponent implements OnInit {
       `,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: confirmText,
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: isEditing 
+        ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>' 
+        : '<i class="fas fa-floppy-disk" aria-hidden="true"></i> <span>Guardar Ciclo</span>',
+      cancelButtonText: '<i class="fas fa-xmark" aria-hidden="true"></i> <span>Cancelar</span>',
       preConfirm: () => {
-        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value.trim();
-        const ordenVal = (document.getElementById('swal-orden') as HTMLInputElement).value;
-        const carrera_id = (document.getElementById('swal-carrera') as HTMLSelectElement).value;
+        const nombreEl = document.getElementById('swal-nombre') as HTMLInputElement;
+        const ordenEl = document.getElementById('swal-orden') as HTMLInputElement;
+        const carreraEl = document.getElementById('swal-carrera') as HTMLSelectElement;
 
+        const nombre = nombreEl ? nombreEl.value.trim() : '';
+        const ordenVal = ordenEl ? ordenEl.value : '';
+        const carrera_id = carreraEl ? carreraEl.value : '';
         const orden = parseInt(ordenVal, 10);
 
         if (!nombre || nombre.length < 3) {
@@ -136,8 +203,12 @@ export class CiclosComponent implements OnInit {
   }
 
   guardarCiclo(formData: any, id: string | null): void {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+
     Swal.fire({
-      title: 'Guardando...',
+      title: 'Procesando...',
+      text: 'Guardando cambios en el sistema',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -145,11 +216,13 @@ export class CiclosComponent implements OnInit {
     if (id) {
       this.ciclosService.updateCiclo(id, formData).subscribe({
         next: () => {
+          this.isSaving.set(false);
           Swal.close();
           this.toastService.show('Ciclo actualizado correctamente.', 'success');
           this.cargarCiclos();
         },
         error: (err) => {
+          this.isSaving.set(false);
           Swal.close();
           this.toastService.show(err?.error?.message || 'Error al actualizar', 'error');
         }
@@ -157,11 +230,13 @@ export class CiclosComponent implements OnInit {
     } else {
       this.ciclosService.createCiclo(formData).subscribe({
         next: () => {
+          this.isSaving.set(false);
           Swal.close();
           this.toastService.show('Ciclo registrado correctamente.', 'success');
           this.cargarCiclos();
         },
         error: (err) => {
+          this.isSaving.set(false);
           Swal.close();
           this.toastService.show(err?.error?.message || 'Error al crear el ciclo', 'error');
         }
@@ -170,23 +245,34 @@ export class CiclosComponent implements OnInit {
   }
 
   darDeBaja(id: string): void {
+    if (this.isSaving()) return;
+
     Swal.fire({
-      title: '¿Está seguro?',
-      text: '¿Está seguro de eliminar/desactivar este ciclo?',
+      title: '¿Desactivar Ciclo?',
+      text: 'El ciclo dejará de estar disponible para el registro académico.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, desactivar',
-      cancelButtonText: 'Cancelar'
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm custom-swal-danger',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, desactivar</span>',
+      cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>'
     }).then((result) => {
       if (result.isConfirmed) {
+        this.isSaving.set(true);
         this.ciclosService.deleteCiclo(id).subscribe({
           next: () => {
+            this.isSaving.set(false);
             this.toastService.show('Ciclo desactivado con éxito.', 'info');
             this.cargarCiclos();
           },
-          error: (err) => this.toastService.show('Error al eliminar el ciclo.', 'error')
+          error: (err) => {
+            this.isSaving.set(false);
+            this.toastService.show('Error al eliminar el ciclo.', 'error');
+          }
         });
       }
     });

@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { FormularioService } from '../../../../core/services/formulario.service';
@@ -25,9 +27,6 @@ import { MatrizBuilderComponent } from './components/matriz-builder/matriz-build
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormularioBuilderComponent implements OnInit {
-  // ==========================================
-  // INYECCIONES Y SERVICIOS
-  // ==========================================
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly formularioService = inject(FormularioService);
@@ -36,10 +35,8 @@ export class FormularioBuilderComponent implements OnInit {
   private readonly rangosVariableService = inject(RangosVariableService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
-  // ==========================================
-  // CONSTANTES GLOBALES
-  // ==========================================
   private readonly RANGOS_BALANCE_PREDETERMINADOS = [
     { variable_calculo: 'BALANCE', nombre: 'Crítico / Déficit', valor_min: 0, valor_max: 0, orden: 1 },
     { variable_calculo: 'BALANCE', nombre: 'Vulnerable', valor_min: 1, valor_max: 200, orden: 2 },
@@ -50,45 +47,66 @@ export class FormularioBuilderComponent implements OnInit {
   ];
 
   private readonly SWAL_CUSTOM_CLASS = {
-    popup: 'rounded-2xl',
-    confirmButton: 'rounded-xl',
-    cancelButton: 'rounded-xl',
-    htmlContainer: 'swal-html-container-custom'
+    popup: 'custom-swal-popup',
+    confirmButton: 'custom-swal-confirm',
+    cancelButton: 'custom-swal-cancel',
+    title: 'custom-swal-title',
+    denyButton: 'custom-swal-confirm-danger'
   };
 
-  // ==========================================
-  // ESTADO (SIGNALS)
-  // ==========================================
-  formulario = signal<Formulario | null>(null);
-  secciones = signal<Seccion[]>([]);
-  tiposCampo = signal<TipoCampoForm[]>([]);
-  dependencias = signal<PreguntaDependencia[]>([]);
-  rangosVariable = signal<RangoVariableCalculada[]>([]);
-  isLoading = signal<boolean>(true);
+  readonly formulario = signal<Formulario | null>(null);
+  readonly secciones = signal<Seccion[]>([]);
+  readonly tiposCampo = signal<TipoCampoForm[]>([]);
+  readonly dependencias = signal<PreguntaDependencia[]>([]);
+  readonly rangosVariable = signal<RangoVariableCalculada[]>([]);
+  readonly isLoading = signal<boolean>(true);
 
-  esSoloLectura = computed(() => this.formulario()?.bloqueado === true);
+  readonly esSoloLectura = computed(() => this.formulario()?.bloqueado === true);
 
-  // UI / UX States
-  isSavingSeccion = signal<boolean>(false);
-  isSavingQuestion = signal<boolean>(false);
-  showMenuPresets = signal<boolean>(false);
-  showRangosPanel = signal<boolean>(false);
-  showSeccionModal = signal<boolean>(false);
+  readonly isSavingSeccion = signal<boolean>(false);
+  readonly isSavingQuestion = signal<boolean>(false);
+  readonly isSavingRango = signal<boolean>(false);
+  readonly showMenuPresets = signal<boolean>(false);
+  readonly showRangosPanel = signal<boolean>(false);
+  readonly showSeccionModal = signal<boolean>(false);
 
-  activeSeccionIdForQuestion = signal<string | null>(null);
-  editingPreguntaId = signal<string | null>(null);
-  esSeccionFinancieraActiva = signal<boolean>(false);
-  editingOpcionId = signal<string | null>(null);
-  editingRangoId = signal<string | null>(null);
-  nuevaOpcionTexto = signal<string>('');
+  readonly activeSeccionIdForQuestion = signal<string | null>(null);
+  readonly editingPreguntaId = signal<string | null>(null);
+  readonly esSeccionFinancieraActiva = signal<boolean>(false);
+  readonly editingOpcionId = signal<string | null>(null);
+  readonly editingRangoId = signal<string | null>(null);
+  readonly nuevaOpcionTexto = signal<string>('');
 
-  // Drag & Drop State
+  readonly searchTermRango = signal<string>('');
+  readonly filtroVariableRango = signal<string>('TODOS');
+  private readonly searchRangoSubject = new Subject<string>();
+
   draggedSeccionIndex: number | null = null;
   draggedPreguntaIndex: number | null = null;
 
-  // ==========================================
-  // FORMULARIOS (REACTIVE FORMS)
-  // ==========================================
+  readonly rangosFiltrados = computed(() => {
+    const term = this.searchTermRango().toLowerCase().trim();
+    const variable = this.filtroVariableRango();
+
+    return this.rangosVariable().filter(rango => {
+      const coincideTexto = !term || 
+        rango.nombre.toLowerCase().includes(term) || 
+        (rango.valor_min != null && rango.valor_min.toString().includes(term)) ||
+        (rango.valor_max != null && rango.valor_max.toString().includes(term));
+      const coincideVariable = variable === 'TODOS' || rango.variable_calculo === variable;
+      return coincideTexto && coincideVariable;
+    });
+  });
+
+  readonly variablesDisponiblesRangos = computed(() => {
+    const vars = this.rangosVariable().map(r => r.variable_calculo);
+    return Array.from(new Set(vars)).sort();
+  });
+
+  readonly hayFiltrosRangosActivos = computed(() => {
+    return this.searchTermRango() !== '' || this.filtroVariableRango() !== 'TODOS';
+  });
+
   rangoForm: FormGroup = this.fb.group({
     variable_calculo: [{ value: 'BALANCE', disabled: true }, Validators.required],
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -124,9 +142,6 @@ export class FormularioBuilderComponent implements OnInit {
     permite_texto_libre: [false]
   });
 
-  // ==========================================
-  // GETTERS PARA FORMARRAYS
-  // ==========================================
   get opcionesTempArray(): FormArray { return this.preguntaForm.get('opcionesTemp') as FormArray; }
   get filasTempArray(): FormArray { return this.preguntaForm.get('filasTemp') as FormArray; }
   get columnasTempArray(): FormArray { return this.preguntaForm.get('columnasTemp') as FormArray; }
@@ -135,9 +150,6 @@ export class FormularioBuilderComponent implements OnInit {
   getSubFilas(opcionIndex: number): FormArray { return this.opcionesTempArray.at(opcionIndex).get('subpregunta_filas') as FormArray; }
   getSubColumnas(opcionIndex: number): FormArray { return this.opcionesTempArray.at(opcionIndex).get('subpregunta_columnas') as FormArray; }
 
-  // ==========================================
-  // LIFECYCLE & INITIALIZATION
-  // ==========================================
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -146,10 +158,18 @@ export class FormularioBuilderComponent implements OnInit {
     } else {
       this.router.navigate(['/admin/formularios']);
     }
+
+    this.searchRangoSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(term => {
+      this.searchTermRango.set(term);
+    });
   }
 
   escucharCambioTipoSeccion(): void {
-    this.seccionForm.get('tipo_seccion')?.valueChanges.subscribe((tipo: string) => {
+    this.seccionForm.get('tipo_seccion')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tipo: string) => {
       const subcatControl = this.seccionForm.get('subcategoria_financiera');
       if (tipo === 'FINANCIERA') {
         if (subcatControl?.value === 'NINGUNO' || !subcatControl?.value) {
@@ -199,9 +219,22 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // ==========================================
-  // LÓGICA DE SECCIONES (SWEETALERTS)
-  // ==========================================
+  onSearchRangoChange(event: Event): void {
+    this.searchRangoSubject.next((event.target as HTMLInputElement).value);
+  }
+
+  onVariableRangoChange(event: Event): void {
+    this.filtroVariableRango.set((event.target as HTMLSelectElement).value);
+  }
+
+  limpiarFiltrosRangos(): void {
+    this.searchTermRango.set('');
+    this.filtroVariableRango.set('TODOS');
+    this.searchRangoSubject.next('');
+    const searchInput = document.getElementById('search-rango-input') as HTMLInputElement;
+    if (searchInput) searchInput.value = '';
+  }
+
   abrirModalNuevaSeccion(): void {
     if (this.esSoloLectura()) {
       this.toastService.show('Esta ficha es una versión anterior bloqueada; solo puede visualizarse.', 'info');
@@ -211,38 +244,38 @@ export class FormularioBuilderComponent implements OnInit {
     Swal.fire({
       title: 'Nueva Sección',
       html: `
-      <div class="text-left space-y-4" style="text-align:left">
-        <div>
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Nombre de Sección *</label>
-          <input id="swal-nombre" class="swal2-input" placeholder="Ej: Información Financiera Familiar" style="margin:0;width:100%;box-sizing:border-box">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción</label>
-          <input id="swal-descripcion" class="swal2-input" placeholder="Breve explicación..." style="margin:0;width:100%;box-sizing:border-box">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Tipo de Sección *</label>
-          <select id="swal-tipo" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-            <option value="INFORMACION_GENERAL">Información General</option>
-            <option value="FINANCIERA">Sección Financiera (Balances / Montos)</option>
-          </select>
-        </div>
-        <div id="swal-subcat-container" style="display:none">
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Subcategoría Financiera *</label>
-          <select id="swal-subcat" class="swal2-select" style="margin:0;width:100%;box-sizing:border-box">
-            <option value="INGRESOS">Exclusivamente Ingresos</option>
-            <option value="GASTOS">Exclusivamente Egresos / Gastos</option>
-            <option value="AMBOS">Ambos (Ingresos y Gastos)</option>
-          </select>
+      <div class="swal-form-card">
+        <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem;">
+          <div>
+            <label class="swal-form-label">Nombre de Sección *</label>
+            <input id="swal-nombre" class="swal2-input custom-input" placeholder="Ej: Información Financiera Familiar" style="margin:0;width:100%;box-sizing:border-box">
+          </div>
+          <div>
+            <label class="swal-form-label">Descripción</label>
+            <input id="swal-descripcion" class="swal2-input custom-input" placeholder="Breve explicación..." style="margin:0;width:100%;box-sizing:border-box">
+          </div>
+          <div>
+            <label class="swal-form-label">Tipo de Sección *</label>
+            <select id="swal-tipo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
+              <option value="INFORMACION_GENERAL">Información General</option>
+              <option value="FINANCIERA">Sección Financiera (Balances / Montos)</option>
+            </select>
+          </div>
+          <div id="swal-subcat-container" style="display:none">
+            <label class="swal-form-label">Subcategoría Financiera *</label>
+            <select id="swal-subcat" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
+              <option value="INGRESOS">Exclusivamente Ingresos</option>
+              <option value="GASTOS">Exclusivamente Egresos / Gastos</option>
+              <option value="AMBOS">Ambos (Ingresos y Gastos)</option>
+            </select>
+          </div>
         </div>
       </div>
     `,
       showCancelButton: true,
       focusConfirm: false,
-      confirmButtonText: 'Guardar Sección',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="fas fa-save"></i> Guardar Sección',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       width: '520px',
       customClass: this.SWAL_CUSTOM_CLASS,
       didOpen: () => {
@@ -274,7 +307,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   private guardarSeccionDesdeSwal(data: { nombre: string; descripcion: string; tipo_seccion: string; subcategoria_financiera: string; }): void {
-    if (this.esSoloLectura() || !this.formulario()) return;
+    if (this.esSoloLectura() || !this.formulario() || this.isSavingSeccion()) return;
     this.isSavingSeccion.set(true);
 
     const payload = {
@@ -305,22 +338,22 @@ export class FormularioBuilderComponent implements OnInit {
     Swal.fire({
       title: 'Editar Sección',
       html: `
-      <div class="text-left space-y-4" style="text-align:left">
-        <div>
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Nombre de Sección *</label>
-          <input id="swal-edit-nombre" class="swal2-input" value="${seccion.nombre}" style="margin:0;width:100%;box-sizing:border-box">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:#334155">Descripción</label>
-          <input id="swal-edit-descripcion" class="swal2-input" value="${seccion.descripcion || ''}" style="margin:0;width:100%;box-sizing:border-box">
+      <div class="swal-form-card">
+        <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem;">
+          <div>
+            <label class="swal-form-label">Nombre de Sección *</label>
+            <input id="swal-edit-nombre" class="swal2-input custom-input" value="${this.escapeHtml(seccion.nombre)}" style="margin:0;width:100%;box-sizing:border-box">
+          </div>
+          <div>
+            <label class="swal-form-label">Descripción</label>
+            <input id="swal-edit-descripcion" class="swal2-input custom-input" value="${this.escapeHtml(seccion.descripcion || '')}" style="margin:0;width:100%;box-sizing:border-box">
+          </div>
         </div>
       </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'Actualizar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#8b5cf6',
-      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="fas fa-save"></i> Actualizar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       width: '500px',
       customClass: this.SWAL_CUSTOM_CLASS,
       preConfirm: () => {
@@ -341,39 +374,51 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   private actualizarSeccion(seccionId: string, data: { nombre: string, descripcion: string }): void {
+    if (this.isSavingSeccion()) return;
+    this.isSavingSeccion.set(true);
     this.formularioService.updateSeccion(seccionId, data).subscribe({
       next: () => {
+        this.isSavingSeccion.set(false);
         this.toastService.show('Sección actualizada con éxito.', 'success');
         this.cargarSecciones(this.formulario()!.id);
       },
       error: (err: HttpErrorResponse) => {
+        this.isSavingSeccion.set(false);
         this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar la sección.'), 'error');
       }
     });
   }
 
   eliminarSeccion(seccionId: string, index: number): void {
-    if (this.esSoloLectura()) return;
+    if (this.esSoloLectura() || this.isSavingSeccion()) return;
 
     Swal.fire({
       title: '¿Eliminar sección?',
       text: 'Se eliminarán también todas sus preguntas. Esta acción no se puede deshacer.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      customClass: this.SWAL_CUSTOM_CLASS
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm-danger',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      }
     }).then((result) => {
       if (result.isConfirmed) {
         if (seccionId) {
+          this.isSavingSeccion.set(true);
           this.formularioService.deleteSeccion(seccionId).subscribe({
             next: () => {
+              this.isSavingSeccion.set(false);
               this.toastService.show('Sección eliminada.', 'info');
               this.secciones.update(secs => secs.filter((_, i) => i !== index));
             },
-            error: (err: HttpErrorResponse) => console.error('Error al eliminar sección:', err)
+            error: (err: HttpErrorResponse) => {
+              this.isSavingSeccion.set(false);
+              this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar sección'), 'error');
+            }
           });
         } else {
           this.secciones.update(secs => secs.filter((_, i) => i !== index));
@@ -382,9 +427,6 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // ==========================================
-  // LÓGICA DE PREGUNTAS Y SUBPREGUNTAS
-  // ==========================================
   cargarPreguntasDeSeccion(seccionId: string): void {
     this.formularioService.getPreguntasBySeccion(seccionId).subscribe({
       next: (preguntas: Pregunta[]) => {
@@ -553,36 +595,41 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarPregunta(preguntaId: string, seccionId: string): void {
-    if (this.esSoloLectura()) return;
+    if (this.esSoloLectura() || this.isSavingQuestion()) return;
 
     Swal.fire({
       title: '¿Eliminar pregunta?',
       text: 'Esta acción no se puede deshacer.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      customClass: this.SWAL_CUSTOM_CLASS
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm-danger',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      }
     }).then((result) => {
       if (result.isConfirmed) {
+        this.isSavingQuestion.set(true);
         this.formularioService.deletePregunta(preguntaId).subscribe({
           next: () => {
+            this.isSavingQuestion.set(false);
             this.toastService.show('Pregunta eliminada.', 'info');
             this.cargarPreguntasDeSeccion(seccionId);
           },
-          error: (err) => console.error('Error al eliminar pregunta:', err)
+          error: (err: HttpErrorResponse) => {
+            this.isSavingQuestion.set(false);
+            this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar pregunta'), 'error');
+          }
         });
       }
     });
   }
 
-  // ==========================================
-  // CORE GUARDAR PREGUNTA Y SINCRONIZACIÓN
-  // ==========================================
   guardarPregunta(seccionId: string): void {
-    if (this.esSoloLectura()) return;
+    if (this.esSoloLectura() || this.isSavingQuestion()) return;
     if (this.preguntaForm.invalid) {
       this.toastService.show('Por favor completa todos los campos requeridos de la pregunta.', 'warning');
       return;
@@ -632,7 +679,6 @@ export class FormularioBuilderComponent implements OnInit {
               });
             }
           } catch (error: any) {
-            console.error('Error al sincronizar opciones/subpreguntas:', error);
             this.isSavingQuestion.set(false);
             this.toastService.show(error?.message || 'La pregunta se actualizó, pero falló una opción/subpregunta.', 'error');
             this.cancelarPregunta();
@@ -647,7 +693,6 @@ export class FormularioBuilderComponent implements OnInit {
       return;
     }
 
-    // Flujo de Creación de Pregunta
     const orden = (seccionPadre?.preguntas?.length || 0) + 1;
     const payloadPreguntaPadre = {
       seccion_id: seccionId,
@@ -743,7 +788,6 @@ export class FormularioBuilderComponent implements OnInit {
             });
           }
         } catch (error: any) {
-          console.error('Error al guardar opciones/subpreguntas:', error);
           this.isSavingQuestion.set(false);
           this.toastService.show(error?.message || 'La pregunta se creó, pero falló una opción o subpregunta.', 'error');
           this.cancelarPregunta();
@@ -859,9 +903,6 @@ export class FormularioBuilderComponent implements OnInit {
     }
   }
 
-  // ==========================================
-  // MANEJO DE OPCIONES DE SELECCIÓN Y MATRICES (NIVEL 1)
-  // ==========================================
   agregarOpcionTemp(texto = '', valorPonderado: number | null = null): void {
     const tipoTexto = this.tiposCampo().find(t => t.nombre.toUpperCase().includes('TEXTO')) || this.tiposCampo()[0];
     this.opcionesTempArray.push(this.fb.group({
@@ -1001,9 +1042,6 @@ export class FormularioBuilderComponent implements OnInit {
     this.matricesService.deleteColumna(columnaId).subscribe({ next: () => this.cargarMatrizDetalles(preguntaId) });
   }
 
-  // ==========================================
-  // DRAG & DROP
-  // ==========================================
   onDragStart(seccionIndex: number, preguntaIndex: number): void {
     if (this.esSoloLectura()) return;
     this.draggedSeccionIndex = seccionIndex;
@@ -1042,9 +1080,6 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // ==========================================
-  // LÓGICA DE RANGOS VARIABLES
-  // ==========================================
   cargarRangosVariable(formularioId: string): void {
     this.rangosVariableService.getByFormulario(formularioId).subscribe({
       next: (rangos) => this.rangosVariable.set(rangos),
@@ -1053,7 +1088,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   cargarRangosBalancePredeterminados(): void {
-    if (this.esSoloLectura() || !this.formulario()) return;
+    if (this.esSoloLectura() || !this.formulario() || this.isSavingRango()) return;
 
     if (this.rangosVariable().length > 0) {
       Swal.fire({
@@ -1061,10 +1096,8 @@ export class FormularioBuilderComponent implements OnInit {
         text: 'Ya existen rangos. ¿Deseas agregar los predeterminados de BALANCE de todas formas? (Puedes borrar o editar después.)',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#8b5cf6',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, agregar',
-        cancelButtonText: 'Cancelar',
+        confirmButtonText: '<i class="fas fa-plus"></i> Sí, agregar',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
         customClass: this.SWAL_CUSTOM_CLASS
       }).then((result) => {
         if (result.isConfirmed) this.ejecutarCargaRangosPredeterminados();
@@ -1075,6 +1108,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   private ejecutarCargaRangosPredeterminados(): void {
+    this.isSavingRango.set(true);
     const formularioId = this.formulario()!.id;
     let pendientes = this.RANGOS_BALANCE_PREDETERMINADOS.length;
     let errores = 0;
@@ -1090,14 +1124,16 @@ export class FormularioBuilderComponent implements OnInit {
         next: () => {
           pendientes--;
           if (pendientes === 0) {
+            this.isSavingRango.set(false);
             this.cargarRangosVariable(formularioId);
-            if (errores === 0) this.toastService.show('Rangos de estatus económico cargados. Puedes editarlos antes de publicar.', 'success');
-            else this.toastService.show(`Rangos cargados con ${errores} error(es). Revisa la lista.`, 'warning');
+            if (errores === 0) this.toastService.show('Rangos cargados correctamente.', 'success');
+            else this.toastService.show(`Cargados con ${errores} error(es).`, 'warning');
           }
         },
         error: () => {
           errores++; pendientes--;
           if (pendientes === 0) {
+            this.isSavingRango.set(false);
             this.cargarRangosVariable(formularioId);
             this.toastService.show('Algunos rangos no se pudieron crear.', 'error');
           }
@@ -1107,7 +1143,7 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   guardarRangoVariable(): void {
-    if (this.esSoloLectura() || this.rangoForm.invalid || !this.formulario()) return;
+    if (this.esSoloLectura() || this.rangoForm.invalid || !this.formulario() || this.isSavingRango()) return;
 
     const raw = this.rangoForm.getRawValue();
     const idEdit = this.editingRangoId();
@@ -1120,6 +1156,8 @@ export class FormularioBuilderComponent implements OnInit {
       return;
     }
 
+    this.isSavingRango.set(true);
+
     if (idEdit) {
       const payloadUpdate = {
         variable_calculo: 'BALANCE', nombre: String(raw.nombre).trim(),
@@ -1127,11 +1165,15 @@ export class FormularioBuilderComponent implements OnInit {
       };
       this.rangosVariableService.updateRango(idEdit, payloadUpdate).subscribe({
         next: () => {
+          this.isSavingRango.set(false);
           this.toastService.show('Rango actualizado.', 'success');
           this.cancelarEdicionRango();
           this.cargarRangosVariable(this.formulario()!.id);
         },
-        error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el rango.'), 'error'),
+        error: (err: HttpErrorResponse) => {
+          this.isSavingRango.set(false);
+          this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el rango.'), 'error');
+        }
       });
       return;
     }
@@ -1144,11 +1186,15 @@ export class FormularioBuilderComponent implements OnInit {
 
     this.rangosVariableService.createRango(payloadCreate).subscribe({
       next: () => {
+        this.isSavingRango.set(false);
         this.toastService.show('Rango agregado.', 'success');
         this.cancelarEdicionRango();
         this.cargarRangosVariable(this.formulario()!.id);
       },
-      error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'Error al guardar el rango.'), 'error'),
+      error: (err: HttpErrorResponse) => {
+        this.isSavingRango.set(false);
+        this.toastService.show(this.extraerMensajeError(err, 'Error al guardar el rango.'), 'error');
+      }
     });
   }
 
@@ -1169,13 +1215,35 @@ export class FormularioBuilderComponent implements OnInit {
   }
 
   eliminarRangoVariable(id: string): void {
-    if (this.esSoloLectura()) return;
-    this.rangosVariableService.deleteRango(id).subscribe({
-      next: () => {
-        this.toastService.show('Rango eliminado.', 'info');
-        if (this.formulario()) this.cargarRangosVariable(this.formulario()!.id);
-      },
-      error: (err) => console.error('Error al eliminar rango:', err)
+    if (this.esSoloLectura() || this.isSavingRango()) return;
+    
+    Swal.fire({
+      title: '¿Eliminar rango?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Eliminar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm-danger',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isSavingRango.set(true);
+        this.rangosVariableService.deleteRango(id).subscribe({
+          next: () => {
+            this.isSavingRango.set(false);
+            this.toastService.show('Rango eliminado.', 'info');
+            if (this.formulario()) this.cargarRangosVariable(this.formulario()!.id);
+          },
+          error: (err) => {
+            this.isSavingRango.set(false);
+            console.error('Error al eliminar rango:', err);
+          }
+        });
+      }
     });
   }
 
@@ -1192,9 +1260,6 @@ export class FormularioBuilderComponent implements OnInit {
     return null;
   }
 
-  // ==========================================
-  // PUBLICACIÓN Y UTILERÍAS GLOBALES
-  // ==========================================
   publicarFormulario(): void {
     if (this.esSoloLectura() || !this.formulario()) return;
 
@@ -1203,10 +1268,8 @@ export class FormularioBuilderComponent implements OnInit {
       text: 'Una vez publicada estará disponible para los estudiantes.',
       icon: 'info',
       showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, publicar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '<i class="fas fa-paper-plane"></i> Sí, publicar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
       customClass: this.SWAL_CUSTOM_CLASS
     }).then((result) => {
       if (result.isConfirmed) {
@@ -1221,6 +1284,12 @@ export class FormularioBuilderComponent implements OnInit {
         });
       }
     });
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {
