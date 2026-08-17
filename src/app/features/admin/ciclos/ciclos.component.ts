@@ -136,9 +136,23 @@ export class CiclosComponent implements OnInit, OnDestroy {
     });
 
     Swal.fire({
-      title: `<div class="swal-header-banner"><i class="fas fa-list-ol"></i><span>${titleText}</span></div>`,
+      title: titleText,
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
       html: `
         <div class="swal-form-card">
+          <div class="swal-header-banner">
+            <i class="fas fa-list-ol swal-banner-icon"></i>
+            <div>
+              <p class="swal-banner-title">${titleText}</p>
+              <p class="swal-banner-sub">Configura la secuencia y el nombre del ciclo para la carrera</p>
+            </div>
+          </div>
+          
           <div class="swal-form-group">
             <label for="swal-nombre" class="swal-form-label">Nombre del Ciclo *</label>
             <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Primer Ciclo, 1er Ciclo" value="${isEditing ? ciclo.nombre : ''}">
@@ -160,11 +174,6 @@ export class CiclosComponent implements OnInit, OnDestroy {
       `,
       focusConfirm: false,
       showCancelButton: true,
-      customClass: {
-        popup: 'custom-swal-popup',
-        confirmButton: 'custom-swal-confirm',
-        cancelButton: 'custom-swal-cancel'
-      },
       buttonsStyling: false,
       confirmButtonText: isEditing 
         ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>' 
@@ -210,6 +219,10 @@ export class CiclosComponent implements OnInit, OnDestroy {
       title: 'Procesando...',
       text: 'Guardando cambios en el sistema',
       allowOutsideClick: false,
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      },
       didOpen: () => Swal.showLoading()
     });
 
@@ -255,7 +268,8 @@ export class CiclosComponent implements OnInit, OnDestroy {
       customClass: {
         popup: 'custom-swal-popup',
         confirmButton: 'custom-swal-confirm custom-swal-danger',
-        cancelButton: 'custom-swal-cancel'
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
       },
       buttonsStyling: false,
       confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, desactivar</span>',

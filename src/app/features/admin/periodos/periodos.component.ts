@@ -132,7 +132,6 @@ export class PeriodosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => this.periodos.set(data || []),
         error: (err: HttpErrorResponse) => {
-          console.error('Error al cargar periodos:', err);
           this.toastService.show('Error al obtener la lista de periodos.', 'error');
         }
       });
@@ -154,7 +153,8 @@ export class PeriodosComponent implements OnInit, OnDestroy {
       customClass: {
         popup: 'custom-swal-popup',
         confirmButton: 'custom-swal-confirm',
-        cancelButton: 'custom-swal-cancel'
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
       },
       html: `
         <div class="swal-form-card">
@@ -232,6 +232,10 @@ export class PeriodosComponent implements OnInit, OnDestroy {
       title: 'Guardando Periodo...',
       text: 'Por favor, espera un momento.',
       allowOutsideClick: false,
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      },
       didOpen: () => {
         Swal.showLoading();
       }
@@ -251,13 +255,14 @@ export class PeriodosComponent implements OnInit, OnDestroy {
         this.cargarPeriodos();
       },
       error: (err: HttpErrorResponse) => {
-        console.error('Error al guardar periodo:', err);
         Swal.fire({
           icon: 'error',
           title: 'Error al Guardar',
           text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
           customClass: {
-            confirmButton: 'custom-swal-confirm'
+            popup: 'custom-swal-popup',
+            confirmButton: 'custom-swal-confirm',
+            title: 'custom-swal-title'
           },
           buttonsStyling: false
         });
@@ -276,7 +281,8 @@ export class PeriodosComponent implements OnInit, OnDestroy {
       customClass: {
         popup: 'custom-swal-popup',
         confirmButton: 'custom-swal-confirm custom-swal-danger',
-        cancelButton: 'custom-swal-cancel'
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
       },
       buttonsStyling: false,
       confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, eliminar</span>',
@@ -292,7 +298,6 @@ export class PeriodosComponent implements OnInit, OnDestroy {
               this.cargarPeriodos();
             },
             error: (err: HttpErrorResponse) => {
-              console.error('Error al eliminar periodo:', err);
               this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar el periodo.'), 'error');
             }
           });

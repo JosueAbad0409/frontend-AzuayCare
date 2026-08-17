@@ -126,7 +126,6 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => this.carreras.set(data || []),
         error: (err: HttpErrorResponse) => {
-          console.error('Error al cargar carreras:', err);
           this.toastService.show('Error al obtener la lista de carreras.', 'error');
         }
       });
@@ -139,9 +138,23 @@ export class CarrerasComponent implements OnInit, OnDestroy {
     const titleText = isEditing ? 'Editar Carrera' : 'Registrar Nueva Carrera';
 
     Swal.fire({
-      title: `<div class="swal-header-banner"><i class="fas fa-graduation-cap"></i><span>${titleText}</span></div>`,
+      title: titleText,
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title',
+        htmlContainer: 'custom-swal-html-container',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel'
+      },
       html: `
         <div class="swal-form-card">
+          <div class="swal-header-banner">
+            <i class="fas fa-graduation-cap swal-banner-icon"></i>
+            <div>
+              <p class="swal-banner-title">${titleText}</p>
+              <p class="swal-banner-sub">Configura la especialidad tecnológica</p>
+            </div>
+          </div>
           <div class="swal-form-group">
             <label for="swal-nombre" class="swal-form-label">Nombre de la Carrera *</label>
             <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Desarrollo de Software" value="${isEditing ? carrera.nombre : ''}">
@@ -154,11 +167,6 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       `,
       focusConfirm: false,
       showCancelButton: true,
-      customClass: {
-        popup: 'custom-swal-popup',
-        confirmButton: 'custom-swal-confirm',
-        cancelButton: 'custom-swal-cancel'
-      },
       buttonsStyling: false,
       confirmButtonText: isEditing 
         ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>' 
@@ -202,6 +210,10 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       title: 'Guardando...',
       text: 'Por favor, espera un momento.',
       allowOutsideClick: false,
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      },
       didOpen: () => {
         Swal.showLoading();
       }
@@ -211,9 +223,8 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       ? this.carreraService.updateCarrera(id, formData)
       : this.carreraService.createCarrera(formData);
 
-    peticion$.subscribe({
+    peticion$.pipe(finalize(() => this.isSaving.set(false))).subscribe({
       next: () => {
-        this.isSaving.set(false);
         Swal.close();
         this.toastService.show(
           id ? 'Carrera actualizada correctamente.' : 'Carrera registrada correctamente.',
@@ -222,14 +233,13 @@ export class CarrerasComponent implements OnInit, OnDestroy {
         this.cargarCarreras();
       },
       error: (err: HttpErrorResponse) => {
-        this.isSaving.set(false);
-        console.error('Error al guardar carrera:', err);
         Swal.fire({
           icon: 'error',
           title: 'Error',
           text: this.extraerMensajeError(err, 'Error al procesar la solicitud.'),
           customClass: {
             popup: 'custom-swal-popup',
+            title: 'custom-swal-title',
             confirmButton: 'custom-swal-confirm custom-swal-danger'
           },
           buttonsStyling: false
@@ -248,6 +258,7 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       showCancelButton: true,
       customClass: {
         popup: 'custom-swal-popup',
+        title: 'custom-swal-title',
         confirmButton: 'custom-swal-confirm custom-swal-danger',
         cancelButton: 'custom-swal-cancel'
       },
@@ -257,18 +268,17 @@ export class CarrerasComponent implements OnInit, OnDestroy {
     }).then((result) => {
       if (result.isConfirmed) {
         this.isSaving.set(true);
-        this.carreraService.deleteCarrera(id).subscribe({
-          next: () => {
-            this.isSaving.set(false);
-            this.toastService.show('Carrera eliminada con éxito.', 'info');
-            this.cargarCarreras();
-          },
-          error: (err: HttpErrorResponse) => {
-            this.isSaving.set(false);
-            console.error('Error al eliminar carrera:', err);
-            this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
-          }
-        });
+        this.carreraService.deleteCarrera(id)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Carrera eliminada con éxito.', 'info');
+              this.cargarCarreras();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
+            }
+          });
       }
     });
   }

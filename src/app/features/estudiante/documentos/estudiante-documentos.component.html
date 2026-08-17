@@ -52,98 +52,126 @@
       <h2 id="gallery-heading" class="gallery-title">
         <i class="fas fa-archive gallery-title-icon" aria-hidden="true"></i>
         <span>Mis Archivos</span>
-        <span class="gallery-count">({{ misDocumentos().length }})</span>
       </h2>
     </header>
 
-    @if (misDocumentos().length > 0) {
-      <div class="doc-grid">
-        @for (doc of misDocumentos(); track doc.id) {
-          <article class="doc-card">
-            <div class="doc-card-body">
-              <div
-                class="doc-icon"
-                [class.doc-icon--pdf]="doc.mime_type?.includes('pdf')"
-                [class.doc-icon--image]="!doc.mime_type?.includes('pdf')"
-                aria-hidden="true">
-                <i class="fas"
-                   [class.fa-file-pdf]="doc.mime_type?.includes('pdf')"
-                   [class.fa-file-image]="!doc.mime_type?.includes('pdf')"></i>
-              </div>
-
-              <div class="doc-info">
-                <h3 class="doc-name" [title]="doc.nombre_original">
-                  {{ doc.nombre_original }}
-                </h3>
-                <time class="doc-date" [attr.datetime]="doc.created_at">
-                  {{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}
-                </time>
-              </div>
-            </div>
-
-            <footer class="doc-actions">
-              <button
-                type="button"
-                class="btn btn--action"
-                (click)="abrirPreview(doc)"
-                [attr.aria-label]="'Ver archivo ' + doc.nombre_original">
-                <i class="fas fa-eye" aria-hidden="true"></i>
-                <span>Ver</span>
-              </button>
-
-              <button
-                type="button"
-                class="btn btn--action"
-                (click)="descargarDocumento(doc)"
-                [attr.aria-label]="'Descargar archivo ' + doc.nombre_original">
-                <i class="fas fa-download" aria-hidden="true"></i>
-                <span>Descargar</span>
-              </button>
-
-              <button
-                type="button"
-                class="btn btn--icon btn--danger"
-                (click)="intentarEliminar(doc.id)"
-                [attr.aria-label]="'Eliminar archivo ' + doc.nombre_original"
-                title="Eliminar">
-                <i class="fas fa-trash-alt" aria-hidden="true"></i>
-              </button>
-            </footer>
-          </article>
-        }
-      </div>
-    } @else {
+    @if (misDocumentos().length === 0) {
       <div class="empty-state" role="status">
         <div class="empty-state-icon" aria-hidden="true">
           <i class="fas fa-folder-open"></i>
         </div>
         <p class="empty-state-text">Tu repositorio está vacío. Sube tus primeros documentos.</p>
       </div>
+    } @else {
+      
+      <!-- SECCIÓN 1: EVIDENCIAS (Solo Lectura, sin botón de eliminar) -->
+      @if (documentosFormulario().length > 0) {
+        <div class="gallery-subsection">
+          <h3 class="subsection-title">
+            <i class="fas fa-clipboard-check" aria-hidden="true"></i> Evidencias Institucionales
+            <span class="gallery-count">({{ documentosFormulario().length }})</span>
+          </h3>
+          <p class="subsection-desc">Estos documentos respaldan tus formularios. No se pueden eliminar desde aquí.</p>
+          
+          <div class="doc-grid">
+            @for (doc of documentosFormulario(); track doc.id) {
+              <article class="doc-card doc-card--readonly">
+                <div class="doc-card-body">
+                  <div class="doc-icon"
+                       [class.doc-icon--pdf]="doc.mime_type?.includes('pdf')"
+                       [class.doc-icon--image]="!doc.mime_type?.includes('pdf')"
+                       aria-hidden="true">
+                    <i class="fas"
+                       [class.fa-file-pdf]="doc.mime_type?.includes('pdf')"
+                       [class.fa-file-image]="!doc.mime_type?.includes('pdf')"></i>
+                  </div>
+
+                  <div class="doc-info">
+                    <h3 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h3>
+                    <time class="doc-date" [attr.datetime]="doc.created_at">
+                      {{ doc.created_at | date:'dd/MM/yyyy' }}
+                    </time>
+                    <span class="doc-context-badge">
+                      <i class="fas fa-lock" aria-hidden="true"></i> Vinculado
+                    </span>
+                  </div>
+                </div>
+
+                <footer class="doc-actions">
+                  <button type="button" class="btn btn--action" (click)="abrirPreview(doc)">
+                    <i class="fas fa-eye" aria-hidden="true"></i><span>Ver</span>
+                  </button>
+                  <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)">
+                    <i class="fas fa-download" aria-hidden="true"></i><span>Descargar</span>
+                  </button>
+                </footer>
+              </article>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- SECCIÓN 2: ARCHIVOS INDEPENDIENTES (CRUD Completo con botón de eliminar) -->
+      @if (documentosSueltos().length > 0) {
+        <div class="gallery-subsection mt-8">
+          <h3 class="subsection-title">
+            <i class="fas fa-folder" aria-hidden="true"></i> Archivos Independientes
+            <span class="gallery-count">({{ documentosSueltos().length }})</span>
+          </h3>
+          <p class="subsection-desc">Documentos que has subido libremente al repositorio.</p>
+          
+          <div class="doc-grid">
+            @for (doc of documentosSueltos(); track doc.id) {
+              <article class="doc-card">
+                <div class="doc-card-body">
+                  <div class="doc-icon"
+                       [class.doc-icon--pdf]="doc.mime_type?.includes('pdf')"
+                       [class.doc-icon--image]="!doc.mime_type?.includes('pdf')"
+                       aria-hidden="true">
+                    <i class="fas"
+                       [class.fa-file-pdf]="doc.mime_type?.includes('pdf')"
+                       [class.fa-file-image]="!doc.mime_type?.includes('pdf')"></i>
+                  </div>
+
+                  <div class="doc-info">
+                    <h3 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h3>
+                    <time class="doc-date" [attr.datetime]="doc.created_at">
+                      {{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}
+                    </time>
+                  </div>
+                </div>
+
+                <footer class="doc-actions">
+                  <button type="button" class="btn btn--action" (click)="abrirPreview(doc)">
+                    <i class="fas fa-eye" aria-hidden="true"></i><span>Ver</span>
+                  </button>
+                  <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)">
+                    <i class="fas fa-download" aria-hidden="true"></i><span>Descargar</span>
+                  </button>
+                  <button type="button" class="btn btn--icon btn--danger" (click)="intentarEliminar(doc.id)" title="Eliminar">
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                  </button>
+                </footer>
+              </article>
+            }
+          </div>
+        </div>
+      }
     }
   </section>
 </main>
 
 @if (docPreview()) {
   <div class="modal-backdrop modal-backdrop--preview" role="presentation">
-    <div
-      class="modal-overlay"
-      (click)="cerrarPreview()"
-      aria-hidden="true"></div>
+    <div class="modal-overlay" (click)="cerrarPreview()" aria-hidden="true"></div>
 
-    <dialog
-      open
-      class="preview-modal animate-pop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="preview-title">
-
+    <dialog open class="preview-modal animate-pop" role="dialog" aria-modal="true" aria-labelledby="preview-title">
       <header class="preview-header">
         <div class="preview-title-group">
-          <div
-            class="preview-icon"
-            [class.doc-icon--pdf]="docPreview()?.mime_type?.includes('pdf')"
-            [class.doc-icon--image]="!docPreview()?.mime_type?.includes('pdf')"
-            aria-hidden="true">
+          <div class="preview-icon"
+               [class.doc-icon--pdf]="docPreview()?.mime_type?.includes('pdf')"
+               [class.doc-icon--image]="!docPreview()?.mime_type?.includes('pdf')"
+               aria-hidden="true">
             <i class="fas"
                [class.fa-file-pdf]="docPreview()?.mime_type?.includes('pdf')"
                [class.fa-file-image]="!docPreview()?.mime_type?.includes('pdf')"></i>
@@ -154,20 +182,10 @@
         </div>
 
         <div class="preview-actions">
-          <button
-            type="button"
-            class="btn-icon"
-            (click)="descargarDocumento(docPreview()!)"
-            aria-label="Descargar archivo"
-            title="Descargar">
+          <button type="button" class="btn-icon" (click)="descargarDocumento(docPreview()!)" aria-label="Descargar archivo" title="Descargar">
             <i class="fas fa-download" aria-hidden="true"></i>
           </button>
-          <button
-            type="button"
-            class="btn-icon btn-icon--close"
-            (click)="cerrarPreview()"
-            aria-label="Cerrar vista previa"
-            title="Cerrar">
+          <button type="button" class="btn-icon btn-icon--close" (click)="cerrarPreview()" aria-label="Cerrar vista previa" title="Cerrar">
             <i class="fas fa-times" aria-hidden="true"></i>
           </button>
         </div>
@@ -175,16 +193,10 @@
 
       <div class="preview-body">
         @if (docPreview()?.mime_type?.includes('pdf')) {
-          <iframe
-            [src]="safePreviewUrl()"
-            class="preview-iframe"
-            title="Vista previa del documento PDF"></iframe>
+          <iframe [src]="safePreviewUrl()" class="preview-iframe" title="Vista previa del documento PDF"></iframe>
         } @else {
           <div class="preview-image-wrapper">
-            <img
-              [src]="docPreview()?.ruta_archivo"
-              [alt]="docPreview()?.nombre_original"
-              class="preview-image" />
+            <img [src]="docPreview()?.ruta_archivo" [alt]="docPreview()?.nombre_original" class="preview-image" />
           </div>
         }
       </div>
@@ -194,19 +206,9 @@
 
 @if (docAEliminar()) {
   <div class="modal-backdrop modal-backdrop--alert" role="presentation">
-    <div
-      class="modal-overlay"
-      (click)="cancelarEliminacion()"
-      aria-hidden="true"></div>
+    <div class="modal-overlay" (click)="cancelarEliminacion()" aria-hidden="true"></div>
 
-    <dialog
-      open
-      class="alert-modal animate-pop"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="alert-title"
-      aria-describedby="alert-desc">
-
+    <dialog open class="alert-modal animate-pop" role="alertdialog" aria-modal="true" aria-labelledby="alert-title" aria-describedby="alert-desc">
       <div class="alert-icon" aria-hidden="true">
         <i class="fas" [ngClass]="isDeleting() ? 'fa-spinner fa-spin' : 'fa-trash-alt'"></i>
       </div>

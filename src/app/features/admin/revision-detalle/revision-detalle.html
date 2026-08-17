@@ -247,13 +247,41 @@
             <div class="locked-content">
               <i class="fas fa-lock locked-icon" aria-hidden="true"></i>
               <div>
-                <p class="locked-title">Ficha ya procesada</p>
+                <p class="locked-title">Ficha procesada</p>
                 <p class="locked-desc">
                   Esta ficha está en estado <strong>{{ ficha()!.estado_ficha }}</strong>.
-                  Solo se podrá volver a evaluar cuando el estudiante la reenvíe.
                 </p>
               </div>
             </div>
+            
+            <!-- NUEVO: Opciones de Reapertura -->
+            @if (puedeReabrir()) {
+              <div class="mt-6 border-t border-slate-200 pt-4">
+                <label class="form-label text-slate-700" for="txt-reabrir">
+                  <i class="fas fa-info-circle text-blue-500 mr-1" aria-hidden="true"></i>
+                  ¿Necesitas que el estudiante corrija algo?
+                </label>
+                <textarea 
+                  id="txt-reabrir"
+                  class="form-control mb-3" 
+                  rows="2" 
+                  [value]="comentario()"
+                  (input)="comentario.set($any($event.target).value)"
+                  placeholder="Escribe el motivo por el cual devuelves la ficha a edición (Opcional)..."
+                  [disabled]="guardando()"
+                ></textarea>
+                
+                <button 
+                  type="button" 
+                  class="btn btn-outline bg-amber-50 border-amber-500 text-amber-700 hover:bg-amber-100 w-full md:w-auto"
+                  (click)="cambiarEstado('BORRADOR', true)"
+                  [disabled]="guardando()"
+                >
+                  <i class="fas" [ngClass]="guardando() ? 'fa-spinner fa-spin' : 'fa-unlock'" aria-hidden="true"></i>
+                  <span>Habilitar Edición (Devolver a Borrador)</span>
+                </button>
+              </div>
+            }
           </div>
         }
       }

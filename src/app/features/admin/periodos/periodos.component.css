@@ -493,9 +493,9 @@ body.swal2-shown {
   overflow: hidden !important;
 }
 
-.custom-swal-popup {
+::ng-deep .custom-swal-popup {
   border-radius: var(--radius-lg) !important;
-  padding: 1.5rem !important;
+  padding: 0 !important;
   background: #ffffff !important;
   box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1) !important;
   border: 1px solid var(--border-color) !important;
@@ -503,43 +503,46 @@ body.swal2-shown {
   overflow: hidden !important;
 }
 
-:root[data-theme='dark'] .custom-swal-popup {
+:root[data-theme='dark'] ::ng-deep .custom-swal-popup {
   background: #0f172a !important;
   border-color: rgba(148, 163, 184, 0.2) !important;
 }
 
-.swal2-title {
-  font-size: 1.25rem !important;
+::ng-deep .custom-swal-title {
+  padding: 1.5rem 2rem 0 2rem !important;
+  margin: 0 !important;
   font-weight: 800 !important;
-  color: var(--text-main) !important;
-  padding: 0 0 1rem 0 !important;
+  font-size: 1.3rem !important;
+  color: #0f172a !important;
+  text-align: left !important;
 }
 
-:root[data-theme='dark'] .swal2-title {
+:root[data-theme='dark'] ::ng-deep .custom-swal-title {
   color: #f8fafc !important;
 }
 
-.swal-form-card {
+::ng-deep .swal-form-card {
   text-align: left !important;
   display: block !important;
-  max-height: calc(88vh - 130px);
+  max-height: calc(88vh - 130px) !important;
   overflow-y: auto !important;
-  padding-right: 0.35rem;
+  padding: 1.5rem 2rem 1rem 2rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.swal-form-card::-webkit-scrollbar {
+::ng-deep .swal-form-card::-webkit-scrollbar {
   width: 4px;
 }
-.swal-form-card::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 10px;
+::ng-deep .swal-form-card::-webkit-scrollbar-track {
+  background: transparent;
 }
-.swal-form-card::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+::ng-deep .swal-form-card::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
   border-radius: 10px;
 }
 
-.swal-header-banner {
+::ng-deep .swal-header-banner {
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -550,48 +553,48 @@ body.swal2-shown {
   margin-bottom: 1.25rem;
 }
 
-:root[data-theme='dark'] .swal-header-banner {
+:root[data-theme='dark'] ::ng-deep .swal-header-banner {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
   border-color: rgba(139, 92, 246, 0.3);
 }
 
-.swal-banner-icon {
+::ng-deep .swal-banner-icon {
   font-size: 1.35rem;
   color: var(--primary-color);
 }
 
-.swal-banner-title {
+::ng-deep .swal-banner-title {
   margin: 0;
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--text-main);
 }
 
-:root[data-theme='dark'] .swal-banner-title {
+:root[data-theme='dark'] ::ng-deep .swal-banner-title {
   color: #f8fafc;
 }
 
-.swal-banner-sub {
+::ng-deep .swal-banner-sub {
   margin: 0.15rem 0 0 0;
   font-size: 0.78rem;
   color: var(--text-muted);
 }
 
-.swal-field-group {
+::ng-deep .swal-field-group {
   margin-bottom: 1rem;
 }
 
-.swal-form-row {
+::ng-deep .swal-form-row {
   display: flex;
   gap: 0.85rem;
   margin-bottom: 1rem;
 }
 
-.swal-form-col {
+::ng-deep .swal-form-col {
   flex: 1;
 }
 
-.swal-form-label {
+::ng-deep .swal-form-label {
   display: block;
   font-size: 0.75rem;
   font-weight: 800;
@@ -601,31 +604,32 @@ body.swal2-shown {
   margin-bottom: 0.35rem;
 }
 
-.swal-form-input {
+::ng-deep .swal-form-input {
   width: 100%;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 0.88rem;
-  color: var(--text-main);
-  background-color: var(--bg-main);
-  outline: none;
-  transition: all 0.15s ease;
-  box-sizing: border-box;
+  padding: 0.55rem 0.75rem !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.88rem !important;
+  color: var(--text-main) !important;
+  background-color: var(--bg-alt) !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+  box-sizing: border-box !important;
 }
 
-:root[data-theme='dark'] .swal-form-input {
-  background-color: #1e293b;
-  color: #f8fafc;
-  border-color: #334155;
+:root[data-theme='dark'] ::ng-deep .swal-form-input {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
 }
 
-.swal-form-input:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+::ng-deep .swal-form-input:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+  background-color: #ffffff !important;
 }
 
-.swal-checkbox-card {
+::ng-deep .swal-checkbox-card {
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
@@ -637,12 +641,12 @@ body.swal2-shown {
   cursor: pointer;
 }
 
-:root[data-theme='dark'] .swal-checkbox-card {
+:root[data-theme='dark'] ::ng-deep .swal-checkbox-card {
   background-color: #1e293b;
   border-color: #334155;
 }
 
-.swal-checkbox-input {
+::ng-deep .swal-checkbox-input {
   width: 1.1rem;
   height: 1.1rem;
   accent-color: var(--primary-color);
@@ -650,33 +654,36 @@ body.swal2-shown {
   margin-top: 0.15rem;
 }
 
-.swal-checkbox-label {
+::ng-deep .swal-checkbox-label {
   display: flex;
   flex-direction: column;
   cursor: pointer;
 }
 
-.swal-checkbox-label span {
+::ng-deep .swal-checkbox-label span {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-main);
 }
 
-:root[data-theme='dark'] .swal-checkbox-label span {
+:root[data-theme='dark'] ::ng-deep .swal-checkbox-label span {
   color: #f8fafc;
 }
 
-.swal-checkbox-sub {
+::ng-deep .swal-checkbox-sub {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.swal2-actions {
+::ng-deep .swal2-actions {
   gap: 0.65rem !important;
-  margin-top: 1.25rem !important;
+  margin-top: 0 !important;
+  padding: 1.25rem 2rem !important;
+  border-top: 1px solid var(--border-color) !important;
+  background: var(--bg-alt) !important;
 }
 
-.custom-swal-confirm {
+::ng-deep .custom-swal-confirm {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -693,23 +700,23 @@ body.swal2-shown {
   cursor: pointer !important;
 }
 
-.custom-swal-confirm:hover {
+::ng-deep .custom-swal-confirm:hover {
   background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
   box-shadow: 0 6px 16px rgba(139, 92, 246, 0.45) !important;
   transform: translateY(-2px) !important;
 }
 
-.custom-swal-danger {
+::ng-deep .custom-swal-danger {
   background: linear-gradient(135deg, #ef4444, #dc2626) !important;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35) !important;
 }
 
-.custom-swal-danger:hover {
+::ng-deep .custom-swal-danger:hover {
   background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45) !important;
 }
 
-.custom-swal-cancel {
+::ng-deep .custom-swal-cancel {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -725,13 +732,13 @@ body.swal2-shown {
   cursor: pointer !important;
 }
 
-:root[data-theme='dark'] .custom-swal-cancel {
+:root[data-theme='dark'] ::ng-deep .custom-swal-cancel {
   background-color: #334155 !important;
   color: #f8fafc !important;
   border-color: #475569 !important;
 }
 
-.custom-swal-cancel:hover {
+::ng-deep .custom-swal-cancel:hover {
   background-color: #e2e8f0 !important;
   transform: translateY(-2px) !important;
 }
@@ -796,7 +803,7 @@ body.swal2-shown {
     justify-content: space-between;
   }
 
-  .swal-form-row {
+  ::ng-deep .swal-form-row {
     flex-direction: column;
     gap: 0.75rem;
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -21,6 +21,16 @@ export class EstudianteDocumentosComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   misDocumentos = signal<DocumentoRespaldo[]>([]);
+  
+  // 🔥 NUEVAS SEÑALES CALCULADAS PARA DIVIDIR LA VISTA
+  documentosFormulario = computed(() => {
+    return this.misDocumentos().filter(doc => doc.respuesta_id != null || doc.ficha_id != null);
+  });
+
+  documentosSueltos = computed(() => {
+    return this.misDocumentos().filter(doc => doc.respuesta_id == null && doc.ficha_id == null);
+  });
+
   docPreview = signal<DocumentoRespaldo | null>(null);
   safePreviewUrl = signal<SafeResourceUrl | null>(null);
   docAEliminar = signal<string | null>(null);
@@ -80,7 +90,7 @@ export class EstudianteDocumentosComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (nuevoDoc) => {
-          this.misDocumentos.update(docs => [...docs, nuevoDoc]);
+          this.misDocumentos.update(docs => [nuevoDoc, ...docs]); // Agregamos al inicio para que se vea rápido
           this.toastService.show('Archivo subido correctamente.', 'success');
           this.isUploading.set(false);
         },

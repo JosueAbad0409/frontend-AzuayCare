@@ -61,6 +61,12 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
     return estado === 'ENVIADA' || estado === 'ENVIADO';
   });
 
+  // NUEVO: Computed para saber si se puede reabrir
+  readonly puedeReabrir = computed(() => {
+    const estado = this.ficha()?.estado_ficha?.toUpperCase();
+    return estado === 'VALIDADO' || estado === 'RECHAZADO' || estado === 'RECHAZADA';
+  });
+
   private normalizarTexto(texto: string | null | undefined): string {
     if (!texto) return '';
     return texto
@@ -254,20 +260,29 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
     this.tabActiva.set(tab);
   }
 
-  cambiarEstado(nuevoEstado: EstadoFicha): void {
+  // ACTUALIZADO: Permite recibir un parámetro para forzar la reapertura
+  cambiarEstado(nuevoEstado: EstadoFicha, esReapertura: boolean = false): void {
     const f = this.ficha();
-    if (!f || !this.puedeRevisar() || this.guardando()) return;
+    
+    // Si no es una reapertura, aplicamos la regla estricta de que debe estar "ENVIADA"
+    if (!f || this.guardando()) return;
+    if (!esReapertura && !this.puedeRevisar()) return;
 
     this.guardando.set(true);
     this.revisionService.actualizarEstadoFicha(f.id, nuevoEstado, this.comentario()).subscribe({
       next: (actualizada) => {
         this.ficha.set(actualizada);
         this.guardando.set(false);
-        this.comentario.set('');
-        this.toastService.show(
-          nuevoEstado === 'VALIDADO' ? 'Ficha validada con éxito.' : 'Ficha rechazada.',
-          nuevoEstado === 'VALIDADO' ? 'success' : 'info'
-        );
+        this.comentario.set(''); // Limpiamos el comentario
+        
+        // Mensaje dinámico según la acción
+        let mensajeToast = 'Estado actualizado';
+        if (nuevoEstado === 'VALIDADO') mensajeToast = 'Ficha validada con éxito.';
+        else if (nuevoEstado === 'BORRADOR') mensajeToast = 'Ficha devuelta al estudiante para edición.';
+        else mensajeToast = 'Ficha rechazada.';
+
+        this.toastService.show(mensajeToast, nuevoEstado === 'VALIDADO' ? 'success' : 'info');
+        
         this.historialService.getHistorialByFicha(f.id).subscribe({
           next: (h) => this.historial.set(h)
         });

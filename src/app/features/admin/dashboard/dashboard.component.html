@@ -13,7 +13,8 @@
       </div>
       <h1 class="hero-title">Tablero de Control Socioeconómico</h1>
       <p class="hero-description">
-        Monitoreo analítico integral de vulnerabilidad, atenciones prioritarias y seguimiento cualitativo de fichas institucionales.
+        Monitoreo analítico integral de vulnerabilidad, atenciones prioritarias y seguimiento cualitativo de fichas
+        institucionales.
       </p>
     </div>
 
@@ -49,16 +50,6 @@
           @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
           @else { <h2 class="kpi-value text-rose">{{ totalNee() }}</h2> }
           <span class="kpi-caption">Casos con vulnerabilidad</span>
-        </div>
-      </article>
-
-      <article class="kpi-card kpi-card-amber">
-        <div class="kpi-icon-wrapper icon-amber"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></div>
-        <div class="kpi-body">
-          <span class="kpi-label">Con Riesgo</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value text-amber">{{ totalConRiesgo() }}</h2> }
-          <span class="kpi-caption">Riesgo acumulado > 0</span>
         </div>
       </article>
 
@@ -150,18 +141,22 @@
         <div class="filter-group">
           <label for="ingreso-min"><i class="fas fa-arrow-up text-emerald" aria-hidden="true"></i> Ingresos ($)</label>
           <div class="input-row">
-            <input id="ingreso-min" type="number" placeholder="Mínimo" [ngModel]="ingresoMin()" (ngModelChange)="ingresoMin.set($event)" aria-label="Ingresos mínimos">
+            <input id="ingreso-min" type="number" placeholder="Mínimo" [ngModel]="ingresoMin()"
+              (ngModelChange)="ingresoMin.set($event)" aria-label="Ingresos mínimos">
             <span class="divider" aria-hidden="true">-</span>
-            <input id="ingreso-max" type="number" placeholder="Máximo" [ngModel]="ingresoMax()" (ngModelChange)="ingresoMax.set($event)" aria-label="Ingresos máximos">
+            <input id="ingreso-max" type="number" placeholder="Máximo" [ngModel]="ingresoMax()"
+              (ngModelChange)="ingresoMax.set($event)" aria-label="Ingresos máximos">
           </div>
         </div>
 
         <div class="filter-group">
           <label for="egreso-min"><i class="fas fa-arrow-down text-rose" aria-hidden="true"></i> Egresos ($)</label>
           <div class="input-row">
-            <input id="egreso-min" type="number" placeholder="Mínimo" [ngModel]="egresoMin()" (ngModelChange)="egresoMin.set($event)" aria-label="Egresos mínimos">
+            <input id="egreso-min" type="number" placeholder="Mínimo" [ngModel]="egresoMin()"
+              (ngModelChange)="egresoMin.set($event)" aria-label="Egresos mínimos">
             <span class="divider" aria-hidden="true">-</span>
-            <input id="egreso-max" type="number" placeholder="Máximo" [ngModel]="egresoMax()" (ngModelChange)="egresoMax.set($event)" aria-label="Egresos máximos">
+            <input id="egreso-max" type="number" placeholder="Máximo" [ngModel]="egresoMax()"
+              (ngModelChange)="egresoMax.set($event)" aria-label="Egresos máximos">
           </div>
         </div>
 
@@ -169,6 +164,75 @@
           <i class="fas fa-eraser" aria-hidden="true"></i><span>Limpiar Filtros</span>
         </button>
       </div>
+      @if (hayFiltrosActivos()) {
+      <div class="filtered-students-panel">
+        <div class="filtered-students-header">
+          <span class="filtered-students-title">
+            <i class="fas fa-list" aria-hidden="true"></i>
+            Estudiantes que cumplen el filtro
+          </span>
+          <span class="condition-count-badge">{{ estudiantesFiltrados() }} resultado(s)</span>
+        </div>
+
+        @if (estudiantesFiltradosList().length === 0) {
+        <div class="filtered-students-empty">
+          <i class="fas fa-user-slash" aria-hidden="true"></i>
+          <p>Ningún estudiante cumple con los rangos seleccionados.</p>
+        </div>
+        } @else {
+        <div class="table-wrapper">
+          <table class="students-table">
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>Carrera / Ciclo</th>
+                <th class="text-right">Ingresos</th>
+                <th class="text-right">Egresos</th>
+                <th class="text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of estudiantesFiltradosList(); track f.id) {
+              <tr>
+                <!-- Nombre + Cédula -->
+                <td>
+                  <div class="student-cell">
+                    <div class="student-name">{{ nombreEstudiante(f) }}</div>
+                    <div class="student-cedula">{{ cedulaEstudiante(f) }}</div>
+                  </div>
+                </td>
+
+                <!-- Carrera + Ciclo -->
+                <td>
+                  <div class="academic-cell">
+                    <div class="carrera">{{ carreraEstudiante(f) }}</div>
+                    <div class="ciclo">{{ cicloEstudiante(f) }}</div>
+                  </div>
+                </td>
+
+                <!-- Ingresos -->
+                <td class="text-right money income">
+                  {{ f.total_ingresos | currency:'USD':'symbol':'1.0-0' }}
+                </td>
+
+                <!-- Egresos -->
+                <td class="text-right money expense">
+                  {{ f.total_egresos | currency:'USD':'symbol':'1.0-0' }}
+                </td>
+
+                <!-- Balance -->
+                <td class="text-right money" [class.positive]="(f.balance_final || 0) >= 0"
+                  [class.negative]="(f.balance_final || 0) < 0">
+                  {{ f.balance_final | currency:'USD':'symbol':'1.0-0' }}
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+      }
     </div>
   </section>
 
@@ -184,7 +248,9 @@
             </div>
           </div>
           <div class="chart-header-actions">
-            <select class="chart-type-selector" [ngModel]="tipoGraficoCarrera()" (ngModelChange)="cambiarTipoGrafico('carrera', $event)" aria-label="Seleccionar tipo de gráfico de carreras">
+            <select class="chart-type-selector" [ngModel]="tipoGraficoCarrera()"
+              (ngModelChange)="cambiarTipoGrafico('carrera', $event)"
+              aria-label="Seleccionar tipo de gráfico de carreras">
               <option value="bar">Barras</option>
               <option value="pie">Pastel</option>
             </select>
@@ -257,30 +323,31 @@
 
         <div class="conditions-scroll-container">
           @if (isLoading()) {
-            <div class="skeleton-loader chart-skeleton"></div>
+          <div class="skeleton-loader chart-skeleton"></div>
           } @else if (condiciones().length === 0) {
-            <div class="empty-state-box">
-              <div class="empty-icon-circle"><i class="fas fa-check" aria-hidden="true"></i></div>
-              <p class="empty-state-title">Sin casos pendientes</p>
-              <p class="empty-state-text">No existen condiciones de vulnerabilidad registradas en este periodo.</p>
-            </div>
+          <div class="empty-state-box">
+            <div class="empty-icon-circle"><i class="fas fa-check" aria-hidden="true"></i></div>
+            <p class="empty-state-title">Sin casos pendientes</p>
+            <p class="empty-state-text">No existen condiciones de vulnerabilidad registradas en este periodo.</p>
+          </div>
           } @else {
-            <div class="conditions-list">
-              @for (c of condiciones(); track c.nombre) {
-                <div class="condition-item">
-                  <div class="condition-meta">
-                    <span class="condition-name">{{ c.nombre }}</span>
-                    <div class="condition-badge-group">
-                      <span class="condition-count-badge">{{ c.total }} caso(s)</span>
-                      <span class="condition-pct-badge">{{ pctCondicion(c.total) }}%</span>
-                    </div>
-                  </div>
-                  <div class="progress-bar-track" role="progressbar" [attr.aria-valuenow]="pctCondicion(c.total)" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-bar-fill" [style.width.%]="pctCondicion(c.total)"></div>
-                  </div>
+          <div class="conditions-list">
+            @for (c of condiciones(); track c.nombre) {
+            <div class="condition-item">
+              <div class="condition-meta">
+                <span class="condition-name">{{ c.nombre }}</span>
+                <div class="condition-badge-group">
+                  <span class="condition-count-badge">{{ c.total }} caso(s)</span>
+                  <span class="condition-pct-badge">{{ pctCondicion(c.total) }}%</span>
                 </div>
-              }
+              </div>
+              <div class="progress-bar-track" role="progressbar" [attr.aria-valuenow]="pctCondicion(c.total)"
+                aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar-fill" [style.width.%]="pctCondicion(c.total)"></div>
+              </div>
             </div>
+            }
+          </div>
           }
         </div>
       </article>
@@ -289,7 +356,8 @@
 
   <section class="quick-access-section slide-up delay-5" aria-label="Módulos clave">
     <div class="section-title-group">
-      <h2 class="section-heading"><i class="fas fa-rocket heading-icon" aria-hidden="true"></i> Módulos Administrativos</h2>
+      <h2 class="section-heading"><i class="fas fa-rocket heading-icon" aria-hidden="true"></i> Módulos Administrativos
+      </h2>
       <p class="section-subheading">Gestión directa y operaciones frecuentes</p>
     </div>
 
@@ -299,21 +367,24 @@
         <div class="quick-icon-wrapper icon-critical"><i class="fas fa-clipboard-check" aria-hidden="true"></i></div>
         <h3 class="quick-title">Revisión de Fichas</h3>
         <p class="quick-desc">Validación, aprobación o rechazo de expedientes enviados por estudiantes.</p>
-        <span class="quick-link-action"><span>Ir a Revisión</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+        <span class="quick-link-action"><span>Ir a Revisión</span> <i class="fas fa-arrow-right"
+            aria-hidden="true"></i></span>
       </a>
 
       <a routerLink="/admin/prioridad-atencion" class="quick-card">
         <div class="quick-icon-wrapper icon-rose"><i class="fas fa-heartbeat" aria-hidden="true"></i></div>
         <h3 class="quick-title">Prioridad de Atención</h3>
         <p class="quick-desc">Supervisión de casos NEE, embarazos, enfermedades y vulnerabilidades.</p>
-        <span class="quick-link-action"><span>Ver Casos</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+        <span class="quick-link-action"><span>Ver Casos</span> <i class="fas fa-arrow-right"
+            aria-hidden="true"></i></span>
       </a>
 
       <a routerLink="/admin/reportes" class="quick-card">
         <div class="quick-icon-wrapper icon-emerald"><i class="fas fa-file-invoice" aria-hidden="true"></i></div>
         <h3 class="quick-title">Reportes Consolidados</h3>
         <p class="quick-desc">Generación de archivos Excel, PDF y métricas institucionales.</p>
-        <span class="quick-link-action"><span>Generar Reportes</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+        <span class="quick-link-action"><span>Generar Reportes</span> <i class="fas fa-arrow-right"
+            aria-hidden="true"></i></span>
       </a>
     </div>
   </section>

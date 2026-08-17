@@ -73,18 +73,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly egresoMin = signal<number | null>(null);
   readonly egresoMax = signal<number | null>(null);
 
-  readonly estudiantesFiltrados = computed(() => {
-    const minIng = this.ingresoMin() ?? -Infinity;
-    const maxIng = this.ingresoMax() ?? Infinity;
-    const minEgr = this.egresoMin() ?? -Infinity;
-    const maxEgr = this.egresoMax() ?? Infinity;
+  readonly estudiantesFiltradosList = computed(() => {
+  const minIng = this.ingresoMin() ?? -Infinity;
+  const maxIng = this.ingresoMax() ?? Infinity;
+  const minEgr = this.egresoMin() ?? -Infinity;
+  const maxEgr = this.egresoMax() ?? Infinity;
 
-    return this.todasLasFichas().filter(f => {
-      const i = Number(f.total_ingresos || 0);
-      const e = Number(f.total_egresos || 0);
-      return i >= minIng && i <= maxIng && e >= minEgr && e <= maxEgr;
-    }).length;
+  return this.todasLasFichas().filter(f => {
+    const i = Number(f.total_ingresos || 0);
+    const e = Number(f.total_egresos || 0);
+    return i >= minIng && i <= maxIng && e >= minEgr && e <= maxEgr;
   });
+});
+
+readonly estudiantesFiltrados = computed(() => this.estudiantesFiltradosList().length);
+
+readonly hayFiltrosActivos = computed(() =>
+  this.ingresoMin() !== null || this.ingresoMax() !== null ||
+  this.egresoMin() !== null || this.egresoMax() !== null
+);
 
   @ViewChild('estadoChartCanvas', { static: false }) estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('economiaChartCanvas', { static: false }) economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
@@ -155,6 +162,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.egresoMin.set(null);
     this.egresoMax.set(null);
   }
+
+  nombreEstudiante(f: any): string {
+  const u = f?.usuario || {};
+  const nombres = [u.primer_nombre, u.segundo_nombre].filter(Boolean).join(' ');
+  const apellidos = [u.primer_apellido, u.segundo_apellido].filter(Boolean).join(' ');
+  return `${nombres} ${apellidos}`.trim() || 'Sin nombre';
+}
+
+cedulaEstudiante(f: any): string {
+  return f?.usuario?.cedula || 'Sin cédula';
+}
+
+carreraEstudiante(f: any): string {
+  // Intentamos varios posibles lugares
+  return f.carrera_nombre
+    || f.carrera?.nombre
+    || f.usuario?.carrera?.nombre
+    || f.usuario?.carrera_nombre
+    || 'Sin carrera';
+}
+
+cicloEstudiante(f: any): string {
+  return f.ciclo_nombre
+    || f.ciclo?.nombre
+    || f.usuario?.ciclo?.nombre
+    || f.usuario?.ciclo_nombre
+    || 'Sin ciclo';
+}
+
 
   cambiarTipoGrafico(grafico: string, nuevoTipo: string): void {
     if (grafico === 'carrera') {

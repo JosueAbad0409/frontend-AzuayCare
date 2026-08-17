@@ -61,7 +61,6 @@
             <th scope="col" class="col-estudiante">Estudiante</th>
             <th scope="col" class="col-carrera">Carrera / Ciclo</th>
             <th scope="col" class="col-vulnerabilidades">Condiciones de Vulnerabilidad Detectadas</th>
-            <th scope="col" class="col-riesgo text-center">Riesgo Total</th>
             <th scope="col" class="col-acc text-center">Acción</th>
           </tr>
           <tr class="header-filters">
@@ -92,18 +91,6 @@
               </select>
             </th>
             <th class="col-vulnerabilidades"></th>
-            <th class="col-riesgo text-center">
-              <select 
-                [value]="filterRiesgo()" 
-                (change)="onRiesgoChange($event)" 
-                class="table-column-select table-column-select-centered" 
-                aria-label="Filtrar por nivel de riesgo"
-              >
-                <option value="TODOS">Todos</option>
-                <option value="CON_RIESGO">Con Riesgo (>0)</option>
-                <option value="SIN_RIESGO">Sin Riesgo (0)</option>
-              </select>
-            </th>
             <th class="col-acc text-center"></th>
           </tr>
         </thead>
@@ -139,11 +126,6 @@
                   }
                 </div>
               </td>
-              <td class="col-riesgo text-center" data-label="Riesgo Total">
-                <span class="risk-badge font-mono" [ngClass]="item.riesgo_total > 0 ? 'risk-high' : 'risk-normal'">
-                  {{ item.riesgo_total }}
-                </span>
-              </td>
               <td class="col-acc text-center" data-label="Acción">
                 <button 
                   type="button" 
@@ -158,7 +140,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="5">
+              <td colspan="4">
                 <div class="state-card empty-state">
                   <i class="fas fa-check-circle empty-icon text-success" aria-hidden="true"></i>
                   <p class="state-title">No se encontraron casos</p>
