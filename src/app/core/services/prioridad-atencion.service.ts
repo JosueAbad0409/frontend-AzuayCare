@@ -6,20 +6,21 @@ import { FichasPaginadasResponse } from '../models/revision-ficha.model';
 
 // 🔥 1. NUEVA INTERFAZ PARA EL DETALLE DINÁMICO
 export interface VulnerabilidadDetalle {
-  respuesta: string;
-  evidencia: boolean;
-  riesgo: number;
+    respuesta: string;
+    evidencia: boolean;
+    riesgo: number;
 }
 
 // 🔥 2. INTERFAZ ACTUALIZADA (Sin campos quemados)
 export interface ReporteNeeSalud {
-  ficha_id: string;
-  estudiante: string;
-  cedula: string;
-  carrera: string;
-  ciclo: string;
-  riesgo_total: number;
-  detalles_vulnerabilidad: Record<string, VulnerabilidadDetalle>;
+    ficha_id: string;
+    estudiante: string;
+    cedula: string;
+    carrera: string;
+    ciclo: string;
+    riesgo_total: number;
+    detalles_vulnerabilidad: Record<string, VulnerabilidadDetalle>;
+    estado_ficha?: string;
 }
 
 @Injectable({ providedIn: 'root' })

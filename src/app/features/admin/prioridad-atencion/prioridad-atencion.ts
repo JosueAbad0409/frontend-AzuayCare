@@ -36,6 +36,7 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   readonly filterEstudiante = signal<string>('');
   readonly filterCarrera = signal<string>('TODOS');
   readonly filterRiesgo = signal<string>('TODOS');
+  readonly filterEstado = signal<string>('TODOS'); // <-- NUEVO: Signal para el estado
 
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
@@ -50,16 +51,28 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
     return Array.from(set);
   });
 
+  // <-- NUEVO: Obtener dinámicamente los estados únicos disponibles
+  readonly estadosDisponibles = computed(() => {
+    const set = new Set<string>();
+    this.reporteNee().forEach(item => {
+      // Asegúrate de que la propiedad 'estado' exista en tu interfaz ReporteNeeSalud
+      if (item.estado_ficha) { 
+        set.add(item.estado_ficha);
+      }
+    });
+    return Array.from(set);
+  });
+
   readonly reporteFiltrado = computed(() => {
     const term = this.filterEstudiante().toLowerCase().trim();
     const carrera = this.filterCarrera();
-    const riesgo = this.filterRiesgo();
+    const estado = this.filterEstado(); // <-- NUEVO
 
     return this.reporteNee().filter(item => {
       if (carrera !== 'TODOS' && item.carrera !== carrera) return false;
-
-      if (riesgo === 'CON_RIESGO' && item.riesgo_total <= 0) return false;
-      if (riesgo === 'SIN_RIESGO' && item.riesgo_total > 0) return false;
+      
+      // <-- NUEVO: Filtro por estado
+      if (estado !== 'TODOS' && item.estado_ficha !== estado) return false;
 
       if (!term) return true;
 
@@ -101,10 +114,17 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
     this.filterRiesgo.set(value);
   }
 
+  // <-- NUEVO: Método para cambiar el estado
+  onEstadoChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.filterEstado.set(value);
+  }
+
   limpiarFiltros(): void {
     this.filterEstudiante.set('');
     this.filterCarrera.set('TODOS');
     this.filterRiesgo.set('TODOS');
+    this.filterEstado.set('TODOS'); // <-- NUEVO: Resetear estado
   }
 
   cargarReporteEspecializado(): void {

@@ -19,17 +19,17 @@ import { ToastService } from '../../../core/services/toast.service';
 export class PeriodosComponent implements OnInit, OnDestroy {
   private readonly periodoService = inject(PeriodoService);
   private readonly toastService = inject(ToastService);
-  
+
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly isSaving = signal<boolean>(false);
-  
+
   readonly searchTerm = signal<string>('');
   readonly filtroNombreSelect = signal<string>('TODOS');
   readonly filtroFechaInicio = signal<string>('');
   readonly filtroFechaFin = signal<string>('');
   readonly filtroEstado = signal<string>('TODOS');
-  
+
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
 
@@ -73,11 +73,11 @@ export class PeriodosComponent implements OnInit, OnDestroy {
   });
 
   readonly tieneFiltrosActivos = computed(() => {
-    return !!this.searchTerm() || 
-           this.filtroNombreSelect() !== 'TODOS' || 
-           !!this.filtroFechaInicio() || 
-           !!this.filtroFechaFin() || 
-           this.filtroEstado() !== 'TODOS';
+    return !!this.searchTerm() ||
+      this.filtroNombreSelect() !== 'TODOS' ||
+      !!this.filtroFechaInicio() ||
+      !!this.filtroFechaFin() ||
+      this.filtroEstado() !== 'TODOS';
   });
 
   ngOnInit(): void {

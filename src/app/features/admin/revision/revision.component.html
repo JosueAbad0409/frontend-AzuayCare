@@ -103,7 +103,7 @@
                 aria-label="Filtrar fichas por estado"
               >
                 <option value="TODOS">Todos los Estados</option>
-                <option value="ENVIADA">ENVIADAS</option>
+                <option value="ENVIADA">POR VALIDAR</option>
                 <option value="VALIDADO">VALIDADAS</option>
                 <option value="RECHAZADO">RECHAZADAS</option>
               </select>
@@ -131,7 +131,7 @@
                   'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
                   'badge-danger': f.estado_ficha === 'RECHAZADO' || f.estado_ficha === 'RECHAZADA'
                 }">
-                  {{ f.estado_ficha }}
+                  {{ f.estado_ficha === 'ENVIADA' ? 'Por Validar' : f.estado_ficha }}
                 </span>
               </td>
               <td class="col-acc text-right" data-label="Acciones">
@@ -334,7 +334,7 @@
                     }"></div>
                     <div class="timeline-card">
                       <div class="timeline-header">
-                        <strong>Transición a {{ h.estado_nuevo }}</strong>
+                        <strong>Transición a {{ h.estado_nuevo === 'ENVIADA' ? 'Por Validar' : h.estado_nuevo }}</strong>
                         <span>{{ h.created_at | date:'medium' }}</span>
                       </div>
                       <p class="timeline-comment">{{ h.comentario || 'Sin comentario registrado' }}</p>

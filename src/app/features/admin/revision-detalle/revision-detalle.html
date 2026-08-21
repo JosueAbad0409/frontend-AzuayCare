@@ -21,7 +21,7 @@
         </div>
       </div>
       <span class="estado-badge" [attr.data-estado]="ficha()!.estado_ficha" role="status">
-        {{ ficha()!.estado_ficha }}
+        {{ ficha()!.estado_ficha === 'ENVIADA' ? 'Por Validar' : ficha()!.estado_ficha }}
       </span>
     </header>
 
@@ -249,7 +249,7 @@
               <div>
                 <p class="locked-title">Ficha procesada</p>
                 <p class="locked-desc">
-                  Esta ficha está en estado <strong>{{ ficha()!.estado_ficha }}</strong>.
+                  Esta ficha está en estado <strong>{{ ficha()!.estado_ficha === 'ENVIADA' ? 'Por Validar' : ficha()!.estado_ficha }}</strong>.
                 </p>
               </div>
             </div>
@@ -299,7 +299,7 @@
               ></div>
               <div class="timeline-card">
                 <div class="timeline-header">
-                  <strong>Transición a {{ h.estado_nuevo }}</strong>
+                  <strong>Transición a {{ h.estado_nuevo === 'ENVIADA' ? 'Por Validar' : h.estado_nuevo }}</strong>
                   <span>{{ h.created_at | date:'medium' }}</span>
                 </div>
                 <p>{{ h.comentario || 'Sin comentario registrado' }}</p>
