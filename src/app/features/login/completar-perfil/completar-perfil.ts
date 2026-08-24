@@ -44,97 +44,74 @@ export class CompletarPerfilComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  loading = signal(false);
-  cargandoCatalogos = signal(true);
-  error = signal('');
-  /** Lista de errores legibles al enviar el form */
-  alertas = signal<string[]>([]);
-  exito = signal('');
+  // === ESTADOS DEL WIZARD ===
+  readonly pasoActual = signal(0);
+  readonly pasosNavegacion = [
+    { nombre: 'Identificación', icono: 'fa-id-card' },
+    { nombre: 'Datos Académicos', icono: 'fa-graduation-cap' },
+    { nombre: 'Datos Personales', icono: 'fa-user' }
+  ];
+  
+  readonly progreso = computed(() => {
+    return ((this.pasoActual() + 1) / this.pasosNavegacion.length) * 100;
+  });
 
-  carreras = signal<Carrera[]>([]);
-  private todosLosCiclos = signal<Ciclo[]>([]);
+  // === ESTADOS GLOBALES ===
+  readonly loading = signal(false);
+  readonly cargandoCatalogos = signal(true);
+  readonly error = signal('');
+  readonly alertas = signal<string[]>([]);
+  readonly exito = signal('');
 
-  filtroCarreraControl = new FormControl('', { nonNullable: true });
-  filtroCarrera = signal('');
+  readonly carreras = signal<Carrera[]>([]);
+  private readonly todosLosCiclos = signal<Ciclo[]>([]);
 
+  // === AUTOCOMPLETE CARRERAS ===
+  readonly filtroCarreraControl = new FormControl('', { nonNullable: true });
+  readonly filtroCarrera = signal('');
+  readonly dropdownCarreraAbierto = signal(false);
+
+  // === CATÁLOGOS LOCALES ===
   readonly sexos = ['Hombre', 'Mujer'];
-  readonly estadosCiviles = [
-    'Soltero/a',
-    'Casado/a',
-    'Divorciado/a',
-    'Viudo/a',
-    'Unión libre',
-  ];
-  readonly etnias = [
-    'Mestizo/a',
-    'Indígena',
-    'Afroecuatoriano/a',
-    'Montubio/a',
-    'Blanco/a',
-    'Mulato/a',
-    'Otro',
-  ];
-  readonly rangosEdad = [
-    'Menor a 18',
-    '18 a 25',
-    '26 a 35',
-    '36 a 45',
-    'Mayor a 45',
-  ];
+  readonly estadosCiviles = ['Soltero/a', 'Casado/a', 'Divorciado/a', 'Viudo/a', 'Unión libre'];
+  readonly etnias = ['Mestizo/a', 'Indígena', 'Afroecuatoriano/a', 'Montubio/a', 'Blanco/a', 'Mulato/a', 'Otro'];
+  readonly rangosEdad = ['Menor a 18', '18 a 25', '26 a 35', '36 a 45', 'Mayor a 45'];
   readonly zonas = ['Urbano', 'Rural'];
-
-  /** Opciones de discapacidad (van en tipo_discapacidad como texto) */
-  readonly tiposDiscapacidad = [
-    'Física',
-    'Visual',
-    'Auditiva',
-    'Intelectual',
-    'Psicosocial',
-    'Múltiple',
-    'Otra',
-  ];
-
-  /**
-   * Embarazo: el backend solo acepta boolean.
-   * En UI usamos meses; "no" => false, cualquier mes => true.
-   */
+  readonly tiposDiscapacidad = ['Física', 'Visual', 'Auditiva', 'Intelectual', 'Psicosocial', 'Múltiple', 'Otra'];
   readonly opcionesEmbarazo = [
     { value: 'no', label: 'No' },
-    { value: '1', label: 'Sí — 1 mes' },
-    { value: '2', label: 'Sí — 2 meses' },
-    { value: '3', label: 'Sí — 3 meses' },
-    { value: '4', label: 'Sí — 4 meses' },
-    { value: '5', label: 'Sí — 5 meses' },
-    { value: '6', label: 'Sí — 6 meses' },
-    { value: '7', label: 'Sí — 7 meses' },
-    { value: '8', label: 'Sí — 8 meses' },
-    { value: '9', label: 'Sí — 9 meses' },
+    { value: '1', label: 'Sí — 1 mes' }, { value: '2', label: 'Sí — 2 meses' },
+    { value: '3', label: 'Sí — 3 meses' }, { value: '4', label: 'Sí — 4 meses' },
+    { value: '5', label: 'Sí — 5 meses' }, { value: '6', label: 'Sí — 6 meses' },
+    { value: '7', label: 'Sí — 7 meses' }, { value: '8', label: 'Sí — 8 meses' },
+    { value: '9', label: 'Sí — 9 meses' }
   ];
 
   readonly mensajesCampo: Record<string, string> = {
-    cedula: 'La cédula debe ser válida (10 dígitos ecuatorianos).',
-    numero_celular: 'El celular debe ser 09 seguido de 8 dígitos (ej. 0991234567).',
-    primer_nombre: 'El primer nombre es obligatorio.',
-    primer_apellido: 'El primer apellido es obligatorio.',
-    email_personal: 'El correo personal no es válido.',
-    carrera_id: 'Debes seleccionar tu carrera.',
-    ciclo_id: 'Debes seleccionar tu ciclo académico.',
-    sexo: 'Selecciona tu sexo.',
-    estado_civil: 'Selecciona tu estado civil.',
-    tiene_hijos: 'Indica si tienes hijos/as.',
-    etnia: 'Selecciona tu etnia o raza.',
-    idioma: 'Indica el idioma principal.',
-    lugar_nacimiento: 'Indica el lugar de nacimiento.',
-    fecha_nacimiento: 'La fecha debe ser DD/MM/AAAA (ej. 15/03/2002).',
-    rango_edad: 'Selecciona el rango de edad.',
-    nacionalidad: 'Indica la nacionalidad.',
-    zona_residencia: 'Selecciona zona urbana o rural.',
-    mes_embarazo: 'Si eres mujer, indica si estás embarazada y en qué mes.',
-    tiene_discapacidad: 'Indica si tienes alguna discapacidad.',
-    tipo_discapacidad: 'Selecciona el tipo de discapacidad.',
+    cedula: 'Cédula inválida (10 dígitos).',
+    numero_celular: 'Celular inválido (09...).',
+    primer_nombre: 'Requerido.',
+    primer_apellido: 'Requerido.',
+    email_personal: 'Correo inválido.',
+    carrera_id: 'Selecciona una carrera de la lista.',
+    ciclo_id: 'Selecciona ciclo.',
+    sexo: 'Requerido.',
+    estado_civil: 'Requerido.',
+    tiene_hijos: 'Requerido.',
+    etnia: 'Requerido.',
+    idioma: 'Requerido.',
+    lugar_nacimiento: 'Requerido.',
+    fecha_nacimiento: 'Usa el formato DD/MM/AAAA.',
+    rango_edad: 'Requerido.',
+    nacionalidad: 'Requerido.',
+    zona_residencia: 'Requerido.',
+    mes_embarazo: 'Requerido.',
+    tiene_discapacidad: 'Requerido.',
+    tipo_discapacidad: 'Requerido.',
   };
 
-  perfilForm: FormGroup = this.fb.group({
+  readonly perfilForm: FormGroup = this.fb.group({
+    // PASO 0
     cedula: ['', [Validators.required, cedulaEcuatorianaValidator()]],
     primer_nombre: ['', Validators.required],
     segundo_nombre: [''],
@@ -144,9 +121,11 @@ export class CompletarPerfilComponent implements OnInit {
     email_personal: ['', Validators.email],
     numero_celular: ['', [Validators.required, Validators.pattern(/^09\d{8}$/)]],
 
-    carrera_id: [''],
-    ciclo_id: [{ value: '', disabled: true }],
+    // PASO 1
+    carrera_id: ['', Validators.required],
+    ciclo_id: [{ value: '', disabled: true }, Validators.required],
 
+    // PASO 2
     sexo: ['', Validators.required],
     estado_civil: ['', Validators.required],
     tiene_hijos: [null as boolean | null, Validators.required],
@@ -157,20 +136,17 @@ export class CompletarPerfilComponent implements OnInit {
     rango_edad: ['', Validators.required],
     nacionalidad: ['Ecuatoriana', Validators.required],
     zona_residencia: ['', Validators.required],
-
-    /** Solo UI: 'no' | '1'..'9' → se mapea a esta_embarazada boolean */
     mes_embarazo: ['no'],
-
     tiene_discapacidad: [null as boolean | null, Validators.required],
     tipo_discapacidad: [''],
   });
 
-  private carreraIdSeleccionada = toSignal(
+  private readonly carreraIdSeleccionada = toSignal(
     this.perfilForm.controls['carrera_id'].valueChanges,
-    { initialValue: '' },
+    { initialValue: '' }
   );
 
-  perfil = computed(() => {
+  readonly perfil = computed(() => {
     const user = this.authService.user();
     return {
       nombre: user?.nombre ?? 'Estudiante',
@@ -178,31 +154,39 @@ export class CompletarPerfilComponent implements OnInit {
     };
   });
 
-  esEstudiante = computed(() => this.authService.user()?.rol === 'ESTUDIANTE');
-  esMujer = computed(() => this.perfilForm.get('sexo')?.value === 'Mujer');
-
-  carrerasFiltradas = computed(() => {
+  readonly carrerasFiltradas = computed(() => {
     const termino = this.filtroCarrera();
     const lista = this.carreras();
     if (!termino) return lista;
     return lista.filter((c) => c.nombre.toLowerCase().includes(termino));
   });
 
-  ciclosDisponibles = computed(() => {
-  const carreraId = this.carreraIdSeleccionada();
-  if (!carreraId) return [];
-
-  return this.todosLosCiclos().filter((c) =>
-    (c.ciclosCarreras || []).some(
-      (cc) => String(cc.carrera_id || cc.carrera?.id) === String(carreraId),
-    ),
-  );
-});
+  readonly ciclosDisponibles = computed(() => {
+    const carreraId = this.carreraIdSeleccionada();
+    if (!carreraId) return [];
+    return this.todosLosCiclos().filter((c) =>
+      (c.ciclosCarreras || []).some(
+        (cc) => String(cc.carrera_id || cc.carrera?.id) === String(carreraId)
+      )
+    );
+  });
 
   constructor() {
+    // LÓGICA AUTOCOMPLETE CARRERA
     this.filtroCarreraControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((value) => this.filtroCarrera.set(value.toLowerCase().trim()));
+      .subscribe((value) => {
+        this.filtroCarrera.set(value.toLowerCase().trim());
+        
+        // Si el usuario escribe algo que ya no coincide con la carrera seleccionada, borramos el ID
+        const currentId = this.perfilForm.controls['carrera_id'].value;
+        if (currentId) {
+          const selected = this.carreras().find(c => c.id === currentId);
+          if (selected && selected.nombre !== value) {
+             this.perfilForm.controls['carrera_id'].setValue('');
+          }
+        }
+      });
 
     this.perfilForm.controls['carrera_id'].valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -217,9 +201,8 @@ export class CompletarPerfilComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((sexo) => {
         const mes = this.perfilForm.controls['mes_embarazo'];
-        if (sexo === 'Mujer') {
-          mes.setValidators([Validators.required]);
-        } else {
+        if (sexo === 'Mujer') mes.setValidators([Validators.required]);
+        else {
           mes.clearValidators();
           mes.setValue('no');
         }
@@ -230,9 +213,8 @@ export class CompletarPerfilComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((tiene) => {
         const tipo = this.perfilForm.controls['tipo_discapacidad'];
-        if (tiene === true) {
-          tipo.setValidators([Validators.required]);
-        } else {
+        if (tiene === true) tipo.setValidators([Validators.required]);
+        else {
           tipo.clearValidators();
           tipo.setValue('');
         }
@@ -255,124 +237,101 @@ export class CompletarPerfilComponent implements OnInit {
         email_institucional: user.email || '',
       });
     }
-
-    if (user?.rol === 'ESTUDIANTE' || user?.rol === 'INVITADO') {
-      this.perfilForm.controls['carrera_id'].setValidators([Validators.required]);
-      this.perfilForm.controls['ciclo_id'].setValidators([Validators.required]);
-      this.perfilForm.controls['carrera_id'].updateValueAndValidity();
-      this.perfilForm.controls['ciclo_id'].updateValueAndValidity();
-    }
-
     this.cargarCatalogos();
   }
 
+  // === MÉTODOS DEL AUTOCOMPLETE ===
+  cerrarDropdownCarrera() {
+    // Retraso minúsculo para que el clic (mousedown) en la opción de la lista 
+    // se registre antes de que el dropdown desaparezca por perder el foco.
+    setTimeout(() => this.dropdownCarreraAbierto.set(false), 200);
+  }
+
+  seleccionarCarrera(c: Carrera) {
+    this.perfilForm.controls['carrera_id'].setValue(c.id);
+    this.filtroCarreraControl.setValue(c.nombre, { emitEvent: false }); 
+    this.filtroCarrera.set(c.nombre.toLowerCase().trim());
+    this.dropdownCarreraAbierto.set(false);
+    this.perfilForm.controls['carrera_id'].markAsTouched();
+  }
+
+  // === NAVEGACIÓN DEL WIZARD ===
+  irAPaso(index: number): void {
+    this.pasoActual.set(index);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  siguiente(): void {
+    if (this.pasoActual() < this.pasosNavegacion.length - 1) {
+      this.pasoActual.update(p => p + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  anterior(): void {
+    if (this.pasoActual() > 0) {
+      this.pasoActual.update(p => p - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  private buscarPasoConError(): number {
+    const camposPaso0 = ['cedula', 'numero_celular', 'primer_nombre', 'primer_apellido', 'email_personal'];
+    const camposPaso1 = ['carrera_id', 'ciclo_id'];
+    const controles = this.perfilForm.controls;
+
+    for (const c of camposPaso0) if (controles[c]?.invalid) return 0;
+    for (const c of camposPaso1) if (controles[c]?.invalid) return 1;
+    return 2; 
+  }
+
+  // === VALIDACIONES Y GUARDADO ===
   private validarFechaNacimiento(control: AbstractControl) {
     const v = (control.value || '').trim();
     if (!v) return { required: true };
     const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);
     if (!m) return { formato: true };
-    const d = +m[1];
-    const mo = +m[2];
-    const y = +m[3];
-    const date = new Date(y, mo - 1, d);
-    if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) {
-      return { invalida: true };
-    }
+    const date = new Date(+m[3], +m[2] - 1, +m[1]);
     if (date > new Date()) return { futura: true };
     return null;
   }
 
   private cargarCatalogos(): void {
     this.cargandoCatalogos.set(true);
+    this.carreraService.getCarreras().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => this.carreras.set(res.filter(c => !c.fecha_desactivacion)),
+      error: () => this.error.set('No se pudieron cargar las carreras.')
+    });
 
-    this.carreraService
-      .getCarreras()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => this.carreras.set(res.filter((c) => !c.fecha_desactivacion)),
-        error: () => {
-          this.error.set('No se pudieron cargar las carreras. Revisa tu conexión.');
-          this.alertas.set(['No se pudieron cargar las carreras.']);
-        },
-      });
-
-    this.ciclosService
-      .getCiclos()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          const normalizados = (res || [])
-            .filter((c) => !c.fecha_desactivacion)
-            .map((c: any) => {
-              // Backend con ManyToMany → ya viene "carreras"
-              if (c.carreras) return c;
-
-              // Si aún manda la tabla intermedia
-              if (c.ciclosCarreras) {
-                return {
-                  ...c,
-                  carreras: c.ciclosCarreras
-                    .map((cc: any) => cc.carrera || { id: cc.carrera_id, nombre: '—' })
-                    .filter(Boolean),
-                };
-              }
-
-              return { ...c, carreras: [] };
-            });
-
-          this.todosLosCiclos.set(normalizados);
-          this.cargandoCatalogos.set(false);
-        },
-        error: () => {
-          this.error.set('No se pudieron cargar los ciclos.');
-          this.alertas.set(['No se pudieron cargar los ciclos.']);
-          this.cargandoCatalogos.set(false);
-        },
-      });
-  }
-
-  /** Construye lista de alertas legibles y marca campos */
-  private recolectarAlertas(): string[] {
-    const lista: string[] = [];
-    const controles = this.perfilForm.controls;
-
-    for (const nombre of Object.keys(controles)) {
-      const ctrl = controles[nombre];
-      if (ctrl.disabled) continue;
-      if (ctrl.invalid) {
-        const msg = this.mensajesCampo[nombre] || `Revisa el campo: ${nombre}`;
-        lista.push(msg);
+    this.ciclosService.getCiclos().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        this.todosLosCiclos.set((res || []).filter(c => !c.fecha_desactivacion));
+        this.cargandoCatalogos.set(false);
+      },
+      error: () => {
+        this.error.set('No se pudieron cargar los ciclos.');
+        this.cargandoCatalogos.set(false);
       }
-    }
-    return lista;
+    });
   }
 
   guardar(): void {
     this.error.set('');
-    this.exito.set('');
     this.alertas.set([]);
     this.perfilForm.markAllAsTouched();
 
     if (this.perfilForm.invalid) {
-      const lista = this.recolectarAlertas();
-      this.alertas.set(lista);
-      this.error.set(
-        lista.length
-          ? `Hay ${lista.length} campo(s) por corregir. Revisa la lista abajo.`
-          : 'Revisa los campos marcados en rojo.',
-      );
-      // Scroll al banner de alertas
-      setTimeout(() => {
-        document.querySelector('.alert-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      const pasoError = this.buscarPasoConError();
+      if (this.pasoActual() !== pasoError) {
+        this.irAPaso(pasoError);
+      }
+      this.error.set('Hay campos obligatorios vacíos o incorrectos en este paso.');
+      setTimeout(() => document.querySelector('.alert-panel')?.scrollIntoView({ behavior: 'smooth' }), 50);
       return;
     }
 
     this.loading.set(true);
     const v = this.perfilForm.getRawValue();
-
-    const mes = v.mes_embarazo as string;
-    const estaEmbarazada = v.sexo === 'Mujer' ? mes !== 'no' && mes !== '' : false;
 
     const payload: any = {
       cedula: v.cedula,
@@ -390,60 +349,33 @@ export class CompletarPerfilComponent implements OnInit {
       nacionalidad: v.nacionalidad,
       zona_residencia: v.zona_residencia,
       tiene_discapacidad: !!v.tiene_discapacidad,
+      carrera_id: v.carrera_id,
+      ciclo_id: v.ciclo_id,
     };
 
     if (v.segundo_nombre) payload.segundo_nombre = v.segundo_nombre;
     if (v.segundo_apellido) payload.segundo_apellido = v.segundo_apellido;
     if (v.email_institucional) payload.email_institucional = v.email_institucional;
     if (v.email_personal) payload.email_personal = v.email_personal;
+    
+    if (v.sexo === 'Mujer') payload.esta_embarazada = (v.mes_embarazo !== 'no' && v.mes_embarazo !== '');
+    if (v.tiene_discapacidad) payload.tipo_discapacidad = v.tipo_discapacidad;
 
-
-    payload.carrera_id = v.carrera_id;
-    payload.ciclo_id = v.ciclo_id;
-
-    if (v.sexo === 'Mujer') {
-      payload.esta_embarazada = estaEmbarazada;
-    }
-
-    if (v.tiene_discapacidad) {
-      payload.tipo_discapacidad = v.tipo_discapacidad;
-    }
-
-    this.usuarioService
-      .completarPerfil(payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.authService.marcarPerfilCompleto({
-            cedula: payload.cedula,
-            carrera_id: payload.carrera_id,
-            ciclo_id: payload.ciclo_id,
-          });
-          this.loading.set(false);
-          this.exito.set('¡Perfil guardado correctamente! Redirigiendo...');
-          this.alertas.set([]);
-          this.error.set('');
-          setTimeout(() => this.router.navigate(['/estudiante/inicio']), 900);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          console.error('Error completar perfil:', err?.error);
-          const msg = err?.error?.message;
-          if (Array.isArray(msg)) {
-            this.alertas.set(msg);
-            this.error.set('El servidor rechazó algunos datos. Corrige lo siguiente:');
-          } else if (typeof msg === 'string') {
-            this.alertas.set([msg]);
-            this.error.set(msg);
-          } else {
-            this.error.set('No se pudo guardar. Intenta de nuevo o revisa tu conexión.');
-            this.alertas.set(['Error de servidor o de red.']);
-          }
-          setTimeout(() => {
-            document.querySelector('.alert-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 50);
-        },
-      });
+    this.usuarioService.completarPerfil(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.authService.marcarPerfilCompleto({
+          cedula: payload.cedula, carrera_id: payload.carrera_id, ciclo_id: payload.ciclo_id,
+        });
+        this.loading.set(false);
+        this.exito.set('¡Perfil completado exitosamente!');
+        setTimeout(() => this.router.navigate(['/estudiante/inicio']), 900);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || 'Error al guardar el perfil.');
+        setTimeout(() => document.querySelector('.alert-panel')?.scrollIntoView({ behavior: 'smooth' }), 50);
+      },
+    });
   }
 
   cancelar(): void {
@@ -457,6 +389,6 @@ export class CompletarPerfilComponent implements OnInit {
   }
 
   mensajeCampo(nombre: string): string {
-    return this.mensajesCampo[nombre] || 'Campo inválido';
+    return this.mensajesCampo[nombre] || 'Inválido';
   }
 }

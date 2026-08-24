@@ -22,6 +22,7 @@ export class EstudianteAyudaModalComponent implements OnInit {
   readonly error = signal(false);
   readonly datos = signal<AyudaEstudianteResponse | null>(null);
   readonly pestanaActiva = signal<PestanaAyuda>('bienestar');
+  readonly fotoAmpliada = signal<{ url: string; alt: string } | null>(null);
 
   ngOnInit(): void {
     this.cargarAyuda();
@@ -48,5 +49,23 @@ export class EstudianteAyudaModalComponent implements OnInit {
 
   cerrarModal(): void {
     this.cerrar.emit();
+  }
+
+  ampliarFoto(url: string | null | undefined, alt: string): void {
+    if (url) {
+      this.fotoAmpliada.set({ url, alt });
+    }
+  }
+
+  cerrarFotoAmpliada(): void {
+    this.fotoAmpliada.set(null);
+  }
+
+  getIniciales(nombre: string | undefined): string {
+    if (!nombre) return 'U';
+    const partes = nombre.trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return 'U';
+    if (partes.length === 1) return partes[0][0].toUpperCase();
+    return (partes[0][0] + partes[1][0]).toUpperCase();
   }
 }

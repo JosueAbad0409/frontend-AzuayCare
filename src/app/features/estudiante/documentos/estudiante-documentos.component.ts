@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgClass, DatePipe } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DocumentosService } from '../../../core/services/documentos.service';
@@ -9,7 +9,7 @@ import { DocumentoRespaldo } from '../../../core/models/documento.model';
 @Component({
   selector: 'app-estudiante-documentos',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NgClass, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './estudiante-documentos.component.html',
   styleUrls: ['./estudiante-documentos.component.css']
@@ -22,13 +22,16 @@ export class EstudianteDocumentosComponent implements OnInit {
 
   misDocumentos = signal<DocumentoRespaldo[]>([]);
   
-  // 🔥 NUEVAS SEÑALES CALCULADAS PARA DIVIDIR LA VISTA
   documentosFormulario = computed(() => {
-    return this.misDocumentos().filter(doc => doc.respuesta_id != null || doc.ficha_id != null);
+    return this.misDocumentos().filter(doc => 
+      (doc.respuesta_id != null || doc.ficha_id != null) && !(doc as any).fecha_desactivacion
+    );
   });
 
   documentosSueltos = computed(() => {
-    return this.misDocumentos().filter(doc => doc.respuesta_id == null && doc.ficha_id == null);
+    return this.misDocumentos().filter(doc => 
+      doc.respuesta_id == null && doc.ficha_id == null && !(doc as any).fecha_desactivacion
+    );
   });
 
   docPreview = signal<DocumentoRespaldo | null>(null);
@@ -43,11 +46,20 @@ export class EstudianteDocumentosComponent implements OnInit {
     this.cargarMisDocumentos();
   }
 
-  cargarMisDocumentos(): void {
+  refrescarDocumentos(): void {
+    this.cargarMisDocumentos(true);
+  }
+
+  cargarMisDocumentos(mostrarToast: boolean = false): void {
     this.documentosService.getMisDocumentos()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (docs) => this.misDocumentos.set(docs),
+        next: (docs) => {
+          this.misDocumentos.set(docs);
+          if (mostrarToast) {
+            this.toastService.show('Repositorio sincronizado y actualizado.', 'success');
+          }
+        },
         error: () => this.toastService.show('Error al cargar tus documentos.', 'error')
       });
   }
@@ -90,7 +102,7 @@ export class EstudianteDocumentosComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (nuevoDoc) => {
-          this.misDocumentos.update(docs => [nuevoDoc, ...docs]); // Agregamos al inicio para que se vea rápido
+          this.misDocumentos.update(docs => [nuevoDoc, ...docs]);
           this.toastService.show('Archivo subido correctamente.', 'success');
           this.isUploading.set(false);
         },

@@ -181,7 +181,7 @@
   margin: 0;
   font-size: clamp(0.875rem, 2vw, 1rem);
   color: var(--text-muted);
-  word-break: break-all;
+  overflow-wrap: break-word; 
 }
 
 .cards-stack {
@@ -258,7 +258,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-main);
-  word-break: break-word;
+  overflow-wrap: break-word; 
 }
 
 .data-block {
@@ -283,7 +283,7 @@
   line-height: 1.6;
   color: var(--text-secondary);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word; 
 }
 
 .card-help {

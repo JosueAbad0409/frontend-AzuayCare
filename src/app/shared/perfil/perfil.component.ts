@@ -55,22 +55,26 @@ export class PerfilComponent implements OnInit {
 
   usuario = computed(() => this.authService.user());
 
-  fotoUrl = computed(() => {
+  // === ESTADOS PARA EL ESTUDIANTE ===
+  readonly cargandoPerfilEstudiante = signal(false);
+  readonly datosCompletosEstudiante = signal<Usuario | null>(null);
+
+  readonly fotoUrl = computed(() => {
     const user = this.usuario();
     return user?.foto_url || null;
   });
 
-  esCoordinador = computed(() => {
+  readonly esCoordinador = computed(() => {
     const rol = this.usuario()?.rol;
     return rol === 'COORDINADOR_BIENESTAR' || rol === 'COORDINADOR_CARRERA';
   });
 
-  esEstudianteOInvitado = computed(() => {
+  readonly esEstudianteOInvitado = computed(() => {
     const rol = this.usuario()?.rol;
     return rol === 'ESTUDIANTE' || rol === 'INVITADO';
   });
 
-  etiquetaRol = computed(() => {
+  readonly etiquetaRol = computed(() => {
     const mapa: Record<string, string> = {
       ESTUDIANTE: 'Estudiante',
       INVITADO: 'Invitado',
@@ -80,7 +84,7 @@ export class PerfilComponent implements OnInit {
     return mapa[this.usuario()?.rol ?? ''] ?? this.usuario()?.rol ?? 'Usuario';
   });
 
-  iniciales = computed(() => {
+  readonly iniciales = computed(() => {
     const nombre = this.usuario()?.nombre ?? '';
     const partes = nombre.trim().split(/\s+/).filter(Boolean);
     if (!partes.length) return 'U';
@@ -88,30 +92,36 @@ export class PerfilComponent implements OnInit {
     return (partes[0][0] + partes[1][0]).toUpperCase();
   });
 
-  subiendoFoto = signal(false);
-  errorFoto = signal('');
+  readonly subiendoFoto = signal(false);
+  readonly errorFoto = signal('');
 
-  carreras = signal<Carrera[]>([]);
-  ciclos = signal<Ciclo[]>([]);
-  cargandoAcademico = signal(false);
+  readonly carreras = signal<Carrera[]>([]);
+  readonly ciclos = signal<Ciclo[]>([]);
+  readonly cargandoAcademico = signal(false);
 
-  nombreCarrera = computed(() => {
-    const id = this.usuario()?.carrera_id;
+  readonly nombreCarrera = computed(() => {
+    const data: any = this.datosCompletosEstudiante() || this.usuario();
+    if (!data) return 'No asignada';
+    if (data.carrera?.nombre) return data.carrera.nombre;
+    const id = data.carrera?.id || data.carrera_id;
     return this.carreras().find(c => c.id === id)?.nombre ?? 'No asignada';
   });
 
-  nombreCiclo = computed(() => {
-    const id = this.usuario()?.ciclo_id;
+  readonly nombreCiclo = computed(() => {
+    const data: any = this.datosCompletosEstudiante() || this.usuario();
+    if (!data) return 'No asignado';
+    if (data.ciclo?.nombre) return data.ciclo.nombre;
+    const id = data.ciclo?.id || data.ciclo_id;
     return this.ciclos().find(c => c.id === id)?.nombre ?? 'No asignado';
   });
 
-  modoEdicionCoordinador = signal(false);
-  cargandoPerfilCoordinador = signal(false);
-  guardandoCoordinador = signal(false);
-  mensajeExitoCoordinador = signal('');
-  errorCoordinador = signal('');
+  readonly modoEdicionCoordinador = signal(false);
+  readonly cargandoPerfilCoordinador = signal(false);
+  readonly guardandoCoordinador = signal(false);
+  readonly mensajeExitoCoordinador = signal('');
+  readonly errorCoordinador = signal('');
 
-  coordinadorForm: FormGroup = this.fb.group({
+  readonly coordinadorForm: FormGroup = this.fb.group({
     titulo_profesional: ['', Validators.required],
     telefono_contacto: ['', [Validators.required, Validators.pattern('^[0-9]*$')]],
     correo_contacto: ['', [Validators.required, Validators.email]],
@@ -120,13 +130,68 @@ export class PerfilComponent implements OnInit {
     mensaje_ayuda_estudiantes: [''],
   });
 
+  // Corrección: Cambiado a `string` simple para evitar conflicto de tipo con SonarLint
+  getDato(prop: string, fallback = 'No especificado'): string {
+    const data: any = this.datosCompletosEstudiante() || this.usuario();
+    if (!data) return fallback;
+
+    const val = data[prop];
+    if (val === undefined || val === null || val === '') return fallback;
+
+    if (prop === 'fecha_nacimiento') {
+      if (typeof val === 'string') {
+        const fechaParte = val.split('T')[0];
+        const parts = fechaParte.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+    }
+    return String(val);
+  }
+
+  // Corrección: Cambiado a `string` simple
+  getBooleanDato(prop: string): string {
+    const data: any = this.datosCompletosEstudiante() || this.usuario();
+    if (!data) return 'No especificado';
+    
+    const val = data[prop];
+    if (val === undefined || val === null || val === '') return 'No especificado';
+    
+    if (val === false || val === 'false' || val === '0' || val === 0) {
+      return 'No';
+    }
+    return 'Sí';
+  }
+
   ngOnInit(): void {
     if (this.esEstudianteOInvitado()) {
       this.cargarCatalogosAcademicos();
+      this.cargarDatosCompletosEstudiante();
     }
     if (this.esCoordinador()) {
       this.cargarPerfilCoordinador();
     }
+  }
+
+  private cargarDatosCompletosEstudiante(): void {
+    const id = this.usuario()?.id;
+    if (!id) return;
+
+    this.cargandoPerfilEstudiante.set(true);
+
+    this.usuarioService.getUsuarioById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data: Usuario) => {
+          this.datosCompletosEstudiante.set(data);
+          this.cargandoPerfilEstudiante.set(false);
+        },
+        error: (err: unknown) => {
+          console.error('Error al cargar datos del usuario:', err);
+          this.cargandoPerfilEstudiante.set(false);
+        }
+      });
   }
 
   toggleEdicionCoordinador(): void {

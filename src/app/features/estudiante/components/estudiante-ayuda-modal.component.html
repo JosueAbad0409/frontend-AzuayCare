@@ -1,57 +1,114 @@
-<div class="ayuda-overlay" (click)="cerrarModal()">
-  <div class="ayuda-modal" (click)="$event.stopPropagation()">
+<div class="ayuda-overlay" (click)="cerrarModal()" (keydown.escape)="cerrarModal()" tabindex="-1" aria-hidden="true">
+  <dialog 
+    class="ayuda-modal animate-modal" 
+    open 
+    (click)="$event.stopPropagation()" 
+    (keydown.enter)="$event.stopPropagation()" 
+    (keydown.space)="$event.stopPropagation()">
+    
     <div class="ayuda-header">
-      <h2>Ayuda y Soporte</h2>
-      <button class="btn-cerrar" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      <div class="header-title-group">
+        <div class="icon-box">
+          <i class="fas fa-headset"></i>
+        </div>
+        <h2>Ayuda y Soporte</h2>
+      </div>
+      <button class="btn-cerrar" (click)="cerrarModal()" aria-label="Cerrar">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
 
-    <div class="ayuda-tabs">
-      <button
-        class="tab-btn"
-        [class.activo]="pestanaActiva() === 'bienestar'"
-        (click)="cambiarPestana('bienestar')"
-      >
-        Bienestar Estudiantil
-      </button>
-      <button
-        class="tab-btn"
-        [class.activo]="pestanaActiva() === 'coordinador'"
-        (click)="cambiarPestana('coordinador')"
-      >
-        Mi Coordinador de Carrera
-      </button>
+    <div class="tabs-container">
+      <div class="ayuda-tabs">
+        <button
+          class="tab-btn"
+          [class.activo]="pestanaActiva() === 'bienestar'"
+          (click)="cambiarPestana('bienestar')"
+        >
+          Bienestar Estudiantil
+        </button>
+        <button
+          class="tab-btn"
+          [class.activo]="pestanaActiva() === 'coordinador'"
+          (click)="cambiarPestana('coordinador')"
+        >
+          Mi Coordinador
+        </button>
+      </div>
     </div>
 
     <div class="ayuda-contenido">
       @if (isLoading()) {
         <div class="skeleton-wrapper">
-          <div class="skeleton-line skeleton-avatar"></div>
+          <div class="skeleton-header">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-title-group">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          </div>
           <div class="skeleton-line"></div>
-          <div class="skeleton-line short"></div>
-          <div class="skeleton-line"></div>
+          <div class="skeleton-line" style="width: 80%"></div>
         </div>
       } @else if (error()) {
-        <div class="estado-mensaje">
+        <div class="estado-mensaje error-state">
+          <i class="fas fa-exclamation-triangle text-amber-500 mb-3 text-3xl"></i>
           <p>No se pudo cargar la información de ayuda.</p>
-          <button class="btn-reintentar" (click)="cargarAyuda()">Reintentar</button>
+          <button class="btn-reintentar" (click)="cargarAyuda()">
+            <i class="fas fa-sync-alt"></i> Reintentar
+          </button>
         </div>
       } @else {
         @if (pestanaActiva() === 'bienestar') {
           @if (datos()?.bienestarEstudiantil; as perfil) {
             <div class="perfil-card">
-              <span class="badge badge-institucional">Institucional</span>
-              <h3>{{ perfil.nombreCompleto }}</h3>
-              @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
-              @if (perfil.mensajeAyuda) { <p class="mensaje">{{ perfil.mensajeAyuda }}</p> }
+              <header class="perfil-card-header">
+                <button 
+                  type="button"
+                  class="avatar-wrapper" 
+                  [class.clickable]="!!perfil.fotoUrl"
+                  (click)="ampliarFoto(perfil.fotoUrl, perfil.nombreCompleto)"
+                  [attr.aria-label]="'Ampliar foto de ' + perfil.nombreCompleto">
+                  @if (perfil.fotoUrl) {
+                    <img [src]="perfil.fotoUrl" [alt]="perfil.nombreCompleto" class="avatar-img" />
+                  } @else {
+                    <div class="avatar-fallback">{{ getIniciales(perfil.nombreCompleto) }}</div>
+                  }
+                </button>
+                <div class="perfil-card-title">
+                  <span class="badge badge-institucional">Soporte Institucional</span>
+                  <h3>{{ perfil.nombreCompleto }}</h3>
+                  @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
+                </div>
+              </header>
+
+              @if (perfil.mensajeAyuda) { 
+                <div class="mensaje-box">
+                  <i class="fas fa-quote-left quote-icon"></i>
+                  <p class="mensaje">{{ perfil.mensajeAyuda }}</p> 
+                </div>
+              }
+
               <ul class="datos-contacto">
-                @if (perfil.correo) { <li><strong>Correo:</strong> {{ perfil.correo }}</li> }
-                @if (perfil.telefono) { <li><strong>Teléfono:</strong> {{ perfil.telefono }}</li> }
-                @if (perfil.horarioAtencion) { <li><strong>Horario:</strong> {{ perfil.horarioAtencion }}</li> }
-                @if (perfil.ubicacion) { <li><strong>Ubicación:</strong> {{ perfil.ubicacion }}</li> }
+                @if (perfil.correo) { 
+                  <li><div class="icono-contacto"><i class="fas fa-envelope"></i></div> <span><strong>Correo:</strong> {{ perfil.correo }}</span></li> 
+                }
+                @if (perfil.telefono) { 
+                  <li><div class="icono-contacto"><i class="fas fa-phone-alt"></i></div> <span><strong>Teléfono:</strong> {{ perfil.telefono }}</span></li> 
+                }
+                @if (perfil.horarioAtencion) { 
+                  <li><div class="icono-contacto"><i class="fas fa-clock"></i></div> <span><strong>Horario:</strong> {{ perfil.horarioAtencion }}</span></li> 
+                }
+                @if (perfil.ubicacion) { 
+                  <li><div class="icono-contacto"><i class="fas fa-map-marker-alt"></i></div> <span><strong>Ubicación:</strong> {{ perfil.ubicacion }}</span></li> 
+                }
               </ul>
             </div>
           } @else {
-            <p class="estado-mensaje">No hay información disponible.</p>
+            <div class="estado-mensaje empty-state">
+              <i class="far fa-folder-open text-slate-300 text-4xl mb-3"></i>
+              <p>No hay información de contacto disponible en este momento.</p>
+            </div>
           }
         }
 
@@ -59,25 +116,68 @@
           @if (datos()?.coordinadoresCarrera?.length) {
             @for (perfil of datos()?.coordinadoresCarrera; track perfil.id) {
               <div class="perfil-card">
-                <span class="badge badge-carrera">Coordinador de Carrera</span>
-                <h3>{{ perfil.nombreCompleto }}</h3>
-                @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
-                @if (perfil.mensajeAyuda) { <p class="mensaje">{{ perfil.mensajeAyuda }}</p> }
+                <header class="perfil-card-header">
+                  <button 
+                    type="button"
+                    class="avatar-wrapper" 
+                    [class.clickable]="!!perfil.fotoUrl"
+                    (click)="ampliarFoto(perfil.fotoUrl, perfil.nombreCompleto)"
+                    [attr.aria-label]="'Ampliar foto de ' + perfil.nombreCompleto">
+                    @if (perfil.fotoUrl) {
+                      <img [src]="perfil.fotoUrl" [alt]="perfil.nombreCompleto" class="avatar-img" />
+                    } @else {
+                      <div class="avatar-fallback">{{ getIniciales(perfil.nombreCompleto) }}</div>
+                    }
+                  </button>
+                  <div class="perfil-card-title">
+                    <span class="badge badge-carrera">Coordinador de Carrera</span>
+                    <h3>{{ perfil.nombreCompleto }}</h3>
+                    @if (perfil.cargo) { <p class="cargo">{{ perfil.cargo }}</p> }
+                  </div>
+                </header>
+
+                @if (perfil.mensajeAyuda) { 
+                  <div class="mensaje-box">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <p class="mensaje">{{ perfil.mensajeAyuda }}</p> 
+                  </div>
+                }
+
                 <ul class="datos-contacto">
-                  @if (perfil.correo) { <li><strong>Correo:</strong> {{ perfil.correo }}</li> }
-                  @if (perfil.telefono) { <li><strong>Teléfono:</strong> {{ perfil.telefono }}</li> }
-                  @if (perfil.horarioAtencion) { <li><strong>Horario:</strong> {{ perfil.horarioAtencion }}</li> }
-                  @if (perfil.ubicacion) { <li><strong>Ubicación:</strong> {{ perfil.ubicacion }}</li> }
+                  @if (perfil.correo) { 
+                    <li><div class="icono-contacto"><i class="fas fa-envelope"></i></div> <span><strong>Correo:</strong> {{ perfil.correo }}</span></li> 
+                  }
+                  @if (perfil.telefono) { 
+                    <li><div class="icono-contacto"><i class="fas fa-phone-alt"></i></div> <span><strong>Teléfono:</strong> {{ perfil.telefono }}</span></li> 
+                  }
+                  @if (perfil.horarioAtencion) { 
+                    <li><div class="icono-contacto"><i class="fas fa-clock"></i></div> <span><strong>Horario:</strong> {{ perfil.horarioAtencion }}</span></li> 
+                  }
+                  @if (perfil.ubicacion) { 
+                    <li><div class="icono-contacto"><i class="fas fa-map-marker-alt"></i></div> <span><strong>Ubicación:</strong> {{ perfil.ubicacion }}</span></li> 
+                  }
                 </ul>
               </div>
             }
           } @else {
-            <p class="estado-mensaje">
-              Aún no tienes una carrera asignada o no hay un coordinador vinculado.
-            </p>
+            <div class="estado-mensaje empty-state">
+              <i class="fas fa-graduation-cap text-slate-300 text-4xl mb-3"></i>
+              <p>Aún no tienes una carrera asignada o no hay un coordinador vinculado a tu carrera.</p>
+            </div>
           }
         }
       }
     </div>
-  </div>
+  </dialog>
+
+  @if (fotoAmpliada(); as foto) {
+    <div class="lightbox-overlay" (click)="cerrarFotoAmpliada()" (keydown.escape)="cerrarFotoAmpliada()" tabindex="-1">
+      <div class="lightbox-content" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+        <button class="btn-cerrar-lightbox" (click)="cerrarFotoAmpliada()" aria-label="Cerrar vista ampliada">
+          <i class="fas fa-times"></i>
+        </button>
+        <img [src]="foto.url" [alt]="foto.alt" class="lightbox-img" />
+      </div>
+    </div>
+  }
 </div>

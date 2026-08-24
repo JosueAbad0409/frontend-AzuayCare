@@ -17,9 +17,9 @@
             [class.is-loading]="subiendoFoto()"
             (click)="abrirSelectorFoto()"
             [disabled]="subiendoFoto()" 
-            aria-label="Cambiar foto de perfil"
             title="Cambiar foto de perfil"
           >
+            <span class="visually-hidden">Cambiar foto de perfil</span>
             @if (!subiendoFoto()) {
               <svg class="icon-camera" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -29,7 +29,9 @@
               <i class="fas fa-spinner fa-spin icon-camera" aria-hidden="true"></i>
             }
           </button>
-          <input #fotoInput type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" (change)="onFotoSeleccionada($event)" />
+          
+          <label for="fotoInputUpload" class="visually-hidden">Seleccionar foto de perfil</label>
+          <input id="fotoInputUpload" #fotoInput type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" (change)="onFotoSeleccionada($event)" />
         </div>
 
         <div class="hero-info">
@@ -73,10 +75,6 @@
             <span class="info-value">{{ usuario()?.nombre || 'No especificado' }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Correo institucional</span>
-            <span class="info-value">{{ usuario()?.email || 'No especificado' }}</span>
-          </div>
-          <div class="info-item">
             <span class="info-label">Rol asignado</span>
             <span class="info-value">{{ etiquetaRol() }}</span>
           </div>
@@ -84,6 +82,7 @@
       </article>
 
       @if (esEstudianteOInvitado()) {
+        <!-- DATOS ACADÉMICOS Y CONTACTO -->
         <article class="perfil-card">
           <header class="card-header">
             <div class="header-title">
@@ -91,20 +90,28 @@
                 <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <h2>Información Académica</h2>
+              <h2>Académico y Contacto</h2>
             </div>
           </header>
 
-          @if (cargandoAcademico()) {
+          @if (cargandoAcademico() || cargandoPerfilEstudiante()) {
             <div class="loading-state" aria-busy="true">
               <div class="spinner-small" aria-hidden="true"></div>
-              <span>Cargando datos académicos...</span>
+              <span>Cargando datos...</span>
             </div>
           } @else {
             <div class="info-grid">
               <div class="info-item">
                 <span class="info-label">Cédula de Identidad</span>
-                <span class="info-value">{{ usuario()?.cedula || 'No registrada' }}</span>
+                <span class="info-value">{{ getDato('cedula') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Celular</span>
+                <span class="info-value">{{ getDato('numero_celular', 'No registrado') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Correo Personal</span>
+                <span class="info-value">{{ getDato('email_personal', 'No registrado') }}</span>
               </div>
               @if (usuario()?.rol === 'ESTUDIANTE') {
                 <div class="info-item">
@@ -118,13 +125,118 @@
               }
             </div>
           }
+        </article>
+
+        <!-- DATOS DEMOGRÁFICOS -->
+        <article class="perfil-card">
+          <header class="card-header">
+            <div class="header-title">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <h2>Datos Personales</h2>
+            </div>
+          </header>
+          
+          @if (cargandoPerfilEstudiante()) {
+            <div class="loading-state" aria-busy="true">
+              <div class="spinner-small" aria-hidden="true"></div>
+              <span>Cargando datos personales...</span>
+            </div>
+          } @else {
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Fecha de Nacimiento</span>
+                <span class="info-value">{{ getDato('fecha_nacimiento') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Lugar de Nacimiento</span>
+                <span class="info-value">{{ getDato('lugar_nacimiento') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Rango de Edad</span>
+                <span class="info-value">{{ getDato('rango_edad') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Nacionalidad</span>
+                <span class="info-value">{{ getDato('nacionalidad') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Zona de Residencia</span>
+                <span class="info-value">{{ getDato('zona_residencia') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Estado Civil</span>
+                <span class="info-value">{{ getDato('estado_civil') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Sexo</span>
+                <span class="info-value">{{ getDato('sexo') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">¿Tiene Hijos?</span>
+                <span class="info-value">{{ getBooleanDato('tiene_hijos') }}</span>
+              </div>
+            </div>
+          }
+        </article>
+
+        <!-- DIVERSIDAD Y SALUD -->
+        <article class="perfil-card">
+          <header class="card-header">
+            <div class="header-title">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <h2>Diversidad y Salud</h2>
+            </div>
+          </header>
+          
+          @if (cargandoPerfilEstudiante()) {
+            <div class="loading-state" aria-busy="true">
+              <div class="spinner-small" aria-hidden="true"></div>
+              <span>Cargando datos de salud...</span>
+            </div>
+          } @else {
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Etnia / Raza</span>
+                <span class="info-value">{{ getDato('etnia') }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Idioma Principal</span>
+                <span class="info-value">{{ getDato('idioma') }}</span>
+              </div>
+              
+              <div class="info-item">
+                <span class="info-label">¿Tiene Discapacidad?</span>
+                <span class="info-value">{{ getBooleanDato('tiene_discapacidad') }}</span>
+              </div>
+              
+              @if (getBooleanDato('tiene_discapacidad') === 'Sí') {
+                <div class="info-item">
+                  <span class="info-label">Tipo de Discapacidad</span>
+                  <span class="info-value">{{ getDato('tipo_discapacidad') }}</span>
+                </div>
+              }
+
+              @if (getDato('sexo') === 'Mujer') {
+                <div class="info-item">
+                  <span class="info-label">Embarazo</span>
+                  <span class="info-value">{{ getBooleanDato('esta_embarazada') === 'Sí' ? 'En curso' : 'No' }}</span>
+                </div>
+              }
+            </div>
+          }
 
           <footer class="card-help">
             <svg class="help-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
               <path d="M12 16v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <span>¿Inconsistencias en los datos? Solicita una rectificación en Bienestar Estudiantil.</span>
+            <span>¿Inconsistencias en los datos? Solicita una rectificación en Coordinación de Bienestar Estudiantil.</span>
           </footer>
         </article>
       }
@@ -194,9 +306,9 @@
               </div>
               
               @if (mensajeExitoCoordinador()) {
-                <div class="alert alert-success mt-15" role="status">
+                <output class="alert alert-success mt-15">
                   <span>{{ mensajeExitoCoordinador() }}</span>
-                </div>
+                </output>
               }
 
             } @else {

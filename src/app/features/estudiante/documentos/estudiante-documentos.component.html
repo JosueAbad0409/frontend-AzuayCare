@@ -9,6 +9,10 @@
         Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos.
       </p>
     </div>
+    
+    <button type="button" class="btn btn--secondary btn-refresh" (click)="refrescarDocumentos()" title="Sincronizar documentos">
+      <i class="fas fa-sync-alt" aria-hidden="true"></i> Actualizar
+    </button>
   </header>
 
   <section
@@ -64,14 +68,14 @@
       </div>
     } @else {
       
-      <!-- SECCIÓN 1: EVIDENCIAS (Solo Lectura, sin botón de eliminar) -->
+      <!-- SECCIÓN 1: EVIDENCIAS (SOLO LECTURA. Sin botón de eliminar) -->
       @if (documentosFormulario().length > 0) {
         <div class="gallery-subsection">
           <h3 class="subsection-title">
             <i class="fas fa-clipboard-check" aria-hidden="true"></i> Evidencias Institucionales
             <span class="gallery-count">({{ documentosFormulario().length }})</span>
           </h3>
-          <p class="subsection-desc">Estos documentos respaldan tus formularios. No se pueden eliminar desde aquí.</p>
+          <p class="subsection-desc">Estos documentos respaldan tus formularios. Se actualizan o eliminan de forma automática directamente desde la ficha correspondiente.</p>
           
           <div class="doc-grid">
             @for (doc of documentosFormulario(); track doc.id) {
@@ -92,7 +96,7 @@
                       {{ doc.created_at | date:'dd/MM/yyyy' }}
                     </time>
                     <span class="doc-context-badge">
-                      <i class="fas fa-lock" aria-hidden="true"></i> Vinculado
+                      <i class="fas fa-link" aria-hidden="true"></i> Vinculado
                     </span>
                   </div>
                 </div>
@@ -104,6 +108,7 @@
                   <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)">
                     <i class="fas fa-download" aria-hidden="true"></i><span>Descargar</span>
                   </button>
+                  <!-- EL BOTÓN DE ELIMINAR HA SIDO REMOVIDO DE ESTA SECCIÓN -->
                 </footer>
               </article>
             }
@@ -111,7 +116,7 @@
         </div>
       }
 
-      <!-- SECCIÓN 2: ARCHIVOS INDEPENDIENTES (CRUD Completo con botón de eliminar) -->
+      <!-- SECCIÓN 2: ARCHIVOS INDEPENDIENTES (CON botón de eliminar) -->
       @if (documentosSueltos().length > 0) {
         <div class="gallery-subsection mt-8">
           <h3 class="subsection-title">

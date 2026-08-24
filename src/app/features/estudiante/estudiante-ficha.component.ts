@@ -113,6 +113,9 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   isSavingLocal = signal<boolean>(false);
   mostrarBannerPrecarga = signal<boolean>(false);
 
+  // Signal UX para saber exactamente cuál evidencia se está subiendo en tiempo real
+  subiendoEvidenciaId = signal<string | null>(null);
+
   misDocumentosGuardados = signal<DocumentoEstudiante[]>([]);
   mostrarModalSeleccionDoc = signal<boolean>(false);
   respuestaIdParaAdjunto = signal<string | null>(null);
@@ -159,13 +162,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const user = this.authService.user() as any;
     const valores = this.valormap();
 
-    // 🔥 DEBUG: Vamos a ver qué tenemos disponible en este momento exacto
-    console.log('=========================================');
-    console.log('🔥 [DEBUG COMPUTED] Calculando cedulaEstudiante...');
-    console.log('-> Ficha activa (Backend):', ficha);
-    console.log('-> authService.user (Token):', user);
-    console.log('-> Perfil Estudiante (Signal):', perfil);
-
     let cedula =
       ficha?.usuario?.cedula ||
       user?.cedula ||
@@ -176,10 +172,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       perfil?.cedula ||
       '';
 
-    console.log('🔥 [DEBUG COMPUTED] Cédula encontrada en perfil/fuentes directas:', cedula || 'VACÍO');
-
     if (!cedula || cedula === 'N/A') {
-      console.log('🔥 [DEBUG COMPUTED] Buscando cédula en las respuestas de la ficha (valormap)...');
       for (const sec of this.secciones()) {
         for (const p of sec.preguntas || []) {
           const codigo = (p.codigo_sistema || '').toUpperCase();
@@ -196,14 +189,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
             enunciado.includes('registro único') ||
             enunciado.includes('registro unico');
 
-          if (esCedula) {
-             console.log(`🔥 [DEBUG COMPUTED] Pregunta candidata encontrada -> ID: ${p.id}, Enunciado: "${p.enunciado}"`);
-             console.log(`🔥 [DEBUG COMPUTED] Valor guardado para esta pregunta:`, valores[p.id]);
-          }
-
           if (esCedula && valores[p.id] && String(valores[p.id]).trim() !== '') {
             cedula = String(valores[p.id]);
-            console.log('🔥 [DEBUG COMPUTED] ¡Cédula encontrada en la respuesta! ->', cedula);
             break;
           }
         }
@@ -212,9 +199,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     }
 
     const limpia = String(cedula || '').trim();
-    console.log('🔥 [DEBUG COMPUTED] Cédula FINAL que se mostrará:', limpia === '' ? 'VACÍO' : limpia);
-    console.log('=========================================');
-
     if (!limpia || limpia === 'N/A') return '—';
     return limpia;
   });
@@ -322,11 +306,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   cargarPerfilUsuario(): void {
     const user = this.authService.user() as any;
-    
-    // 🔥 DEBUG: Vemos qué objeto de usuario devuelve tu servicio de Auth
-    console.log('🔥 [DEBUG INIT] Ejecutando cargarPerfilUsuario()...');
-    console.log('🔥 [DEBUG INIT] El authService devolvió:', user);
-
     if (!user) return;
 
     this.perfilEstudiante.set({
@@ -338,8 +317,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       periodoAcademico: user.periodo || 'Actual',
       estadoMatricula: user.estadoMatricula || 'MATRICULADO',
     });
-    
-    console.log('🔥 [DEBUG INIT] Perfil estudiante guardado en Signal:', this.perfilEstudiante());
   }
 
   private sincronizarCedulaDesdeFicha(): void {
@@ -351,12 +328,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   private precargarCamposPerfil(): void {
     const user = this.authService.user() as any;
     const perfil = this.perfilEstudiante();
-    
     const cedula = user?.cedula || user?.identificacion || user?.numero_documento || user?.usuario?.cedula || perfil?.cedula;
-    
-    // 🔥 DEBUG: Vemos si la precarga detectó la cédula
-    console.log('🔥 [DEBUG PRECARGA] Intentando precargar cédula en formulario. Cédula a inyectar:', cedula || 'VACÍO');
-    
+
     if (!cedula || cedula === 'N/A') return;
 
     for (const sec of this.secciones()) {
@@ -388,7 +361,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           (Array.isArray(actual) && actual.length === 0);
 
         if (vacio) {
-          console.log(`🔥 [DEBUG PRECARGA] Se rellenó automáticamente la pregunta ${p.id} con:`, cedula);
           ctrl.setValue(cedula, { emitEvent: false });
         }
       }
@@ -1182,7 +1154,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       this.matricesGroup.enable({ emitEvent: false });
     }
 
-    // Si la cédula no vino en BD (p.ej. ficha rechazada sin esa respuesta), la rellenamos del perfil
     this.precargarCamposPerfil();
   }
 
@@ -1351,6 +1322,20 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       const fichaId = this.fichaActiva()?.id;
       if (!fichaId) return;
 
+      const tiposPermitidos = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!tiposPermitidos.includes(file.type)) {
+        this.toastService.show('Formato no permitido. Solo se aceptan archivos PDF, JPG o PNG.', 'warning');
+        element.value = '';
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        this.toastService.show('El archivo sobrepasa el límite máximo permitido de 5 MB.', 'warning');
+        element.value = '';
+        return;
+      }
+
+      this.subiendoEvidenciaId.set(preguntaId);
       this.toastService.show('Subiendo evidencia, por favor espera...', 'info');
 
       this.documentosService.subirDocumentoGeneral(fichaId, file)
@@ -1358,13 +1343,62 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (docRes: any) => {
             const urlFinal = docRes.ruta_archivo;
-            this.evidenciasGroup.get(preguntaId)?.setValue(urlFinal);
+            const ctrl = this.evidenciasGroup.get(preguntaId);
+            if (ctrl) {
+              ctrl.setValue(urlFinal);
+              ctrl.markAsDirty();
+              ctrl.markAsTouched();
+            }
             this.respuestasForm.updateValueAndValidity();
+            this.persistirAutosave();
             this.toastService.show('Documento adjuntado correctamente.', 'success');
+            element.value = '';
+            this.subiendoEvidenciaId.set(null);
           },
-          error: () => this.toastService.show('Error al subir el archivo.', 'error')
+          error: () => {
+            this.toastService.show('Error al subir el archivo.', 'error');
+            this.subiendoEvidenciaId.set(null);
+          }
         });
     }
+  }
+
+  eliminarArchivoEvidencia(preguntaId: string): void {
+    if (!this.esEditable() || this.enviando()) return;
+
+    Swal.fire({
+      title: '¿Eliminar evidencia?',
+      text: 'Se quitará el archivo adjunto de esta pregunta.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'custom-swal-popup rounded-2xl p-6 text-left',
+        confirmButton: 'px-4 py-2 rounded-xl font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-md',
+        cancelButton: 'px-4 py-2 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const ctrl = this.evidenciasGroup.get(preguntaId);
+        if (ctrl) {
+          ctrl.setValue('');
+          ctrl.markAsDirty();
+          ctrl.markAsTouched();
+        }
+        this.respuestasForm.updateValueAndValidity();
+        this.persistirAutosave();
+        this.toastService.show('Evidencia eliminada del borrador.', 'info');
+      }
+    });
+  }
+
+  getIconoExtension(url: string | null): string {
+    if (!url) return 'fas fa-file-alt';
+    const cleanUrl = url.toLowerCase();
+    if (cleanUrl.endsWith('.pdf')) return 'fas fa-file-pdf text-rose-500';
+    if (cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpeg')) return 'fas fa-file-image text-blue-500';
+    return 'fas fa-file-alt text-amber-500';
   }
 
   getIconoSeccion(nombre: string): string {
