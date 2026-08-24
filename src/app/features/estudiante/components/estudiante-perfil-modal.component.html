@@ -1,13 +1,13 @@
 @if (visible) {
-  <div 
+  <div
     class="modal-backdrop animate-pop"
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-perfil-titulo"
   >
     <div class="modal-overlay" (click)="onCerrarModal()" aria-hidden="true"></div>
-    
-    <div class="modal-card">
+
+    <div class="modal-card modal-card--wide">
       <div class="modal-decorative-line"></div>
 
       <header class="modal-header">
@@ -15,9 +15,9 @@
           <i class="fas fa-id-badge modal-title-icon" aria-hidden="true"></i>
           <span>Mi Perfil Estudiantil</span>
         </h3>
-        <button 
+        <button
           type="button"
-          (click)="onCerrarModal()" 
+          (click)="onCerrarModal()"
           class="btn-close"
           aria-label="Cerrar modal de perfil"
         >
@@ -26,53 +26,142 @@
       </header>
 
       <div class="modal-body">
+        <!-- Resumen superior -->
         <div class="profile-summary">
           <div class="profile-avatar" aria-hidden="true">
-            {{ inicialCorreo }}
+            {{ inicialNombre }}
           </div>
           <div class="profile-main-info">
-            <h4 class="profile-email" [title]="perfil?.correo || 'Sin correo'">
-              {{ perfil?.correo || 'Sin correo registrado' }}
+            <h4 class="profile-email" [title]="nombreCompleto">
+              {{ nombreCompleto }}
             </h4>
+            <p class="profile-sub">{{ perfil?.correo || 'Sin correo registrado' }}</p>
             <div class="badge-group">
-              <span class="badge badge--emerald">
-                {{ perfil?.rol || 'ESTUDIANTE' }}
-              </span>
-              <span class="badge badge--blue">
-                {{ perfil?.estadoMatricula || 'ACTIVO' }}
-              </span>
+              <span class="badge badge--emerald">{{ perfil?.rol || 'ESTUDIANTE' }}</span>
+              <span class="badge badge--blue">{{ perfil?.estadoMatricula || 'ACTIVO' }}</span>
             </div>
           </div>
         </div>
 
+        <!-- Identidad -->
+        <h5 class="section-label">
+          <i class="fas fa-user" aria-hidden="true"></i> Datos de identidad
+        </h5>
         <div class="grid-details">
           <div class="detail-item">
-            <span class="detail-label">Identificación</span>
+            <span class="detail-label">Cédula / Registro único</span>
             <p class="detail-value">{{ perfil?.cedula || 'No registrada' }}</p>
           </div>
-
           <div class="detail-item">
-            <span class="detail-label">Periodo Académico</span>
-            <p class="detail-value">{{ perfil?.periodoAcademico || 'Vigente' }}</p>
+            <span class="detail-label">Nombres</span>
+            <p class="detail-value">{{ nombres }}</p>
           </div>
+          <div class="detail-item">
+            <span class="detail-label">Apellidos</span>
+            <p class="detail-value">{{ apellidos }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Correo institucional</span>
+            <p class="detail-value">{{ perfil?.correo || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Correo personal</span>
+            <p class="detail-value">{{ perfil?.email_personal || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Celular</span>
+            <p class="detail-value">{{ perfil?.numero_celular || '—' }}</p>
+          </div>
+        </div>
 
+        <!-- Académico -->
+        <h5 class="section-label">
+          <i class="fas fa-graduation-cap" aria-hidden="true"></i> Datos académicos
+        </h5>
+        <div class="grid-details">
           <div class="detail-item detail-item--full">
-            <span class="detail-label">Carrera Asignada</span>
+            <span class="detail-label">Carrera</span>
             <p class="detail-value text-emerald">{{ perfil?.carrera || 'No asignada' }}</p>
           </div>
+          <div class="detail-item">
+            <span class="detail-label">Ciclo</span>
+            <p class="detail-value">{{ perfil?.ciclo || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Periodo académico</span>
+            <p class="detail-value">{{ perfil?.periodoAcademico || 'Vigente' }}</p>
+          </div>
+        </div>
+
+        <!-- Datos personales del periodo -->
+        <h5 class="section-label">
+          <i class="fas fa-address-card" aria-hidden="true"></i> Datos personales
+        </h5>
+        <div class="grid-details">
+          <div class="detail-item">
+            <span class="detail-label">Sexo</span>
+            <p class="detail-value">{{ perfil?.sexo || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Estado civil</span>
+            <p class="detail-value">{{ perfil?.estado_civil || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fecha de nacimiento</span>
+            <p class="detail-value">{{ fechaNacimientoFormateada }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Rango de edad</span>
+            <p class="detail-value">{{ perfil?.rango_edad || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Lugar de nacimiento</span>
+            <p class="detail-value">{{ perfil?.lugar_nacimiento || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Nacionalidad</span>
+            <p class="detail-value">{{ perfil?.nacionalidad || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Etnia</span>
+            <p class="detail-value">{{ perfil?.etnia || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Idioma</span>
+            <p class="detail-value">{{ perfil?.idioma || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Zona de residencia</span>
+            <p class="detail-value">{{ perfil?.zona_residencia || '—' }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">¿Tiene hijos?</span>
+            <p class="detail-value">{{ siNo(perfil?.tiene_hijos) }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">¿Tiene discapacidad?</span>
+            <p class="detail-value">{{ siNo(perfil?.tiene_discapacidad) }}</p>
+          </div>
+          @if (perfil?.tiene_discapacidad) {
+            <div class="detail-item">
+              <span class="detail-label">Tipo de discapacidad</span>
+              <p class="detail-value">{{ perfil?.tipo_discapacidad || '—' }}</p>
+            </div>
+          }
+          @if (perfil?.sexo === 'Mujer' || perfil?.sexo === 'MUJER') {
+            <div class="detail-item">
+              <span class="detail-label">¿Está embarazada?</span>
+              <p class="detail-value">{{ siNo(perfil?.esta_embarazada) }}</p>
+            </div>
+          }
         </div>
       </div>
 
       <footer class="modal-footer">
-        <button 
-          type="button" 
-          (click)="onCerrarModal()" 
-          class="btn btn--secondary"
-        >
+        <button type="button" (click)="onCerrarModal()" class="btn btn--secondary">
           Cerrar
         </button>
       </footer>
-
     </div>
   </div>
 }

@@ -15,151 +15,302 @@
       <div class="header-text">
         <span class="eyebrow">Registro · Paso final</span>
         <h1>Completemos tu ficha</h1>
-        <p>Esta información permite activar tu acceso académico y la ficha de bienestar estudiantil del ITSA.</p>
+        <p>
+          Completa todos los datos. Los campos con * son obligatorios.
+          Si algo falla, verás una alerta clara con lo que debes corregir.
+        </p>
       </div>
     </header>
 
-    @if (error()) {
+    <!-- PANEL DE ALERTAS -->
+    <div class="alert-panel">
+      @if (error()) {
       <div class="alert error-alert" role="alert" aria-live="assertive">
-        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
+        <strong>⚠️ Atención</strong>
         <span>{{ error() }}</span>
       </div>
-    }
+      }
+
+      @if (alertas().length) {
+      <ul class="alert-list" role="list">
+        @for (a of alertas(); track a) {
+        <li>{{ a }}</li>
+        }
+      </ul>
+      }
+
+      @if (exito()) {
+      <div class="alert success-alert" role="status">
+        <strong>✅ Listo</strong>
+        <span>{{ exito() }}</span>
+      </div>
+      }
+    </div>
 
     <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="bento-form" novalidate>
 
-      <!-- Campo Cédula -->
-      <div class="input-group full-width">
-        <label for="cedula">Cédula de identidad</label>
-        <input
-          id="cedula"
-          type="text"
-          formControlName="cedula"
-          class="input-clean"
-          [class.has-error]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched"
-          placeholder="Ingresa tus 10 dígitos"
-          maxlength="10"
-          inputmode="numeric"
-          autocomplete="off"
-          [attr.aria-invalid]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched"
-          [attr.aria-describedby]="perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched ? 'cedula-error' : null"
-        >
-        @if (perfilForm.controls.cedula.invalid && perfilForm.controls.cedula.touched) {
-          <span class="error-text" id="cedula-error">
-            Formato de cédula incorrecto (debe contener 10 dígitos numéricos).
-          </span>
+      <h3 class="section-title">1. Identificación</h3>
+
+      <div class="input-group" [class.field-error]="campoInvalido('cedula')">
+        <label for="cedula">Cédula *</label>
+        <input id="cedula" type="text" formControlName="cedula" class="input-clean" maxlength="10" inputmode="numeric"
+          placeholder="Ej. 0102030405" />
+        @if (campoInvalido('cedula')) {
+        <span class="error-text">{{ mensajeCampo('cedula') }}</span>
         }
       </div>
 
-      <!-- Sección de Carrera y Ciclo con Filtro Integrado -->
-      @if (authService.user()?.rol === 'ESTUDIANTE') {
-        <div class="academic-section">
-          
-          <!-- Filtro rápido de Carrera -->
-          <div class="input-group full-width">
-            <div class="label-with-hint">
-              <label for="buscarCarrera">Carrera o Especialidad</label>
-              <span class="field-hint">Filtra para encontrar tu carrera rápido</span>
-            </div>
-            
-            <div class="search-input-wrapper">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
-                <path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <input
-                id="buscarCarrera"
-                type="text"
-                class="input-clean search-field"
-                placeholder="Escribe el nombre de tu carrera..."
-                [formControl]="filtroCarreraControl"
-                autocomplete="off"
-              >
-            </div>
+      <div class="input-group" [class.field-error]="campoInvalido('numero_celular')">
+        <label for="numero_celular">Celular *</label>
+        <input id="numero_celular" type="text" formControlName="numero_celular" class="input-clean" maxlength="10"
+          inputmode="numeric" placeholder="09XXXXXXXX" />
+        @if (campoInvalido('numero_celular')) {
+        <span class="error-text">{{ mensajeCampo('numero_celular') }}</span>
+        }
+      </div>
 
-            <div class="select-clean-wrapper">
-              <select 
-                id="carrera" 
-                formControlName="carrera_id" 
-                class="select-clean"
-                [class.has-error]="perfilForm.controls.carrera_id?.invalid && perfilForm.controls.carrera_id?.touched"
-              >
-                <option value="" disabled selected>
-                  {{ carrerasFiltradas().length ? 'Selecciona tu carrera de la lista...' : 'No se encontraron carreras' }}
-                </option>
-                @for (c of carrerasFiltradas(); track c.id) {
-                  <option [value]="c.id">{{ c.nombre }}</option>
-                }
-              </select>
-              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            
-            @if (perfilForm.controls.carrera_id?.invalid && perfilForm.controls.carrera_id?.touched) {
-              <span class="error-text">Debes seleccionar una carrera para continuar.</span>
-            }
-          </div>
+      <div class="input-group" [class.field-error]="campoInvalido('primer_nombre')">
+        <label for="primer_nombre">Primer nombre *</label>
+        <input id="primer_nombre" type="text" formControlName="primer_nombre" class="input-clean" />
+        @if (campoInvalido('primer_nombre')) {
+        <span class="error-text">{{ mensajeCampo('primer_nombre') }}</span>
+        }
+      </div>
 
-          <!-- Seleccionar Ciclo -->
-          <div class="input-group full-width">
-            <label for="ciclo">Ciclo académico</label>
-            <div class="select-clean-wrapper">
-              <select 
-                id="ciclo" 
-                formControlName="ciclo_id" 
-                class="select-clean"
-                [class.has-error]="perfilForm.controls.ciclo_id?.invalid && perfilForm.controls.ciclo_id?.touched"
-              >
-                <option value="" disabled selected>
-                  {{ perfilForm.get('carrera_id')?.value ? 'Seleccionar ciclo académico...' : 'Primero selecciona una carrera' }}
-                </option>
-                @for (c of ciclosDisponibles(); track c.id) {
-                  <option [value]="c.id">{{ c.nombre }}</option>
-                }
-              </select>
-              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            @if (perfilForm.controls.ciclo_id?.invalid && perfilForm.controls.ciclo_id?.touched) {
-              <span class="error-text">Selecciona el ciclo al que perteneces.</span>
-            }
-          </div>
+      <div class="input-group">
+        <label for="segundo_nombre">Segundo nombre</label>
+        <input id="segundo_nombre" type="text" formControlName="segundo_nombre" class="input-clean" />
+      </div>
 
-        </div>
+      <div class="input-group" [class.field-error]="campoInvalido('primer_apellido')">
+        <label for="primer_apellido">Primer apellido *</label>
+        <input id="primer_apellido" type="text" formControlName="primer_apellido" class="input-clean" />
+        @if (campoInvalido('primer_apellido')) {
+        <span class="error-text">{{ mensajeCampo('primer_apellido') }}</span>
+        }
+      </div>
+
+      <div class="input-group">
+        <label for="segundo_apellido">Segundo apellido</label>
+        <input id="segundo_apellido" type="text" formControlName="segundo_apellido" class="input-clean" />
+      </div>
+
+      <div class="input-group">
+        <label for="email_institucional">Correo institucional</label>
+        <input id="email_institucional" type="email" formControlName="email_institucional" class="input-clean" />
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('email_personal')">
+        <label for="email_personal">Correo personal</label>
+        <input id="email_personal" type="email" formControlName="email_personal" class="input-clean" />
+        @if (campoInvalido('email_personal')) {
+        <span class="error-text">{{ mensajeCampo('email_personal') }}</span>
+        }
+      </div>
+
+      <!-- ACADÉMICO (ESTUDIANTE e INVITADO) -->
+      <h3 class="section-title">2. Datos académicos</h3>
+
+      <div class="input-group full-width" [class.field-error]="campoInvalido('carrera_id')">
+        <label for="buscarCarrera">Carrera *</label>
+        <input id="buscarCarrera" type="text" class="input-clean" placeholder="Escribe para filtrar..."
+          [formControl]="filtroCarreraControl" autocomplete="off" />
+        <select id="carrera" formControlName="carrera_id" class="select-clean" style="margin-top:0.4rem">
+          <option value="" disabled>Selecciona tu carrera...</option>
+          @for (c of carrerasFiltradas(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+        @if (campoInvalido('carrera_id')) {
+        <span class="error-text">{{ mensajeCampo('carrera_id') }}</span>
+        }
+      </div>
+
+      <div class="input-group full-width" [class.field-error]="campoInvalido('ciclo_id')">
+        <label for="ciclo">Ciclo académico *</label>
+        <select id="ciclo" formControlName="ciclo_id" class="select-clean">
+          <option value="" disabled>
+            {{ perfilForm.get('carrera_id')?.value ? 'Selecciona ciclo...' : 'Primero elige carrera' }}
+          </option>
+          @for (c of ciclosDisponibles(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+        @if (campoInvalido('ciclo_id')) {
+        <span class="error-text">{{ mensajeCampo('ciclo_id') }}</span>
+        }
+      </div>
+
+      <!-- PERSONALES -->
+      <h3 class="section-title">3. Datos personales</h3>
+
+      <div class="input-group" [class.field-error]="campoInvalido('sexo')">
+        <label for="sexo">Sexo *</label>
+        <select id="sexo" formControlName="sexo" class="select-clean">
+          <option value="" disabled>Selecciona...</option>
+          @for (s of sexos; track s) {
+          <option [value]="s">{{ s }}</option>
+          }
+        </select>
+        @if (campoInvalido('sexo')) {
+        <span class="error-text">{{ mensajeCampo('sexo') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('estado_civil')">
+        <label for="estado_civil">Estado civil *</label>
+        <select id="estado_civil" formControlName="estado_civil" class="select-clean">
+          <option value="" disabled>Selecciona...</option>
+          @for (e of estadosCiviles; track e) {
+          <option [value]="e">{{ e }}</option>
+          }
+        </select>
+        @if (campoInvalido('estado_civil')) {
+        <span class="error-text">{{ mensajeCampo('estado_civil') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('tiene_hijos')">
+        <label for="tiene_hijos">¿Tiene hijos/as? *</label>
+        <select id="tiene_hijos" formControlName="tiene_hijos" class="select-clean">
+          <option [ngValue]="null" disabled>Selecciona...</option>
+          <option [ngValue]="false">No</option>
+          <option [ngValue]="true">Sí</option>
+        </select>
+        @if (campoInvalido('tiene_hijos')) {
+        <span class="error-text">{{ mensajeCampo('tiene_hijos') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('etnia')">
+        <label for="etnia">Etnia / raza *</label>
+        <select id="etnia" formControlName="etnia" class="select-clean">
+          <option value="" disabled>Selecciona...</option>
+          @for (e of etnias; track e) {
+          <option [value]="e">{{ e }}</option>
+          }
+        </select>
+        @if (campoInvalido('etnia')) {
+        <span class="error-text">{{ mensajeCampo('etnia') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('idioma')">
+        <label for="idioma">Idioma *</label>
+        <input id="idioma" type="text" formControlName="idioma" class="input-clean" />
+        @if (campoInvalido('idioma')) {
+        <span class="error-text">{{ mensajeCampo('idioma') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('lugar_nacimiento')">
+        <label for="lugar_nacimiento">Lugar de nacimiento *</label>
+        <input id="lugar_nacimiento" type="text" formControlName="lugar_nacimiento" class="input-clean"
+          placeholder="Ciudad / Provincia" />
+        @if (campoInvalido('lugar_nacimiento')) {
+        <span class="error-text">{{ mensajeCampo('lugar_nacimiento') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('fecha_nacimiento')">
+        <label for="fecha_nacimiento">Fecha de nacimiento * (DD/MM/AAAA)</label>
+        <input id="fecha_nacimiento" type="text" formControlName="fecha_nacimiento" class="input-clean"
+          placeholder="15/03/2002" maxlength="10" />
+        @if (campoInvalido('fecha_nacimiento')) {
+        <span class="error-text">{{ mensajeCampo('fecha_nacimiento') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('rango_edad')">
+        <label for="rango_edad">Rango de edad *</label>
+        <select id="rango_edad" formControlName="rango_edad" class="select-clean">
+          <option value="" disabled>Selecciona...</option>
+          @for (r of rangosEdad; track r) {
+          <option [value]="r">{{ r }}</option>
+          }
+        </select>
+        @if (campoInvalido('rango_edad')) {
+        <span class="error-text">{{ mensajeCampo('rango_edad') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('nacionalidad')">
+        <label for="nacionalidad">Nacionalidad *</label>
+        <input id="nacionalidad" type="text" formControlName="nacionalidad" class="input-clean" />
+        @if (campoInvalido('nacionalidad')) {
+        <span class="error-text">{{ mensajeCampo('nacionalidad') }}</span>
+        }
+      </div>
+
+      <div class="input-group" [class.field-error]="campoInvalido('zona_residencia')">
+        <label for="zona_residencia">Zona de residencia *</label>
+        <select id="zona_residencia" formControlName="zona_residencia" class="select-clean">
+          <option value="" disabled>Selecciona...</option>
+          @for (z of zonas; track z) {
+          <option [value]="z">{{ z }}</option>
+          }
+        </select>
+        @if (campoInvalido('zona_residencia')) {
+        <span class="error-text">{{ mensajeCampo('zona_residencia') }}</span>
+        }
+      </div>
+
+      <!-- EMBARAZO: opciones por mes -->
+      @if (perfilForm.get('sexo')?.value === 'Mujer') {
+      <div class="input-group full-width" [class.field-error]="campoInvalido('mes_embarazo')">
+        <label for="mes_embarazo">¿Está embarazada? ¿En qué mes? *</label>
+        <select id="mes_embarazo" formControlName="mes_embarazo" class="select-clean">
+          @for (o of opcionesEmbarazo; track o.value) {
+          <option [value]="o.value">{{ o.label }}</option>
+          }
+        </select>
+        <span class="field-hint">Si no estás embarazada, elige “No”.</span>
+        @if (campoInvalido('mes_embarazo')) {
+        <span class="error-text">{{ mensajeCampo('mes_embarazo') }}</span>
+        }
+      </div>
       }
 
-      <!-- Acciones de Formulario -->
+      <!-- DISCAPACIDAD: Sí/No + tipo en opciones -->
+      <div class="input-group" [class.field-error]="campoInvalido('tiene_discapacidad')">
+        <label for="tiene_discapacidad">¿Tiene alguna discapacidad? *</label>
+        <select id="tiene_discapacidad" formControlName="tiene_discapacidad" class="select-clean">
+          <option [ngValue]="null" disabled>Selecciona...</option>
+          <option [ngValue]="false">No</option>
+          <option [ngValue]="true">Sí</option>
+        </select>
+        @if (campoInvalido('tiene_discapacidad')) {
+        <span class="error-text">{{ mensajeCampo('tiene_discapacidad') }}</span>
+        }
+      </div>
+
+      @if (perfilForm.get('tiene_discapacidad')?.value === true) {
+      <div class="input-group full-width" [class.field-error]="campoInvalido('tipo_discapacidad')">
+        <label for="tipo_discapacidad">Tipo de discapacidad *</label>
+        <select id="tipo_discapacidad" formControlName="tipo_discapacidad" class="select-clean">
+          <option value="" disabled>Selecciona el tipo...</option>
+          @for (t of tiposDiscapacidad; track t) {
+          <option [value]="t">{{ t }}</option>
+          }
+        </select>
+        @if (campoInvalido('tipo_discapacidad')) {
+        <span class="error-text">{{ mensajeCampo('tipo_discapacidad') }}</span>
+        }
+      </div>
+      }
+
       <footer class="actions">
-        <button 
-          type="button" 
-          class="btn-outline" 
-          (click)="cancelar()" 
-          [disabled]="loading()"
-        >
+        <button type="button" class="btn-outline" (click)="cancelar()" [disabled]="loading()">
           Cancelar
         </button>
-        <button 
-          type="submit" 
-          class="btn-solid" 
-          [disabled]="loading() || cargandoCatalogos() || perfilForm.invalid"
-        >
+        <button type="submit" class="btn-solid" [disabled]="loading() || cargandoCatalogos()">
           @if (loading()) {
-            <span class="spinner-small" aria-hidden="true"></span>
-            <span>Guardando...</span>
+          <span>Guardando...</span>
           } @else {
-            <span>Completar registro</span>
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+          <span>Completar registro</span>
           }
         </button>
       </footer>
-
     </form>
   </article>
 </main>

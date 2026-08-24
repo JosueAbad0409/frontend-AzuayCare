@@ -1,32 +1,42 @@
 import {
   Component,
   OnInit,
-  OnDestroy,
   inject,
   signal,
   computed,
   ElementRef,
   ViewChild,
-  ChangeDetectorRef,
-  ChangeDetectionStrategy
+  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import {
-  ReportesService,
-  DashboardResumenBackend
-} from '../../../core/services/reportes.service';
-import { PrioridadAtencionService } from '../../../core/services/prioridad-atencion.service';
-import { PeriodoMatricula } from '../../../core/models/periodo.model';
-import { Chart, registerables } from 'chart.js';
+import { RouterModule } from '@angular/router';
+import { CarreraService } from '../../../core/services/carrera.service';
+import { CiclosService } from '../../../core/services/ciclos.service';
+import { PeriodoService } from '../../../core/services/periodo.service';
 import { RevisionService } from '../../../core/services/revision.service';
+import { FormularioService } from '../../../core/services/formulario.service';
+import { PeriodoMatricula } from '../../../core/models/periodo.model';
+import { Carrera } from '../../../core/models/carrera.model';
+import { Ciclo } from '../../../core/models/ciclo.model';
+import { FichaRevision } from '../../../core/models/revision-ficha.model';
+import { environment } from '../../../../environments/environment';
+import { Chart, registerables } from 'chart.js';
+import { forkJoin } from 'rxjs';
+import Swal from 'sweetalert2';
 
 Chart.register(...registerables);
 
-interface CondicionCount {
-  nombre: string;
-  total: number;
+export interface FiltrosDashboard {
+  periodoId: string;
+  carreraId: string;
+  cicloId: string;
+  etnia: string;
+  sexo: string;
+  zona: string;
+  estadoFicha: string;
+  nivelEconomico: string;
+  busqueda: string;
 }
 
 @Component({
@@ -35,434 +45,932 @@ interface CondicionCount {
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  private readonly reportesService = inject(ReportesService);
-  private readonly prioridadService = inject(PrioridadAtencionService);
-  private readonly cdRef = inject(ChangeDetectorRef);
+export class DashboardComponent implements OnInit {
+  private readonly carreraService = inject(CarreraService);
+  private readonly ciclosService = inject(CiclosService);
+  private readonly periodoService = inject(PeriodoService);
   private readonly revisionService = inject(RevisionService);
+  private readonly formularioService = inject(FormularioService);
 
-  readonly totalCarreras = signal<number>(0);
-  readonly totalFormularios = signal<number>(0);
-  readonly totalFichas = signal<number>(0);
-  readonly totalFichasEvaluadas = signal<number>(0);
-  readonly fichasBorrador = signal<number>(0);
-  readonly fichasEnviadas = signal<number>(0);
-  readonly fichasValidadas = signal<number>(0);
-  readonly fichasRechazadas = signal<number>(0);
+  isLoading = signal(true);
 
-  readonly totalNee = signal<number>(0);
-  readonly totalConRiesgo = signal<number>(0);
-  readonly condiciones = signal<CondicionCount[]>([]);
-  readonly periodoActivo = signal<PeriodoMatricula | null>(null);
-  readonly isLoading = signal<boolean>(true);
+  // NUEVO: Signal para controlar el estado de generación/descarga de archivos
+  isExporting = signal(false);
 
-  readonly carrerasLabels = signal<string[]>([]);
-  readonly carrerasEnviadas = signal<number[]>([]);
-  readonly carrerasValidadas = signal<number[]>([]);
-  readonly economiaLabels = signal<string[]>([]);
-  readonly economiaData = signal<number[]>([]);
+  periodoActivo = signal<PeriodoMatricula | null>(null);
 
-  readonly todasLasFichas = signal<any[]>([]);
-  readonly tipoGraficoCarrera = signal<string>('bar');
-  readonly tipoGraficoEstado = signal<string>('doughnut');
+  carrerasList = signal<Carrera[]>([]);
+  ciclosList = signal<Ciclo[]>([]);
+  periodosList = signal<PeriodoMatricula[]>([]);
+  fichasList = signal<FichaRevision[]>([]);
+  totalFormularios = signal(0);
 
-  readonly ingresoMin = signal<number | null>(null);
-  readonly ingresoMax = signal<number | null>(null);
-  readonly egresoMin = signal<number | null>(null);
-  readonly egresoMax = signal<number | null>(null);
-
-  readonly estudiantesFiltradosList = computed(() => {
-  const minIng = this.ingresoMin() ?? -Infinity;
-  const maxIng = this.ingresoMax() ?? Infinity;
-  const minEgr = this.egresoMin() ?? -Infinity;
-  const maxEgr = this.egresoMax() ?? Infinity;
-
-  return this.todasLasFichas().filter(f => {
-    const i = Number(f.total_ingresos || 0);
-    const e = Number(f.total_egresos || 0);
-    return i >= minIng && i <= maxIng && e >= minEgr && e <= maxEgr;
+  // --- Filtros demográficos (sin estado de ficha) ---
+  filtrosPoblacion = signal({
+    periodoId: '' as string,
+    carreraId: '' as string,
+    cicloId: '' as string,
+    sexo: '' as string,
+    etnia: '' as string,
+    zona: '' as string,
+    tieneDiscapacidad: '' as string, // '', 'true', 'false'
+    busqueda: '' as string,
   });
+
+  resultadosPoblacion = signal<any[]>([]);
+  cargandoPoblacion = signal(false);
+  errorPoblacion = signal('');
+
+  /** Ciclos según carrera del filtro de población */
+  ciclosPoblacion = computed(() => {
+  const carreraId = this.filtrosPoblacion().carreraId;
+  const todos = this.ciclosList();
+  if (!carreraId) return todos;
+
+  return todos.filter((c) =>
+    (c.ciclosCarreras || []).some(
+      (cc) => String(cc.carrera_id || cc.carrera?.id) === String(carreraId),
+    ),
+  );
 });
 
-readonly estudiantesFiltrados = computed(() => this.estudiantesFiltradosList().length);
+  setFiltroPoblacion(key: string, value: string) {
+    this.filtrosPoblacion.update((prev) => {
+      const next: any = { ...prev, [key]: value };
+      if (key === 'carreraId') next.cicloId = '';
+      return next;
+    });
+    // Cada cambio recarga resultados
+    this.buscarPoblacion();
+  }
 
-readonly hayFiltrosActivos = computed(() =>
-  this.ingresoMin() !== null || this.ingresoMax() !== null ||
-  this.egresoMin() !== null || this.egresoMax() !== null
+  limpiarFiltrosPoblacion() {
+    const activo = this.periodoActivo();
+    this.filtrosPoblacion.set({
+      periodoId: activo?.id || '',
+      carreraId: '',
+      cicloId: '',
+      sexo: '',
+      etnia: '',
+      zona: '',
+      tieneDiscapacidad: '',
+      busqueda: '',
+    });
+    this.buscarPoblacion();
+  }
+
+  /** Body para el backend: solo manda lo que el usuario eligió */
+  private buildBodyPoblacion() {
+    const f = this.filtrosPoblacion();
+    const body: any = { vista: 'poblacion' };
+
+    if (f.periodoId) body.periodo_id = f.periodoId;
+    if (f.carreraId) body.carrera_id = f.carreraId;
+    if (f.cicloId) body.ciclo_id = f.cicloId;
+    if (f.sexo) body.sexo = f.sexo;
+    if (f.etnia) body.etnia = f.etnia;
+    if (f.zona) body.zona_residencia = f.zona;
+    if (f.tieneDiscapacidad === 'true') body.tiene_discapacidad = true;
+    if (f.tieneDiscapacidad === 'false') body.tiene_discapacidad = false;
+    if (f.busqueda.trim()) body.busqueda = f.busqueda.trim();
+
+    return body;
+  }
+
+  private authHeaders(): HeadersInit {
+    const token = localStorage.getItem('azuaycare_access_token') || '';
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  /** Resultados en vivo (tabla de abajo) */
+  async buscarPoblacion() {
+    this.cargandoPoblacion.set(true);
+    this.errorPoblacion.set('');
+    try {
+      const res = await fetch(`${environment.apiUrl}/reportes/dataset-filtrado`, {
+        method: 'POST',
+        headers: this.authHeaders(),
+        body: JSON.stringify(this.buildBodyPoblacion()),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `Error ${res.status}`);
+      }
+      const data = await res.json();
+      this.resultadosPoblacion.set(Array.isArray(data) ? data : data?.datos || []);
+    } catch (e: any) {
+      this.errorPoblacion.set(e?.message || 'No se pudieron cargar los resultados.');
+      this.resultadosPoblacion.set([]);
+    } finally {
+      this.cargandoPoblacion.set(false);
+    }
+  }
+
+  private async descargarArchivo(url: string, nombre: string, titulo = 'Generando archivo...') {
+  this.isExporting.set(true);
+
+  Swal.fire({
+    title: titulo,
+    text: 'Esto puede tardar unos segundos. No cierres esta ventana.',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: this.authHeaders(),
+      body: JSON.stringify(this.buildBodyPoblacion()),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t || `Error ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Listo',
+      text: 'El archivo se descargó correctamente.',
+      timer: 1800,
+      showConfirmButton: false,
+    });
+  } catch (e: any) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'No se pudo generar',
+      text: e?.message || 'Ocurrió un error al exportar.',
+    });
+  } finally {
+    this.isExporting.set(false);
+  }
+}
+
+
+async exportarPdfPoblacion() {
+  await this.descargarArchivo(
+    `${environment.apiUrl}/reportes/dataset-filtrado/pdf`,
+    `Poblacion_${Date.now()}.pdf`,
+    'Generando PDF...',
+  );
+}
+
+  async exportarExcelPoblacion() {
+    try {
+      await this.descargarArchivo(
+        `${environment.apiUrl}/reportes/dataset-filtrado/excel`,
+        `Poblacion_${Date.now()}.xlsx`,
+      );
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo exportar Excel');
+    }
+  }
+
+
+  filtros = signal<FiltrosDashboard>({
+    periodoId: '',
+    carreraId: '',
+    cicloId: '',
+    etnia: '',
+    sexo: '',
+    zona: '',
+    estadoFicha: '',
+    nivelEconomico: '',
+    busqueda: '',
+  });
+
+  readonly etnias = [
+    'Mestizo/a',
+    'Indígena',
+    'Afroecuatoriano/a',
+    'Montubio/a',
+    'Blanco/a',
+    'Mulato/a',
+    'Otro',
+  ];
+  readonly sexos = ['Hombre', 'Mujer'];
+  readonly zonas = ['Urbano', 'Rural'];
+  readonly estadosFicha = ['BORRADOR', 'ENVIADA', 'VALIDADO', 'RECHAZADO', 'OBSERVADO'];
+
+  // ---- Filtro económico ----
+  ingresoMin = signal<number | null>(null);
+  ingresoMax = signal<number | null>(null);
+  egresoMin = signal<number | null>(null);
+  egresoMax = signal<number | null>(null);
+
+  tipoGraficoCarrera = signal<'bar' | 'pie'>('bar');
+
+  // ---- Canvas del HTML ----
+  @ViewChild('carreraChartCanvas') carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('carreraEconomiaChartCanvas') carreraEconomiaChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('estadoChartCanvas') estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('economiaChartCanvas') economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
+
+  private carreraChart?: Chart;
+  private carreraEconomiaChart?: Chart;
+  private estadoChart?: Chart;
+  private economiaChart?: Chart;
+
+  // ---- Ciclos por carrera ----
+  ciclosFiltrados = computed(() => {
+  const carreraId = this.filtros().carreraId;
+  const todos = this.ciclosList();
+  if (!carreraId) return todos;
+
+  return todos.filter((c) =>
+    (c.ciclosCarreras || []).some(
+      (cc) => String(cc.carrera_id || cc.carrera?.id) === String(carreraId),
+    ),
+  );
+});
+
+  nivelesDisponibles = computed(() => {
+    const set = new Set<string>();
+    this.fichasList().forEach((f) => {
+      const n = f.nivelEconomico?.nombre;
+      if (n) set.add(n);
+    });
+    return Array.from(set).sort();
+  });
+
+  /** Fichas con filtros demográficos / académicos */
+  fichasFiltradas = computed(() => {
+    const f = this.filtros();
+    let list = this.fichasList() as any[];
+
+    if (f.periodoId) {
+      list = list.filter(
+        (x) => x.periodo_id === f.periodoId || x.periodo?.id === f.periodoId,
+      );
+    }
+    if (f.carreraId) {
+  list = list.filter((x) => {
+    const carreraId =
+      x.usuario?.carrera_id ||
+      x.usuario?.carrera?.id ||
+      x.carrera_id;
+    return String(carreraId) === String(f.carreraId);
+  });
+}
+
+if (f.cicloId) {
+  list = list.filter((x) => {
+    const cicloId =
+      x.usuario?.ciclo_id ||
+      x.usuario?.ciclo?.id ||
+      x.ciclo_id;
+    return String(cicloId) === String(f.cicloId);
+  });
+}
+    if (f.estadoFicha) {
+      list = list.filter((x) => x.estado_ficha === f.estadoFicha);
+    }
+    if (f.nivelEconomico) {
+      list = list.filter((x) => x.nivelEconomico?.nombre === f.nivelEconomico);
+    }
+    if (f.etnia) {
+      list = list.filter(
+        (x) => x.usuario?.etnia === f.etnia || x.perfil?.etnia === f.etnia,
+      );
+    }
+    if (f.sexo) {
+      list = list.filter(
+        (x) => x.usuario?.sexo === f.sexo || x.perfil?.sexo === f.sexo,
+      );
+    }
+    if (f.zona) {
+      list = list.filter(
+        (x) =>
+          x.usuario?.zona_residencia === f.zona ||
+          x.perfil?.zona_residencia === f.zona,
+      );
+    }
+    if (f.busqueda.trim()) {
+      const q = f.busqueda.trim().toLowerCase();
+      list = list.filter((x) => {
+        const u = x.usuario || {};
+        const nombre = `${u.primer_nombre || ''} ${u.primer_apellido || ''}`.toLowerCase();
+        const cedula = (u.cedula || '').toLowerCase();
+        const email = (u.email_institucional || '').toLowerCase();
+        return nombre.includes(q) || cedula.includes(q) || email.includes(q);
+      });
+    }
+    return list;
+  });
+
+  // ---- KPIs ----
+  totalCarreras = computed(() => this.carrerasList().length);
+  totalFichas = computed(() => this.fichasFiltradas().length);
+  totalFichasEvaluadas = computed(() => this.fichasFiltradas().length);
+
+  fichasEnviadas = computed(
+  () =>
+    this.fichasFiltradas().filter((f) => {
+      const e = (f.estado_ficha || '').toUpperCase();
+      return e === 'ENVIADA' || e === 'ENVIADO';
+    }).length,
 );
 
-  @ViewChild('estadoChartCanvas', { static: false }) estadoChartCanvas?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('economiaChartCanvas', { static: false }) economiaChartCanvas?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('carreraChartCanvas', { static: false }) carreraChartCanvas?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('carreraEconomiaChartCanvas', { static: false }) carreraEconomiaChartCanvas?: ElementRef<HTMLCanvasElement>;
+fichasValidadas = computed(
+  () =>
+    this.fichasFiltradas().filter(
+      (f) => (f.estado_ficha || '').toUpperCase() === 'VALIDADO',
+    ).length,
+);
 
-  private charts: { estado?: Chart; economia?: Chart; carrera?: Chart; carreraEcon?: Chart } = {};
+fichasRechazadas = computed(
+  () =>
+    this.fichasFiltradas().filter((f) => {
+      const e = (f.estado_ficha || '').toUpperCase();
+      return e === 'RECHAZADO' || e === 'RECHAZADA';
+    }).length,
+);
+  fichasBorrador = computed(
+    () => this.fichasFiltradas().filter((f) => f.estado_ficha === 'BORRADOR').length,
+  );
 
-  ngOnInit(): void {
-    this.cargarTodo();
-    Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
-    Chart.defaults.color = '#64748b';
-  }
+  totalNee = computed(() => {
+    return this.fichasFiltradas().filter((f: any) => {
+      const p = f.perfil || f.usuario || {};
+      return (
+        p.tiene_discapacidad === true ||
+        p.esta_embarazada === true ||
+        f.prioridad_atencion === true ||
+        f.es_nee === true
+      );
+    }).length;
+  });
 
-  ngOnDestroy(): void {
-    this.destruirGraficos();
-  }
+  hayFiltrosActivos = computed(() => {
+    return (
+      this.ingresoMin() != null ||
+      this.ingresoMax() != null ||
+      this.egresoMin() != null ||
+      this.egresoMax() != null
+    );
+  });
 
-  private destruirGraficos(): void {
-    Object.values(this.charts).forEach(chart => chart?.destroy());
-    this.charts = {};
-  }
+  estudiantesFiltradosList = computed(() => {
+    let list = this.fichasFiltradas() as any[];
+    const iMin = this.ingresoMin();
+    const iMax = this.ingresoMax();
+    const eMin = this.egresoMin();
+    const eMax = this.egresoMax();
 
-  cargarTodo(): void {
-    this.isLoading.set(true);
+    if (iMin != null) list = list.filter((f) => Number(f.total_ingresos ?? 0) >= iMin);
+    if (iMax != null) list = list.filter((f) => Number(f.total_ingresos ?? 0) <= iMax);
+    if (eMin != null) list = list.filter((f) => Number(f.total_egresos ?? 0) >= eMin);
+    if (eMax != null) list = list.filter((f) => Number(f.total_egresos ?? 0) <= eMax);
+    return list;
+  });
 
-    this.reportesService.getDashboardResumen().subscribe({
-      next: (resumen) => {
-        this.totalCarreras.set(resumen.totalCarreras ?? 0);
-        this.totalFormularios.set(resumen.totalFormularios ?? 0);
-        this.totalFichasEvaluadas.set(resumen.totalFichasEvaluadas ?? 0);
-        this.periodoActivo.set(resumen.periodoActivo ?? null);
+  estudiantesFiltrados = computed(() => this.estudiantesFiltradosList().length);
 
-        const fc = resumen.graficos?.fichasPorCarrera;
-        this.carrerasLabels.set(fc?.labels ?? []);
-        this.carrerasEnviadas.set(fc?.enviadas ?? []);
-        this.carrerasValidadas.set(fc?.validadas ?? []);
+  condiciones = computed(() => {
+    const map = new Map<string, number>();
+    const bump = (nombre: string) => map.set(nombre, (map.get(nombre) || 0) + 1);
 
-        const periodoId = resumen.periodoActivo?.id;
+    this.fichasFiltradas().forEach((f: any) => {
+      const p = f.perfil || {};
+      if (p.tiene_discapacidad) bump('Discapacidad');
+      if (p.esta_embarazada) bump('Embarazo');
+      if (p.tiene_hijos) bump('Tiene hijos/as');
+      if (f.prioridad_atencion || f.es_nee) bump('Prioridad de atención');
+    });
 
-        this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').subscribe({
-          next: (response: any) => {
-            const lista: any[] = response.data || response || [];
-            this.todasLasFichas.set(lista);
-            this.contarEstadosDesdeFichas(lista);
+    return Array.from(map.entries())
+      .map(([nombre, total]) => ({ nombre, total }))
+      .sort((a, b) => b.total - a.total);
+  });
 
-            if (periodoId) {
-              this.prioridadService.getReporteNee(periodoId).subscribe({
-                next: (nee) => { this.procesarNee(nee || []); this.finalizarCarga(); },
-                error: () => { this.procesarNee([]); this.finalizarCarga(); }
-              });
-            } else { this.finalizarCarga(); }
-          },
-          error: () => this.finalizarCarga()
-        });
-      },
-      error: (err) => {
-        console.error('Error dashboard:', err);
-        this.isLoading.set(false);
-        this.cdRef.markForCheck();
-      }
+  constructor() {
+    afterNextRender(() => {
+      if (!this.isLoading()) this.inicializarGraficos();
     });
   }
 
+  ngOnInit(): void {
+    this.cargarResumen();
+  }
+
+  cargarResumen(): void {
+    this.isLoading.set(true);
+
+    forkJoin({
+      carreras: this.carreraService.getCarreras(),
+      ciclos: this.ciclosService.getCiclos(),
+      fichas: this.revisionService.getTodasLasFichas(),
+      periodos: this.periodoService.getPeriodos(),
+      formularios: this.formularioService.getFormularios(),
+    }).subscribe({
+      next: ({ carreras, ciclos, fichas, periodos, formularios }: any) => {
+        this.carrerasList.set(
+          (carreras || []).filter((c: Carrera) => !c.fecha_desactivacion),
+        );
+        this.ciclosList.set(
+          (ciclos || [])
+            .filter((c: Ciclo) => !c.fecha_desactivacion)
+            .map((c: any) => {
+              if (c.carreras) return c;
+              if (c.ciclosCarreras) {
+                return {
+                  ...c,
+                  carreras: c.ciclosCarreras
+                    .map((cc: any) => cc.carrera || { id: cc.carrera_id, nombre: '—' })
+                    .filter(Boolean),
+                };
+              }
+              return { ...c, carreras: [] };
+            })
+        );
+        this.fichasList.set(fichas || []);
+        this.periodosList.set(periodos || []);
+        this.totalFormularios.set(formularios?.length || 0);
+
+        const activo = (periodos || []).find((p: any) => p.activo);
+        if (activo) {
+          this.periodoActivo.set(activo);
+          this.filtros.update((prev) => ({ ...prev, periodoId: activo.id }));
+          this.filtrosPoblacion.update((prev) => ({ ...prev, periodoId: activo.id }));
+        }
+
+        this.isLoading.set(false);
+        setTimeout(() => this.inicializarGraficos(), 80);
+        this.buscarPoblacion();
+      },
+      error: (err) => {
+        console.error('Error al cargar datos del dashboard:', err);
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  setFiltro<K extends keyof FiltrosDashboard>(key: K, value: FiltrosDashboard[K]): void {
+    this.filtros.update((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === 'carreraId') next.cicloId = '';
+      return next;
+    });
+    setTimeout(() => this.inicializarGraficos(), 30);
+  }
+
   limpiarFiltros(): void {
+    const activo = this.periodoActivo();
+    this.filtros.set({
+      periodoId: activo?.id || '',
+      carreraId: '',
+      cicloId: '',
+      etnia: '',
+      sexo: '',
+      zona: '',
+      estadoFicha: '',
+      nivelEconomico: '',
+      busqueda: '',
+    });
+    this.limpiarFiltrosEconomicos();
+    setTimeout(() => this.inicializarGraficos(), 30);
+  }
+
+  limpiarFiltrosEconomicos(): void {
     this.ingresoMin.set(null);
     this.ingresoMax.set(null);
     this.egresoMin.set(null);
     this.egresoMax.set(null);
   }
 
+  pctCondicion(total: number): number {
+    const base = this.fichasFiltradas().length || 1;
+    return Math.round((total / base) * 100);
+  }
+
   nombreEstudiante(f: any): string {
-  const u = f?.usuario || {};
-  const nombres = [u.primer_nombre, u.segundo_nombre].filter(Boolean).join(' ');
-  const apellidos = [u.primer_apellido, u.segundo_apellido].filter(Boolean).join(' ');
-  return `${nombres} ${apellidos}`.trim() || 'Sin nombre';
-}
-
-cedulaEstudiante(f: any): string {
-  return f?.usuario?.cedula || 'Sin cédula';
-}
-
-carreraEstudiante(f: any): string {
-  // Intentamos varios posibles lugares
-  return f.carrera_nombre
-    || f.carrera?.nombre
-    || f.usuario?.carrera?.nombre
-    || f.usuario?.carrera_nombre
-    || 'Sin carrera';
-}
-
-cicloEstudiante(f: any): string {
-  return f.ciclo_nombre
-    || f.ciclo?.nombre
-    || f.usuario?.ciclo?.nombre
-    || f.usuario?.ciclo_nombre
-    || 'Sin ciclo';
-}
-
-
-  cambiarTipoGrafico(grafico: string, nuevoTipo: string): void {
-    if (grafico === 'carrera') {
-      this.tipoGraficoCarrera.set(nuevoTipo);
-      this.charts.carrera?.destroy();
-      this.dibujarGraficoCarrera();
-    } else if (grafico === 'estado') {
-      this.tipoGraficoEstado.set(nuevoTipo);
-      this.charts.estado?.destroy();
-      this.dibujarGraficoEstado();
-    }
+    const u = f.usuario || {};
+    return `${u.primer_nombre || ''} ${u.primer_apellido || ''}`.trim() || 'Sin nombre';
   }
 
-  private calcularNivelesEconomicos(lista: any[]): void {
-    const utiles = lista.filter(f => ['ENVIADA', 'ENVIADO', 'VALIDADO', 'RECHAZADO', 'RECHAZADA'].includes(String(f.estado_ficha || '').toUpperCase()));
-    let critico = 0, bajo = 0, medioBajo = 0, medio = 0, alto = 0;
+  cedulaEstudiante(f: any): string {
+    return f.usuario?.cedula || '—';
+  }
 
-    utiles.forEach((f) => {
-      const balance = Number(f.balance_final ?? 0);
-      if (balance < 0) critico++;
-      else if (balance <= 100) bajo++;
-      else if (balance <= 300) medioBajo++;
-      else if (balance <= 600) medio++;
-      else alto++;
+  carreraEstudiante(f: any): string {
+    return (
+      f.usuario?.carrera?.nombre ||
+      this.carrerasList().find((c) => c.id === f.usuario?.carrera_id)?.nombre ||
+      '—'
+    );
+  }
+
+  cicloEstudiante(f: any): string {
+    return (
+      f.usuario?.ciclo?.nombre ||
+      this.ciclosList().find((c) => c.id === f.usuario?.ciclo_id)?.nombre ||
+      '—'
+    );
+  }
+
+  cambiarTipoGrafico(_cual: string, tipo: 'bar' | 'pie'): void {
+    this.tipoGraficoCarrera.set(tipo);
+    setTimeout(() => this.inicializarGraficos(), 30);
+  }
+
+  // ===================== GRÁFICOS =====================
+
+  inicializarGraficos(): void {
+    const fichas = this.fichasFiltradas() as any[];
+    const carreras = this.carrerasList();
+
+    this.renderCarreraChart(fichas, carreras);
+    this.renderCarreraEconomiaChart(fichas, carreras);
+    this.renderEstadoChart(fichas);
+    this.renderEconomiaChart(fichas);
+  }
+
+  private renderCarreraChart(fichas: any[], carreras: Carrera[]): void {
+  if (!this.carreraChartCanvas) return;
+
+  const labels: string[] = [];
+  const enviadas: number[] = [];
+  const validadas: number[] = [];
+
+  const carreraFiltro = this.filtros().carreraId;
+  const lista = carreraFiltro
+    ? carreras.filter((c) => c.id === carreraFiltro)
+    : carreras;
+
+  const esEnviada = (estado: string | undefined) => {
+    const e = (estado || '').toUpperCase();
+    return e === 'ENVIADA' || e === 'ENVIADO';
+  };
+
+  const esValidada = (estado: string | undefined) => {
+    return (estado || '').toUpperCase() === 'VALIDADO';
+  };
+
+  lista.forEach((carrera) => {
+    labels.push(carrera.nombre);
+
+    const deCarrera = fichas.filter((x) => {
+      const carreraId =
+        x.usuario?.carrera_id ||
+        x.usuario?.carrera?.id ||
+        x.carrera_id;
+      return String(carreraId) === String(carrera.id);
     });
 
-    this.economiaLabels.set(['Crítico', 'Bajo', 'Medio-Bajo', 'Medio', 'Alto']);
-    this.economiaData.set([critico, bajo, medioBajo, medio, alto]);
-  }
+    enviadas.push(deCarrera.filter((x) => esEnviada(x.estado_ficha)).length);
+    validadas.push(deCarrera.filter((x) => esValidada(x.estado_ficha)).length);
+  });
 
-  private contarEstadosDesdeFichas(lista: any[]): void {
-    let borrador = 0, enviadas = 0, validadas = 0, rechazadas = 0;
-    lista.forEach((f) => {
-      const e = String(f.estado_ficha || '').toUpperCase();
-      if (e === 'BORRADOR') borrador++;
-      else if (e === 'ENVIADA' || e === 'ENVIADO') enviadas++;
-      else if (e === 'VALIDADO') validadas++;
-      else if (e === 'RECHAZADO' || e === 'RECHAZADA') rechazadas++;
-    });
+  const ctx = this.carreraChartCanvas.nativeElement.getContext('2d');
+  if (!ctx) return;
+  this.carreraChart?.destroy();
 
-    this.totalFichas.set(lista.length);
-    this.fichasBorrador.set(borrador);
-    this.fichasEnviadas.set(enviadas);
-    this.fichasValidadas.set(validadas);
-    this.fichasRechazadas.set(rechazadas);
-    this.calcularNivelesEconomicos(lista);
-  }
+  const tipo = this.tipoGraficoCarrera();
 
-  private procesarNee(items: any[]): void {
-    this.totalNee.set(items.length);
-    this.totalConRiesgo.set(items.filter(i => (i.riesgo_total ?? 0) > 0).length);
+  // Si no hay datos, muestra mensaje limpio
+  const hayDatos = enviadas.some((n) => n > 0) || validadas.some((n) => n > 0);
 
-    const contador: Record<string, number> = {};
-    items.forEach((item) => {
-      Object.keys(item.detalles_vulnerabilidad || {}).forEach(llave => {
-        const nombre = llave.trim() || 'Otra condición';
-        contador[nombre] = (contador[nombre] || 0) + 1;
-      });
-    });
-
-    this.condiciones.set(Object.entries(contador).map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total));
-  }
-
-  private finalizarCarga(): void {
-    this.isLoading.set(false);
-    this.cdRef.markForCheck();
-    setTimeout(() => { this.dibujarTodosLosGraficos(); }, 150);
-  }
-
-  private dibujarTodosLosGraficos(): void {
-    this.destruirGraficos();
-    this.dibujarGraficoEstado();
-    this.dibujarGraficoEconomia();
-    this.dibujarGraficoCarrera();
-    this.dibujarGraficoCarreraApilado();
-  }
-
-  private dibujarGraficoEstado(): void {
-    if (!this.estadoChartCanvas?.nativeElement) return;
-    const ctx = this.estadoChartCanvas.nativeElement.getContext('2d');
-    if (!ctx) return;
-
-    const data = [this.fichasBorrador(), this.fichasEnviadas(), this.fichasValidadas(), this.fichasRechazadas()];
-    const tiene = data.some(v => v > 0);
-
-    this.charts.estado = new Chart(ctx, {
-      type: 'doughnut',
+  if (tipo === 'pie') {
+    const totales = labels.map((_, i) => enviadas[i] + validadas[i]);
+    this.carreraChart = new Chart(ctx, {
+      type: 'pie',
       data: {
-        labels: ['Borrador', 'Enviadas', 'Validadas', 'Rechazadas'],
-        datasets: [{ data: tiene ? data : [1], backgroundColor: tiene ? ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'] : ['#e2e8f0'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 } } } }
-    });
-  }
-
-  private dibujarGraficoEconomia(): void {
-    if (!this.economiaChartCanvas?.nativeElement) return;
-    const ctx = this.economiaChartCanvas.nativeElement.getContext('2d');
-    if (!ctx) return;
-
-    const labels = this.economiaLabels();
-    const data = this.economiaData();
-    const tiene = data.some(v => v > 0);
-
-    this.charts.economia = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: tiene ? labels : ['Sin datos'],
-        datasets: [{ data: tiene ? data : [1], backgroundColor: tiene ? ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#10b981'] : ['#e2e8f0'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12, weight: 600 }, usePointStyle: true, padding: 14 } } } }
-    });
-  }
-
-  private dibujarGraficoCarrera(): void {
-    if (!this.carreraChartCanvas?.nativeElement) return;
-    const ctx = this.carreraChartCanvas.nativeElement.getContext('2d');
-    if (!ctx) return;
-
-    const labels = this.carrerasLabels();
-    const tiene = labels.length > 0;
-    const tipo = this.tipoGraficoCarrera() as any;
-    const esCircular = tipo === 'pie' || tipo === 'doughnut';
-
-    const coloresPastel = [
-      '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
-      '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a855f7',
-      '#06b6d4', '#f97316', '#64748b', '#d946ef', '#059669',
-      '#fbbf24', '#f87171', '#34d399', '#818cf8'
-    ];
-
-    this.charts.carrera = new Chart(ctx, {
-      type: tipo,
-      data: {
-        labels: tiene ? labels : ['Sin carreras'],
-        datasets: esCircular ? [
+        labels: labels.length && hayDatos ? labels : ['Sin datos'],
+        datasets: [
           {
-            label: 'Validadas por Carrera',
-            data: tiene ? this.carrerasValidadas() : [0],
-            backgroundColor: coloresPastel,
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }
-        ] : [
-          { label: 'Enviadas', data: tiene ? this.carrerasEnviadas() : [0], backgroundColor: '#8b5cf6', borderRadius: 4 },
-          { label: 'Validadas', data: tiene ? this.carrerasValidadas() : [0], backgroundColor: '#10b981', borderRadius: 4 }
-        ]
+            data: hayDatos ? totales : [1],
+            backgroundColor: hayDatos
+              ? ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#64748b']
+              : ['#e2e8f0'],
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            position: 'bottom',
-            align: 'center',
-            labels: {
-              font: { size: 11, weight: 600 },
-              usePointStyle: true,
-              padding: 14,
-              boxWidth: 8,
-              generateLabels: (chart: any) => {
-                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                return original.map((label: any) => {
-                  if (label.text && label.text.length > 22) {
-                    label.text = label.text.substring(0, 22) + '…';
-                  }
-                  return label;
-                });
-              }
-            }
-          }
+          legend: { position: 'bottom', labels: { usePointStyle: true } },
         },
-        scales: esCircular ? {
-          x: { display: false },
-          y: { display: false }
-        } : {
-          x: { 
-            grid: { display: false },
-            ticks: {
-              font: { size: 10, weight: 600 },
-              maxRotation: 45,
-              minRotation: 45,
-              callback: function(this: any, value: any) {
-                const label = this.getLabelForValue(value as number) || '';
-                return label.length > 18 ? label.substring(0, 18) + '…' : label;
-              }
-            }
-          },
-          y: {
-            beginAtZero: true, 
-            grid: { color: '#f1f5f9' }, 
-            ticks: { precision: 0, font: { size: 11 } }
-          }
-        }
-      }
+      },
     });
-  }
-
-  private dibujarGraficoCarreraApilado(): void {
-    if (!this.carreraEconomiaChartCanvas?.nativeElement) return;
-    const ctx = this.carreraEconomiaChartCanvas.nativeElement.getContext('2d');
-    if (!ctx) return;
-
-    const mapa = new Map<string, { alto: number, medio: number, bajo: number }>();
-    this.todasLasFichas()
-      .filter(f => ['ENVIADA', 'ENVIADO', 'VALIDADO'].includes(String(f.estado_ficha || '').toUpperCase()))
-      .forEach(f => {
-        const carrera = f.carrera_nombre || f.carrera?.nombre || f.estudiante?.carrera || 'Desconocida';
-        const balance = Number(f.balance_final ?? 0);
-        if (!mapa.has(carrera)) mapa.set(carrera, { alto: 0, medio: 0, bajo: 0 });
-        const conteo = mapa.get(carrera)!;
-        if (balance <= 150) conteo.bajo++; else if (balance <= 400) conteo.medio++; else conteo.alto++;
-      });
-
-    const labels = Array.from(mapa.keys());
-    const tiene = labels.length > 0;
-
-    this.charts.carreraEcon = new Chart(ctx, {
+  } else {
+    this.carreraChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: tiene ? labels : ['Sin carreras'],
+        labels: labels.length ? labels : ['Sin carreras'],
         datasets: [
-          { label: 'Alto (> $400)', data: tiene ? labels.map(l => mapa.get(l)!.alto) : [0], backgroundColor: '#10b981', borderRadius: 4 },
-          { label: 'Medio ($150-$400)', data: tiene ? labels.map(l => mapa.get(l)!.medio) : [0], backgroundColor: '#f59e0b', borderRadius: 4 },
-          { label: 'Bajo (< $150)', data: tiene ? labels.map(l => mapa.get(l)!.bajo) : [0], backgroundColor: '#ef4444', borderRadius: 4 }
-        ]
+          {
+            label: 'Enviadas',
+            data: enviadas.length ? enviadas : [0],
+            backgroundColor: '#8b5cf6',
+            borderRadius: 6,
+          },
+          {
+            label: 'Validadas',
+            data: validadas.length ? validadas : [0],
+            backgroundColor: '#10b981',
+            borderRadius: 6,
+          },
+        ],
       },
       options: {
-        responsive: true, 
+        responsive: true,
         maintainAspectRatio: false,
-        plugins: { 
-          legend: { 
-            position: 'bottom',
-            labels: { font: { size: 11, weight: 600 }, usePointStyle: true, padding: 14 } 
-          }, 
-          tooltip: { 
-            mode: 'index', 
-            intersect: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true } },
+          tooltip: {
             callbacks: {
-              title: function(tooltipItems) {
-                return tooltipItems[0].label; 
-              }
-            }
-          } 
+              footer: (items) => {
+                const i = items[0]?.dataIndex ?? 0;
+                const total = (enviadas[i] || 0) + (validadas[i] || 0);
+                return `Total: ${total}`;
+              },
+            },
+          },
         },
         scales: {
-          x: { 
-            stacked: true, 
-            grid: { display: false }, 
-            ticks: { 
-              font: { size: 10, weight: 600 },
-              maxRotation: 45, 
-              minRotation: 45,
-              callback: function(this: any, value: any) { 
-                const label = this.getLabelForValue(value as number) || ''; 
-                return label.length > 18 ? label.substring(0, 18) + '…' : label; 
-              } 
-            } 
+          x: {
+            grid: { display: false },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 0,
+              autoSkip: true,
+              callback: function (value) {
+                const label = this.getLabelForValue(value as number) || '';
+                return label.length > 18 ? label.slice(0, 16) + '…' : label;
+              },
+            },
           },
-          y: { 
-            stacked: true, 
-            beginAtZero: true, 
-            grid: { color: '#f1f5f9' }, 
-            ticks: { precision: 0, font: { size: 11 } } 
-          }
-        }
-      }
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0, stepSize: 1 },
+          },
+        },
+      },
+    });
+  }
+}
+
+  private renderCarreraEconomiaChart(fichas: any[], carreras: Carrera[]): void {
+    if (!this.carreraEconomiaChartCanvas) return;
+
+    const labels: string[] = [];
+    const altos: number[] = [];
+    const medios: number[] = [];
+    const bajos: number[] = [];
+
+    const carreraFiltro = this.filtros().carreraId;
+    const lista = carreraFiltro
+      ? carreras.filter((c) => c.id === carreraFiltro)
+      : carreras;
+
+    lista.forEach((carrera) => {
+      labels.push(carrera.nombre);
+      const deCarrera = fichas.filter((x) => x.usuario?.carrera_id === carrera.id);
+      altos.push(
+        deCarrera.filter((x) =>
+          (x.nivelEconomico?.nombre || '').toLowerCase().includes('alto'),
+        ).length,
+      );
+      medios.push(
+        deCarrera.filter((x) =>
+          (x.nivelEconomico?.nombre || '').toLowerCase().includes('medio'),
+        ).length,
+      );
+      bajos.push(
+        deCarrera.filter((x) =>
+          (x.nivelEconomico?.nombre || '').toLowerCase().includes('bajo'),
+        ).length,
+      );
+    });
+
+    const ctx = this.carreraEconomiaChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+    this.carreraEconomiaChart?.destroy();
+
+    this.carreraEconomiaChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels.length ? labels : ['Sin datos'],
+        datasets: [
+          { label: 'Alto', data: altos.length ? altos : [0], backgroundColor: '#10b981', borderRadius: 4 },
+          { label: 'Medio', data: medios.length ? medios : [0], backgroundColor: '#f59e0b', borderRadius: 4 },
+          { label: 'Bajo', data: bajos.length ? bajos : [0], backgroundColor: '#ef4444', borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true } },
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        },
+      },
     });
   }
 
-  pctCondicion(total: number): number {
-    const t = this.totalNee();
-    return t ? Math.round((total / t) * 100) : 0;
+  private renderEstadoChart(fichas: any[]): void {
+    if (!this.estadoChartCanvas) return;
+
+    const estados = ['BORRADOR', 'ENVIADA', 'VALIDADO', 'RECHAZADO', 'OBSERVADO'];
+    const colores = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#64748b'];
+    const data = estados.map(
+      (e) => fichas.filter((f) => f.estado_ficha === e).length,
+    );
+
+    const ctx = this.estadoChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+    this.estadoChart?.destroy();
+
+    this.estadoChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: estados,
+        datasets: [{ data, backgroundColor: colores, borderWidth: 2, borderColor: '#fff' }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+        },
+      },
+    });
+  }
+
+  private renderEconomiaChart(fichas: any[]): void {
+    if (!this.economiaChartCanvas) return;
+
+    const conteo: Record<string, number> = {};
+    fichas.forEach((f) => {
+      const n = f.nivelEconomico?.nombre || 'SIN CLASIFICAR';
+      conteo[n] = (conteo[n] || 0) + 1;
+    });
+
+    const labels = Object.keys(conteo);
+    const data = Object.values(conteo);
+
+    const ctx = this.economiaChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+    this.economiaChart?.destroy();
+
+    this.economiaChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['Sin datos'],
+        datasets: [
+          {
+            data: data.length ? data : [0],
+            backgroundColor: labels.length
+              ? ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#64748b']
+              : ['#cbd5e1'],
+            borderWidth: 2,
+            borderColor: '#fff',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+        },
+      },
+    });
+  }
+
+  // ===================== EXPORT =====================
+
+  private buildQueryParams(): string {
+    const f = this.filtros();
+    const params = new URLSearchParams();
+    if (f.periodoId) params.set('periodo_id', f.periodoId);
+    if (f.carreraId) params.set('carrera_id', f.carreraId);
+    if (f.cicloId) params.set('ciclo_id', f.cicloId);
+    if (f.etnia) params.set('etnia', f.etnia);
+    if (f.sexo) params.set('sexo', f.sexo);
+    if (f.zona) params.set('zona_residencia', f.zona);
+    if (f.estadoFicha) params.set('estado_ficha', f.estadoFicha);
+    if (f.nivelEconomico) params.set('nivel_economico', f.nivelEconomico);
+    return params.toString();
+  }
+
+  private getAuthHeaders(): HeadersInit {
+    const token =
+      localStorage.getItem('azuaycare_access_token') ||
+      localStorage.getItem('access_token') ||
+      '';
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  private async descargarBlob(url: string, options: RequestInit, nombreArchivo: string) {
+    // ACTUALIZADO: Activamos el estado de exportación
+    this.isExporting.set(true);
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Error ${res.status} al descargar`);
+      }
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = nombreArchivo;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      // ACTUALIZADO: Desactivamos el estado de exportación al terminar (éxito o error)
+      this.isExporting.set(false);
+    }
+  }
+
+  /** Body alineado a FiltroReporteDto */
+  private buildFiltroBody() {
+    const f = this.filtros();
+    return {
+      periodo_id: f.periodoId || this.periodoActivo()?.id || undefined,
+      carrera_id: f.carreraId || undefined,
+      ciclo_id: f.cicloId || undefined,
+      etnia: f.etnia || undefined,
+      sexo: f.sexo || undefined,
+      zona_residencia: f.zona || undefined,
+      estado_ficha: f.estadoFicha || undefined,
+      nivel_economico: f.nivelEconomico || undefined,
+    };
+  }
+
+  /** Excel oficial de matriz socioeconómica (GET, solo periodo) */
+  async descargarReporteExcel(): Promise<void> {
+    const periodo = this.filtros().periodoId || this.periodoActivo()?.id;
+    if (!periodo) {
+      alert('Selecciona un periodo para exportar el Excel.');
+      return;
+    }
+    try {
+      await this.descargarBlob(
+        `${environment.apiUrl}/reportes/socioeconomico/periodo/${periodo}`,
+        { method: 'GET', headers: this.getAuthHeaders() },
+        `Matriz_Socioeconomica_${periodo}.xlsx`,
+      );
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo descargar el Excel.');
+    }
+  }
+
+  /** PDF filtrado (POST que SÍ existe en tu controller) */
+  async descargarReportePdf(): Promise<void> {
+    const periodo = this.filtros().periodoId || this.periodoActivo()?.id;
+    if (!periodo) {
+      alert('Selecciona un periodo para exportar el PDF.');
+      return;
+    }
+    try {
+      await this.descargarBlob(
+        `${environment.apiUrl}/reportes/dataset-filtrado/pdf`,
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.buildFiltroBody()),
+        },
+        `Reporte_Filtrado_${Date.now()}.pdf`,
+      );
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo descargar el PDF.');
+    }
+  }
+
+  /** (Opcional) Excel con los mismos filtros del panel */
+  async descargarExcelFiltrado(): Promise<void> {
+    try {
+      await this.descargarBlob(
+        `${environment.apiUrl}/reportes/dataset-filtrado/excel`,
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.buildFiltroBody()),
+        },
+        `Reporte_Filtrado_${Date.now()}.xlsx`,
+      );
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo descargar el Excel filtrado.');
+    }
   }
 }

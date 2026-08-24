@@ -31,7 +31,8 @@ export interface FormularioUI extends Formulario {
   estado_ui: EstadoUI;
 }
 
-const AUTOSAVE_KEY = 'azuaycare_autosave_ficha';
+const AUTOSAVE_PREFIX = 'azuaycare_autosave_ficha_';
+const AUTOSAVE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const NUMERIC_REGEX = /^(0|[1-9]\d*)(\.\d{1,2})?$/;
 
@@ -152,6 +153,72 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.secciones().some(s => s.tipo_seccion === 'FINANCIERA')
   );
 
+  cedulaEstudiante = computed(() => {
+    const ficha = this.fichaActiva();
+    const perfil = this.perfilEstudiante();
+    const user = this.authService.user() as any;
+    const valores = this.valormap();
+
+    // 🔥 DEBUG: Vamos a ver qué tenemos disponible en este momento exacto
+    console.log('=========================================');
+    console.log('🔥 [DEBUG COMPUTED] Calculando cedulaEstudiante...');
+    console.log('-> Ficha activa (Backend):', ficha);
+    console.log('-> authService.user (Token):', user);
+    console.log('-> Perfil Estudiante (Signal):', perfil);
+
+    let cedula =
+      ficha?.usuario?.cedula ||
+      user?.cedula ||
+      user?.identificacion || 
+      user?.numero_documento ||
+      user?.usuario?.cedula ||
+      user?.usuario?.identificacion ||
+      perfil?.cedula ||
+      '';
+
+    console.log('🔥 [DEBUG COMPUTED] Cédula encontrada en perfil/fuentes directas:', cedula || 'VACÍO');
+
+    if (!cedula || cedula === 'N/A') {
+      console.log('🔥 [DEBUG COMPUTED] Buscando cédula en las respuestas de la ficha (valormap)...');
+      for (const sec of this.secciones()) {
+        for (const p of sec.preguntas || []) {
+          const codigo = (p.codigo_sistema || '').toUpperCase();
+          const enunciado = (p.enunciado || '').toLowerCase();
+          
+          const esCedula =
+            codigo === 'CEDULA' ||
+            codigo === 'REGISTRO_UNICO' ||
+            codigo === 'DOCUMENTO_IDENTIDAD' ||
+            enunciado.includes('cédula') ||
+            enunciado.includes('cedula') ||
+            enunciado.includes('identificación') ||
+            enunciado.includes('identificacion') ||
+            enunciado.includes('registro único') ||
+            enunciado.includes('registro unico');
+
+          if (esCedula) {
+             console.log(`🔥 [DEBUG COMPUTED] Pregunta candidata encontrada -> ID: ${p.id}, Enunciado: "${p.enunciado}"`);
+             console.log(`🔥 [DEBUG COMPUTED] Valor guardado para esta pregunta:`, valores[p.id]);
+          }
+
+          if (esCedula && valores[p.id] && String(valores[p.id]).trim() !== '') {
+            cedula = String(valores[p.id]);
+            console.log('🔥 [DEBUG COMPUTED] ¡Cédula encontrada en la respuesta! ->', cedula);
+            break;
+          }
+        }
+        if (cedula && cedula !== 'N/A') break;
+      }
+    }
+
+    const limpia = String(cedula || '').trim();
+    console.log('🔥 [DEBUG COMPUTED] Cédula FINAL que se mostrará:', limpia === '' ? 'VACÍO' : limpia);
+    console.log('=========================================');
+
+    if (!limpia || limpia === 'N/A') return '—';
+    return limpia;
+  });
+
   resumenRespuestas = computed<Record<string, string>>(() => {
     const map: Record<string, string> = {};
     const valores = this.valormap();
@@ -182,7 +249,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   get evidenciasGroup(): FormGroup { return this.respuestasForm.get('evidencias') as FormGroup; }
 
   ngOnInit(): void {
-    this.recuperarAutosaveValido();
     this.cargarPerfilUsuario();
     this.cargarDatosEstudiante();
 
@@ -195,39 +261,143 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         this.valormap.set(val.respuestas || {});
         this.limpiarPreguntasOcultas();
         this.recalcularTotalesFinancieros();
-        
-        const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave));
+        this.persistirAutosave();
         setTimeout(() => this.isSavingLocal.set(false), 500);
       });
   }
 
-  private recuperarAutosaveValido(): void {
-    const saved = localStorage.getItem(AUTOSAVE_KEY);
-    if (saved) {
-      try {
-        this.autosaveData = JSON.parse(saved);
-      } catch (e) {
-        localStorage.removeItem(AUTOSAVE_KEY);
-        this.autosaveData = null;
+  // ---------- AUTOSAVE 24h POR FICHA ----------
+
+  private getAutosaveKey(fichaId?: string): string {
+    const id = fichaId || this.fichaActiva()?.id || 'temp';
+    return `${AUTOSAVE_PREFIX}${id}`;
+  }
+
+  private recuperarAutosaveValido(fichaId?: string): void {
+    const key = this.getAutosaveKey(fichaId);
+    const saved = localStorage.getItem(key);
+    this.autosaveData = null;
+
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      const ts = Number(parsed?.savedAt || 0);
+
+      if (!ts || Date.now() - ts > AUTOSAVE_TTL_MS) {
+        localStorage.removeItem(key);
+        return;
       }
+
+      this.autosaveData = parsed;
+    } catch {
+      localStorage.removeItem(key);
     }
   }
 
-  cargarPerfilUsuario(): void {
-    const user = this.authService.user();
-    if (user) {
-      this.perfilEstudiante.set({
-        cedula: user.cedula || 'N/A',
-        rol: (user.rol as any) || 'ESTUDIANTE',
-        correo: user.email || user.nombre,
-        carrera: (user as any).carrera || 'General',
-        ciclo: (user as any).ciclo || 'N/A',
-        periodoAcademico: (user as any).periodo || 'Actual',
-        estadoMatricula: (user as any).estadoMatricula || 'MATRICULADO'
-      });
-    }
+  private persistirAutosave(): void {
+    if (!this.esEditable()) return;
+
+    const fichaId = this.fichaActiva()?.id;
+    if (!fichaId) return;
+
+    const val = this.respuestasForm.getRawValue();
+    const dataToSave = {
+      ...val,
+      seccionIndex: this.seccionActualIndex(),
+      fichaId,
+      formularioId: this.formularioActivo()?.id,
+      savedAt: Date.now(),
+    };
+
+    localStorage.setItem(this.getAutosaveKey(fichaId), JSON.stringify(dataToSave));
   }
+
+  private borrarAutosave(fichaId?: string): void {
+    const id = fichaId || this.fichaActiva()?.id;
+    if (id) localStorage.removeItem(this.getAutosaveKey(id));
+  }
+
+  // ---------- PERFIL / CÉDULA ----------
+
+  cargarPerfilUsuario(): void {
+    const user = this.authService.user() as any;
+    
+    // 🔥 DEBUG: Vemos qué objeto de usuario devuelve tu servicio de Auth
+    console.log('🔥 [DEBUG INIT] Ejecutando cargarPerfilUsuario()...');
+    console.log('🔥 [DEBUG INIT] El authService devolvió:', user);
+
+    if (!user) return;
+
+    this.perfilEstudiante.set({
+      cedula: user.cedula || user.identificacion || user.numero_documento || user.usuario?.cedula || user.usuario?.identificacion || '',
+      rol: user.rol || 'ESTUDIANTE',
+      correo: user.email || user.email_institucional || user.nombre || '',
+      carrera: user.carrera?.nombre || user.carrera || 'General',
+      ciclo: user.ciclo?.nombre || user.ciclo || 'N/A',
+      periodoAcademico: user.periodo || 'Actual',
+      estadoMatricula: user.estadoMatricula || 'MATRICULADO',
+    });
+    
+    console.log('🔥 [DEBUG INIT] Perfil estudiante guardado en Signal:', this.perfilEstudiante());
+  }
+
+  private sincronizarCedulaDesdeFicha(): void {
+    const cedula = this.fichaActiva()?.usuario?.cedula;
+    if (!cedula) return;
+    this.perfilEstudiante.update((p) => (p ? { ...p, cedula } : p));
+  }
+
+  private precargarCamposPerfil(): void {
+    const user = this.authService.user() as any;
+    const perfil = this.perfilEstudiante();
+    
+    const cedula = user?.cedula || user?.identificacion || user?.numero_documento || user?.usuario?.cedula || perfil?.cedula;
+    
+    // 🔥 DEBUG: Vemos si la precarga detectó la cédula
+    console.log('🔥 [DEBUG PRECARGA] Intentando precargar cédula en formulario. Cédula a inyectar:', cedula || 'VACÍO');
+    
+    if (!cedula || cedula === 'N/A') return;
+
+    for (const sec of this.secciones()) {
+      for (const p of sec.preguntas || []) {
+        const codigo = ((p as any).codigo_sistema || '').toUpperCase();
+        const enunciado = (p.enunciado || '').toLowerCase();
+
+        const esCedula =
+          codigo === 'CEDULA' ||
+          codigo === 'REGISTRO_UNICO' ||
+          codigo === 'DOCUMENTO_IDENTIDAD' ||
+          enunciado.includes('cédula') ||
+          enunciado.includes('cedula') ||
+          enunciado.includes('identificación') ||
+          enunciado.includes('identificacion') ||
+          enunciado.includes('registro único') ||
+          enunciado.includes('registro unico');
+
+        if (!esCedula) continue;
+
+        const ctrl = this.respuestasGroup.get(p.id);
+        if (!ctrl) continue;
+
+        const actual = ctrl.value;
+        const vacio =
+          actual === null ||
+          actual === undefined ||
+          actual === '' ||
+          (Array.isArray(actual) && actual.length === 0);
+
+        if (vacio) {
+          console.log(`🔥 [DEBUG PRECARGA] Se rellenó automáticamente la pregunta ${p.id} con:`, cedula);
+          ctrl.setValue(cedula, { emitEvent: false });
+        }
+      }
+    }
+
+    this.valormap.set(this.respuestasGroup.getRawValue());
+  }
+
+  // ---------- NAVEGACIÓN DE PASOS ----------
 
   irAPaso(index: number): void {
     if (index <= this.seccionActualIndex() || this.validarSeccionActual()) {
@@ -319,11 +489,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   private guardarPasoEnLocal(): void {
-    if (!this.esEditable()) return;
-    const currentData = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || '{}');
-    currentData.seccionIndex = this.seccionActualIndex();
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(currentData));
+    this.persistirAutosave();
   }
+
+  // ---------- CARGA INICIAL ----------
 
   cargarDatosEstudiante(): void {
     this.isLoading.set(true);
@@ -357,7 +526,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           this.vistaActual.set('LISTA');
           this.isLoading.set(false);
         },
-        error: (err) => {
+        error: () => {
           this.toastService.show('Error de conexión al cargar tus datos.', 'error');
           this.isLoading.set(false);
         }
@@ -382,6 +551,8 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     if (fichaExistente) {
       this.fichaActiva.set(fichaExistente);
+      this.sincronizarCedulaDesdeFicha();
+      this.recuperarAutosaveValido(fichaExistente.id);
       this.cargarEstructuraFormulario(formularioId);
     } else {
       this.crearNuevaFicha(pActivo.id, formularioId);
@@ -390,20 +561,21 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   volverALista(): void {
     if (this.isLoading() || this.enviando()) return;
+    
     this.vistaActual.set('LISTA');
     this.fichaActiva.set(null);
     this.formularioActivo.set(null);
     this.seccionActualIndex.set(0);
     this.mostrarBannerPrecarga.set(false);
+    this.autosaveData = null;
 
     this.respuestasForm = this.fb.group({
       respuestas: this.fb.group({}),
       matrices: this.fb.group({}),
-      evidencias: this.fb.group({}) 
+      evidencias: this.fb.group({})
     });
-
-    this.recuperarAutosaveValido();
-  } 
+    this.cargarDatosEstudiante(); 
+  }
 
   evaluarPrecarga(fichas: FichaRevision[]): void {
     const tieneRespuestasReales = this.respuestasBDCache.length > 0;
@@ -432,28 +604,19 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         next: (data) => {
           if (data?.respuestas_transferidas) {
             this.mostrarBannerPrecarga.set(false);
-            this.toastService.show(
-              data.message || '¡Respuestas importadas!',
-              'success',
-            );
-            localStorage.removeItem(AUTOSAVE_KEY);
+            this.toastService.show(data.message || '¡Respuestas importadas!', 'success');
+            this.borrarAutosave();
             this.autosaveData = null;
             this.forzarRecarga();
           } else {
-            this.toastService.show(
-              data?.message || 'No se encontraron datos para precargar.',
-              'info',
-            );
+            this.toastService.show(data?.message || 'No se encontraron datos para precargar.', 'info');
             this.isLoading.set(false);
           }
         },
         error: (err) => {
-          this.toastService.show(
-            err?.error?.message || 'Error al importar las respuestas.',
-            'error',
-          );
+          this.toastService.show(err?.error?.message || 'Error al importar las respuestas.', 'error');
           this.isLoading.set(false);
-        },
+        }
       });
   }
 
@@ -461,7 +624,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const ficha = this.fichaActiva();
     if (!ficha) return;
 
-    localStorage.removeItem(AUTOSAVE_KEY);
+    this.borrarAutosave(ficha.id);
     this.autosaveData = null;
 
     this.respuestasGroup.reset({}, { emitEvent: false });
@@ -470,7 +633,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.valormap.set({});
 
     this.toastService.show('Sincronizando con la base de datos...', 'info');
-    this.isLoading.set(true); 
+    this.isLoading.set(true);
 
     this.cargarEstructuraFormulario(ficha.formulario_id);
   }
@@ -486,15 +649,18 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (nuevaFicha: FichaRevision) => {
           this.fichaActiva.set(nuevaFicha);
+          this.sincronizarCedulaDesdeFicha();
+          this.recuperarAutosaveValido(nuevaFicha.id);
           const fichasActualizadas = [...this.misFichas(), nuevaFicha];
           this.misFichas.set(fichasActualizadas);
           this.cargarEstructuraFormulario(formularioId);
         },
-        error: (err) => {
+        error: () => {
           this.fichaService.getMisFichas().subscribe(fichas => {
             const found = fichas.find(f => f.periodo_id === periodoId && f.formulario_id === formularioId);
             if (found) {
               this.fichaActiva.set(found);
+              this.recuperarAutosaveValido(found.id);
               this.cargarEstructuraFormulario(found.formulario_id);
             } else {
               this.toastService.show('Error al crear o buscar tu ficha.', 'error');
@@ -513,13 +679,13 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       dependencias: this.dependenciasService.getDependenciasByFormulario(formularioId),
       respuestas: fichaActual
         ? this.http
-            .get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
-            .pipe(
-              catchError(() => {
-                this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
-                return of([] as any[]);
-              })
-            )
+          .get<any[]>(`${environment.apiUrl}/respuestas-formulario/ficha/${fichaActual.id}`)
+          .pipe(
+            catchError(() => {
+              this.toastService.show('No se pudieron cargar las respuestas guardadas.', 'error');
+              return of([] as any[]);
+            })
+          )
         : of([] as any[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -591,6 +757,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     preguntasTodas.forEach((p) => this.construirControlesPreguntas(p));
     this.aplicarRespuestasGuardadas(this.respuestasBDCache);
+    this.precargarCamposPerfil();
     this.recalcularTotalesFinancieros();
 
     if (!this.esEditable()) {
@@ -696,7 +863,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         validators.push(Validators.pattern(NUMERIC_REGEX));
         validators.push(Validators.min(0));
       }
-      
+
       if (!this.respuestasGroup.contains(p.id)) {
         const savedVal = this.autosaveData?.respuestas?.[p.id] ?? '';
         this.respuestasGroup.addControl(p.id, this.fb.control(savedVal, validators));
@@ -717,7 +884,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     const checked = (event.target as HTMLInputElement).checked;
     const formArray = this.respuestasGroup.get(preguntaId) as FormArray;
-
     if (!formArray) return;
 
     if (checked) {
@@ -956,7 +1122,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   aplicarRespuestasGuardadas(respuestasBD: any[]): void {
-    if (!respuestasBD || respuestasBD.length === 0) return;
+    if (!respuestasBD || respuestasBD.length === 0) {
+      this.precargarCamposPerfil();
+      return;
+    }
 
     const valoresParaElFormulario: any = {};
     const evidenciasParaElFormulario: any = {};
@@ -1012,13 +1181,16 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
       this.evidenciasGroup.enable({ emitEvent: false });
       this.matricesGroup.enable({ emitEvent: false });
     }
+
+    // Si la cédula no vino en BD (p.ej. ficha rechazada sin esa respuesta), la rellenamos del perfil
+    this.precargarCamposPerfil();
   }
 
   descargarPdfResumen(fichaId: string): void {
     const ficha = this.fichaActiva();
     const cedula = ficha?.usuario?.cedula || fichaId.slice(0, 8);
     this.descargaService.descargar(
-      `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf-resumen`, 
+      `${environment.apiUrl}/fichas-respondidas/${fichaId}/pdf-resumen`,
       `Resumen_Ficha_${cedula}.pdf`,
       'Hubo un problema al generar tu comprobante PDF.'
     );
@@ -1151,11 +1323,11 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   private finalizarEnvio(): void {
     this.enviando.set(false);
-    localStorage.removeItem(AUTOSAVE_KEY);
+    this.borrarAutosave();
     this.toastService.show('¡Ficha socioeconómica enviada exitosamente a Bienestar!', 'success');
-    
+
     const fichaId = this.fichaActiva()?.id;
-    
+
     this.http.get<any>(`${environment.apiUrl}/fichas-respondidas/${fichaId}/resumen-vulnerabilidad`)
       .subscribe({
         next: (res) => {
@@ -1163,7 +1335,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
           this.vistaActual.set('RESUMEN_FINAL');
         },
         error: () => {
-          this.vistaActual.set('RESUMEN_FINAL'); 
+          this.vistaActual.set('RESUMEN_FINAL');
         }
       });
   }
@@ -1177,7 +1349,6 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     if (fileList && fileList.length > 0) {
       const file = fileList[0];
       const fichaId = this.fichaActiva()?.id;
-
       if (!fichaId) return;
 
       this.toastService.show('Subiendo evidencia, por favor espera...', 'info');
@@ -1224,9 +1395,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.esEditable()) {
-      const val = this.respuestasForm.getRawValue();
-      const dataToSave = { ...val, seccionIndex: this.seccionActualIndex() };
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave));
+      this.persistirAutosave();
     }
   }
 }

@@ -1060,3 +1060,214 @@
   .kpi-body { align-items: center; }
   .kpi-label, .kpi-caption { white-space: normal; }
 }
+.filters-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.1rem 1.25rem 1.15rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+.filters-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.filters-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.btn-clear-filters-sm {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.7rem;
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+.filter-field label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+}
+.filter-field select,
+.filter-field input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.875rem;
+  background: #fff;
+}
+.filter-search {
+  grid-column: span 2;
+}
+@media (max-width: 640px) {
+  .filter-search { grid-column: span 1; }
+}
+/* ===== EXPLORADOR DE POBLACIÓN – HEADER + BOTONES ===== */
+.poblacion-card,
+.explorer-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 1.15rem 1.25rem 1.25rem;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(15, 23, 42, 0.04));
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.poblacion-header,
+.explorer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.poblacion-header-text h3,
+.explorer-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.poblacion-header-text p,
+.explorer-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+}
+
+/* Grupo de botones Excel / PDF / Limpiar */
+.poblacion-actions,
+.explorer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.btn-export,
+.btn-clear-explorer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Excel */
+.btn-export-excel {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.btn-export-excel:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  transform: translateY(-1px);
+}
+
+/* PDF */
+.btn-export-pdf {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-export-pdf:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+/* Limpiar */
+.btn-clear-explorer {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.btn-clear-explorer:hover:not(:disabled) {
+  background: #fff1f2;
+  color: #e11d48;
+  border-color: #fecdd3;
+}
+
+.btn-export:disabled,
+.btn-clear-explorer:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Tabla resultados (por si se desborda) */
+.poblacion-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .poblacion-header,
+  .explorer-header {
+    flex-direction: column;
+  }
+
+  .poblacion-actions,
+  .explorer-actions {
+    width: 100%;
+  }
+
+  .poblacion-actions .btn-export,
+  .poblacion-actions .btn-clear-explorer,
+  .explorer-actions .btn-export,
+  .explorer-actions .btn-clear-explorer {
+    flex: 1 1 auto;
+  }
+}

@@ -29,11 +29,12 @@ export class UsuarioService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  // El propio estudiante completa su registro (cédula, carrera y ciclo)
-  // la primera vez que ingresa con Google. El backend identifica al usuario
-  // por el token JWT, no hace falta enviar el id.
-  completarPerfil(dto: CompletarPerfilDto): Observable<Usuario> {
-    return this.http.patch<Usuario>(`${this.apiUrl}/perfil/completar`, dto);
+    getEstadoPerfil() {
+    return this.http.get<any>(`${this.apiUrl}/perfil/estado`);
+  }
+
+  completarPerfil(payload: any) {
+    return this.http.patch(`${this.apiUrl}/perfil/completar`, payload);
   }
 
   update(id: string, data: any) {
@@ -49,4 +50,5 @@ export class UsuarioService {
     formData.append('foto', file);
     return this.http.patch<Usuario>(`${this.apiUrl}/foto`, formData);
   }
+  
 }

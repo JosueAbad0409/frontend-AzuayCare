@@ -59,7 +59,7 @@
           <tr class="header-titles">
             <th scope="col" class="col-orden text-center">Orden</th>
             <th scope="col" class="col-nombre">Nombre del Ciclo</th>
-            <th scope="col" class="col-carrera">Carrera Asignada</th>
+            <th scope="col" class="col-carrera">Carrera(s) Asignada(s)</th>
             <th scope="col" class="col-estado text-center">Estado</th>
             <th scope="col" class="col-acc text-right">Acciones</th>
           </tr>
@@ -117,9 +117,9 @@
               <td class="col-nombre" data-label="Nombre del Ciclo">
                 <strong class="ciclo-title-text">{{ ciclo.nombre }}</strong>
               </td>
-              <td class="col-carrera text-muted" data-label="Carrera Asignada">
-                {{ ciclo.carrera?.nombre || getCarreraNombre(ciclo.carrera_id) }}
-              </td>
+              <td class="col-carrera text-muted" data-label="Carrera(s) Asignada(s)">
+  {{ getCarrerasTexto(ciclo) }}
+</td>
               <td class="col-estado text-center" data-label="Estado">
                 <span class="badge" [ngClass]="!ciclo.fecha_desactivacion ? 'badge-success' : 'badge-danger'">
                   <i class="fas" [ngClass]="!ciclo.fecha_desactivacion ? 'fa-check-circle' : 'fa-times-circle'" aria-hidden="true"></i>

@@ -1,4 +1,6 @@
 <main class="dashboard-shell">
+
+  <!-- ========== HERO ========== -->
   <header class="hero-card slide-up">
     <div class="hero-content">
       <div class="hero-badge-group">
@@ -8,168 +10,459 @@
         </span>
         <span class="hero-period-pill" role="status">
           <i class="fas fa-calendar-alt" aria-hidden="true"></i>
-          <span>Periodo Activo: <strong>{{ periodoActivo()?.nombre || 'Sin periodo' }}</strong></span>
+          <span>
+            Periodo Activo:
+            <strong>{{ periodoActivo()?.nombre || 'Sin periodo' }}</strong>
+          </span>
         </span>
       </div>
       <h1 class="hero-title">Tablero de Control Socioeconómico</h1>
       <p class="hero-description">
-        Monitoreo analítico integral de vulnerabilidad, atenciones prioritarias y seguimiento cualitativo de fichas
-        institucionales.
+        Monitoreo analítico integral de vulnerabilidad, atenciones prioritarias y seguimiento
+        cualitativo de fichas institucionales. Filtra por carrera, ciclo, etnia y más; exporta a Excel o PDF.
       </p>
     </div>
 
-    <nav class="hero-actions" aria-label="Navegación directa">
+    <nav class="hero-actions" aria-label="Acciones del tablero">
+      <!-- BOTÓN EXCEL (ACTUALIZADO) -->
+      <button type="button" class="btn btn-hero-outline" (click)="descargarReporteExcel()" [disabled]="isExporting()">
+        @if (isExporting()) {
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <span>Generando...</span>
+        } @else {
+        <i class="fas fa-file-excel" aria-hidden="true"></i>
+        <span>Excel</span>
+        }
+      </button>
+
+      <!-- BOTÓN PDF (ACTUALIZADO) -->
+      <button type="button" class="btn btn-hero-outline" (click)="descargarReportePdf()" [disabled]="isExporting()">
+        @if (isExporting()) {
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <span>Generando...</span>
+        } @else {
+        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+        <span>PDF</span>
+        }
+      </button>
+
       <a routerLink="/admin/reportes" class="btn btn-hero-outline">
-        <i class="fas fa-file-excel" aria-hidden="true"></i><span>Reportes</span>
+        <i class="fas fa-chart-line" aria-hidden="true"></i>
+        <span>Reportes</span>
       </a>
       <a routerLink="/admin/prioridad-atencion" class="btn btn-hero-outline">
-        <i class="fas fa-heartbeat" aria-hidden="true"></i><span>Prioridad Atención</span>
+        <i class="fas fa-heartbeat" aria-hidden="true"></i>
+        <span>Prioridad</span>
       </a>
       <a routerLink="/admin/revision-fichas" class="btn btn-hero-primary">
-        <i class="fas fa-clipboard-check" aria-hidden="true"></i><span>Revisar Fichas</span>
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        <span>Revisar Fichas</span>
       </a>
     </nav>
   </header>
 
-  <section class="kpi-section slide-up delay-1" aria-label="Métricas principales">
+  <section class="filters-panel slide-up" aria-label="Explorador de población">
+    <div class="poblacion-header">
+  <div class="poblacion-header-text">
+    <h3>
+      <i class="fas fa-users"></i>
+      Explorador de población
+    </h3>
+    <p>Combina los filtros como quieras (sexo, zona, carrera, periodo...). Los resultados se actualizan abajo y son los que se exportan.</p>
+  </div>
+
+  <div class="poblacion-actions">
+    <button
+      type="button"
+      class="btn-export btn-export-excel"
+      (click)="exportarExcelPoblacion()"
+      [disabled]="isExporting() || cargandoPoblacion()"
+    >
+      <i class="fas" [ngClass]="isExporting() ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+      <span>Excel</span>
+    </button>
+
+    <button
+      type="button"
+      class="btn-export btn-export-pdf"
+      (click)="exportarPdfPoblacion()"
+      [disabled]="isExporting() || cargandoPoblacion()"
+    >
+      <i class="fas" [ngClass]="isExporting() ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+      <span>PDF</span>
+    </button>
+
+    <button
+      type="button"
+      class="btn-clear-explorer"
+      (click)="limpiarFiltrosPoblacion()"
+      [disabled]="isExporting()"
+    >
+      <i class="fas fa-eraser"></i>
+      <span>Limpiar</span>
+    </button>
+  </div>
+</div>
+
+    <div class="filters-grid">
+      <div class="filter-field">
+        <label>Periodo</label>
+        <select [ngModel]="filtrosPoblacion().periodoId" (ngModelChange)="setFiltroPoblacion('periodoId', $event)">
+          <option value="">Todos</option>
+          @for (p of periodosList(); track p.id) {
+          <option [value]="p.id">{{ p.nombre }}{{ p.activo ? ' (Activo)' : '' }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Carrera</label>
+        <select [ngModel]="filtrosPoblacion().carreraId" (ngModelChange)="setFiltroPoblacion('carreraId', $event)">
+          <option value="">Todas</option>
+          @for (c of carrerasList(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Ciclo</label>
+        <select [ngModel]="filtrosPoblacion().cicloId" (ngModelChange)="setFiltroPoblacion('cicloId', $event)">
+          <option value="">Todos</option>
+          @for (c of ciclosPoblacion(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Sexo</label>
+        <select [ngModel]="filtrosPoblacion().sexo" (ngModelChange)="setFiltroPoblacion('sexo', $event)">
+          <option value="">Todos</option>
+          <option value="Hombre">Hombre</option>
+          <option value="Mujer">Mujer</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Etnia</label>
+        <select [ngModel]="filtrosPoblacion().etnia" (ngModelChange)="setFiltroPoblacion('etnia', $event)">
+          <option value="">Todas</option>
+          @for (e of etnias; track e) {
+          <option [value]="e">{{ e }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Zona</label>
+        <select [ngModel]="filtrosPoblacion().zona" (ngModelChange)="setFiltroPoblacion('zona', $event)">
+          <option value="">Todas</option>
+          <option value="Urbano">Urbano</option>
+          <option value="Rural">Rural</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Discapacidad</label>
+        <select [ngModel]="filtrosPoblacion().tieneDiscapacidad"
+          (ngModelChange)="setFiltroPoblacion('tieneDiscapacidad', $event)">
+          <option value="">Todas</option>
+          <option value="true">Sí</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+
+      <div class="filter-field filter-search">
+        <label>Buscar</label>
+        <input type="search" placeholder="Nombre o cédula..." [ngModel]="filtrosPoblacion().busqueda"
+          (ngModelChange)="setFiltroPoblacion('busqueda', $event)" />
+      </div>
+    </div>
+
+    <!-- Resultados en vivo -->
+    <div class="filtered-students-panel" style="margin-top: 1rem;">
+      <div class="filtered-students-header">
+        <span class="filtered-students-title">
+          <i class="fas fa-list"></i>
+          Resultados del filtro
+        </span>
+        <span class="condition-count-badge">
+          {{ resultadosPoblacion().length }} persona(s)
+        </span>
+      </div>
+
+      @if (errorPoblacion()) {
+      <div class="alert error-alert">{{ errorPoblacion() }}</div>
+      }
+
+      @if (cargandoPoblacion()) {
+      <p>Cargando resultados...</p>
+      } @else if (resultadosPoblacion().length === 0) {
+      <div class="filtered-students-empty">
+        <i class="fas fa-user-slash"></i>
+        <p>Nadie coincide con esos criterios. Prueba quitar algún filtro.</p>
+      </div>
+      } @else {
+      <div class="table-wrapper">
+        <table class="students-table">
+          <thead>
+            <tr>
+              <th>Estudiante</th>
+              <th>Cédula</th>
+              <th>Carrera / Ciclo</th>
+              <th>Sexo</th>
+              <th>Zona</th>
+              <th>Etnia</th>
+              <th>Fecha nacimiento</th>
+              <th>Rango edad</th>
+              <th>Estado civil</th>
+              <th>Celular</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (r of resultadosPoblacion(); track r.cedula || $index) {
+            <tr>
+              <td>{{ r.nombres }} {{ r.apellidos }}</td>
+
+              <td>
+                {{ r.cedula || '—' }}
+              </td>
+
+              <td>
+                {{ r.carrera || '—' }} / {{ r.ciclo || '—' }}
+              </td>
+
+              <td>
+                {{ r.sexo || '—' }}
+              </td>
+
+              <td>
+                {{ r.zona_residencia || '—' }}
+              </td>
+
+              <td>
+                {{ r.etnia || '—' }}
+              </td>
+
+              <td>
+                {{ r.fecha_nacimiento | date:'dd/MM/yyyy' }}
+              </td>
+
+              <td>
+                {{ r.rango_edad || '—' }}
+              </td>
+
+              <td>
+                {{ r.estado_civil || '—' }}
+              </td>
+
+              <td>
+                {{ r.numero_celular || '—' }}
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+    </div>
+  </section>
+
+  <!-- ========== KPIs PRINCIPALES ========== -->
+  <section class="kpi-section slide-up delay-2" aria-label="Métricas principales">
     <div class="kpi-grid">
       <article class="kpi-card kpi-card-blue">
-        <div class="kpi-icon-wrapper icon-blue"><i class="fas fa-users" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-blue">
+          <i class="fas fa-users" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Registradas</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value">{{ totalFichas() || totalFichasEvaluadas() }}</h2> }
-          <span class="kpi-caption">Fichas en el sistema</span>
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value">{{ totalFichas() }}</h2>
+          }
+          <span class="kpi-caption">Fichas (según filtros)</span>
         </div>
       </article>
 
       <article class="kpi-card kpi-card-rose">
-        <div class="kpi-icon-wrapper icon-rose"><i class="fas fa-wheelchair" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-rose">
+          <i class="fas fa-wheelchair" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Prioridad / NEE</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value text-rose">{{ totalNee() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value text-rose">{{ totalNee() }}</h2>
+          }
           <span class="kpi-caption">Casos con vulnerabilidad</span>
         </div>
       </article>
 
       <article class="kpi-card kpi-card-indigo">
-        <div class="kpi-icon-wrapper icon-indigo"><i class="fas fa-paper-plane" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-indigo">
+          <i class="fas fa-paper-plane" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Enviadas</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value text-indigo">{{ fichasEnviadas() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value text-indigo">{{ fichasEnviadas() }}</h2>
+          }
           <span class="kpi-caption">Pendientes de revisión</span>
         </div>
       </article>
 
       <article class="kpi-card kpi-card-emerald">
-        <div class="kpi-icon-wrapper icon-emerald"><i class="fas fa-check-circle" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-emerald">
+          <i class="fas fa-check-circle" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Validadas</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value text-emerald">{{ fichasValidadas() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value text-emerald">{{ fichasValidadas() }}</h2>
+          }
           <span class="kpi-caption">Aprobadas</span>
         </div>
       </article>
 
       <article class="kpi-card kpi-card-red">
-        <div class="kpi-icon-wrapper icon-red"><i class="fas fa-times-circle" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-red">
+          <i class="fas fa-times-circle" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Rechazadas</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value text-red">{{ fichasRechazadas() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value text-red">{{ fichasRechazadas() }}</h2>
+          }
           <span class="kpi-caption">A corregir</span>
         </div>
       </article>
     </div>
   </section>
 
+  <!-- ========== KPIs SECUNDARIOS ========== -->
   <section class="kpi-section slide-up delay-2" aria-label="Configuración">
     <div class="kpi-grid kpi-grid-sub">
       <article class="kpi-card">
-        <div class="kpi-icon-wrapper icon-orange"><i class="fas fa-edit" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-orange">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Borradores</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value">{{ fichasBorrador() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value">{{ fichasBorrador() }}</h2>
+          }
         </div>
       </article>
 
       <article class="kpi-card">
-        <div class="kpi-icon-wrapper icon-teal"><i class="fas fa-graduation-cap" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-teal">
+          <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Carreras</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value">{{ totalCarreras() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value">{{ totalCarreras() }}</h2>
+          }
         </div>
       </article>
 
       <article class="kpi-card">
-        <div class="kpi-icon-wrapper icon-purple"><i class="fas fa-file-alt" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-purple">
+          <i class="fas fa-file-alt" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Formularios</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value">{{ totalFormularios() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value">{{ totalFormularios() }}</h2>
+          }
         </div>
       </article>
 
       <article class="kpi-card">
-        <div class="kpi-icon-wrapper icon-violet"><i class="fas fa-clipboard-list" aria-hidden="true"></i></div>
+        <div class="kpi-icon-wrapper icon-violet">
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+        </div>
         <div class="kpi-body">
           <span class="kpi-label">Evaluadas</span>
-          @if (isLoading()) { <div class="skeleton-loader kpi-skeleton"></div> }
-          @else { <h2 class="kpi-value">{{ totalFichasEvaluadas() }}</h2> }
+          @if (isLoading()) {
+          <div class="skeleton-loader kpi-skeleton"></div>
+          } @else {
+          <h2 class="kpi-value">{{ totalFichasEvaluadas() }}</h2>
+          }
         </div>
       </article>
     </div>
   </section>
 
-  <section class="interactive-kpi-section slide-up delay-3" aria-label="Filtros">
+  <!-- ========== FLUJO ECONÓMICO (ingresos / egresos) ========== -->
+  <section class="interactive-kpi-section slide-up delay-3" aria-label="Filtro económico">
     <div class="interactive-kpi-card">
       <div class="interactive-kpi-info">
         <h3>Explorador de Flujo Económico</h3>
-        <p>Busca estudiantes estableciendo rangos de dinero exactos.</p>
+        <p>Busca estudiantes estableciendo rangos de dinero exactos (sobre el conjunto ya filtrado arriba).</p>
         <div class="kpi-big-number">
           <i class="fas fa-search-dollar" aria-hidden="true"></i>
           <span>{{ estudiantesFiltrados() }}</span>
         </div>
-        <span class="kpi-subtitle">Estudiantes coinciden con tu filtro</span>
+        <span class="kpi-subtitle">Estudiantes coinciden con el filtro económico</span>
       </div>
 
       <div class="interactive-kpi-controls">
         <div class="filter-group">
-          <label for="ingreso-min"><i class="fas fa-arrow-up text-emerald" aria-hidden="true"></i> Ingresos ($)</label>
+          <label for="ingreso-min">
+            <i class="fas fa-arrow-up text-emerald" aria-hidden="true"></i> Ingresos ($)
+          </label>
           <div class="input-row">
             <input id="ingreso-min" type="number" placeholder="Mínimo" [ngModel]="ingresoMin()"
-              (ngModelChange)="ingresoMin.set($event)" aria-label="Ingresos mínimos">
+              (ngModelChange)="ingresoMin.set($event)" aria-label="Ingresos mínimos" />
             <span class="divider" aria-hidden="true">-</span>
             <input id="ingreso-max" type="number" placeholder="Máximo" [ngModel]="ingresoMax()"
-              (ngModelChange)="ingresoMax.set($event)" aria-label="Ingresos máximos">
+              (ngModelChange)="ingresoMax.set($event)" aria-label="Ingresos máximos" />
           </div>
         </div>
 
         <div class="filter-group">
-          <label for="egreso-min"><i class="fas fa-arrow-down text-rose" aria-hidden="true"></i> Egresos ($)</label>
+          <label for="egreso-min">
+            <i class="fas fa-arrow-down text-rose" aria-hidden="true"></i> Egresos ($)
+          </label>
           <div class="input-row">
             <input id="egreso-min" type="number" placeholder="Mínimo" [ngModel]="egresoMin()"
-              (ngModelChange)="egresoMin.set($event)" aria-label="Egresos mínimos">
+              (ngModelChange)="egresoMin.set($event)" aria-label="Egresos mínimos" />
             <span class="divider" aria-hidden="true">-</span>
             <input id="egreso-max" type="number" placeholder="Máximo" [ngModel]="egresoMax()"
-              (ngModelChange)="egresoMax.set($event)" aria-label="Egresos máximos">
+              (ngModelChange)="egresoMax.set($event)" aria-label="Egresos máximos" />
           </div>
         </div>
 
-        <button type="button" class="btn btn-clear-filters" (click)="limpiarFiltros()">
-          <i class="fas fa-eraser" aria-hidden="true"></i><span>Limpiar Filtros</span>
+        <button type="button" class="btn btn-clear-filters" (click)="limpiarFiltrosEconomicos()">
+          <i class="fas fa-eraser" aria-hidden="true"></i>
+          <span>Limpiar rangos</span>
         </button>
       </div>
+
       @if (hayFiltrosActivos()) {
       <div class="filtered-students-panel">
         <div class="filtered-students-header">
           <span class="filtered-students-title">
             <i class="fas fa-list" aria-hidden="true"></i>
-            Estudiantes que cumplen el filtro
+            Estudiantes que cumplen el filtro económico
           </span>
           <span class="condition-count-badge">{{ estudiantesFiltrados() }} resultado(s)</span>
         </div>
@@ -194,33 +487,24 @@
             <tbody>
               @for (f of estudiantesFiltradosList(); track f.id) {
               <tr>
-                <!-- Nombre + Cédula -->
                 <td>
                   <div class="student-cell">
                     <div class="student-name">{{ nombreEstudiante(f) }}</div>
                     <div class="student-cedula">{{ cedulaEstudiante(f) }}</div>
                   </div>
                 </td>
-
-                <!-- Carrera + Ciclo -->
                 <td>
                   <div class="academic-cell">
                     <div class="carrera">{{ carreraEstudiante(f) }}</div>
                     <div class="ciclo">{{ cicloEstudiante(f) }}</div>
                   </div>
                 </td>
-
-                <!-- Ingresos -->
                 <td class="text-right money income">
                   {{ f.total_ingresos | currency:'USD':'symbol':'1.0-0' }}
                 </td>
-
-                <!-- Egresos -->
                 <td class="text-right money expense">
                   {{ f.total_egresos | currency:'USD':'symbol':'1.0-0' }}
                 </td>
-
-                <!-- Balance -->
                 <td class="text-right money" [class.positive]="(f.balance_final || 0) >= 0"
                   [class.negative]="(f.balance_final || 0) < 0">
                   {{ f.balance_final | currency:'USD':'symbol':'1.0-0' }}
@@ -236,12 +520,16 @@
     </div>
   </section>
 
+  <!-- ========== GRÁFICOS ========== -->
   <section class="analytics-section slide-up delay-4" aria-label="Gráficos">
     <div class="analytics-grid">
+
       <article class="chart-card card-full">
         <header class="chart-card-header">
           <div class="chart-header-title">
-            <div class="icon-chart icon-indigo"><i class="fas fa-tasks" aria-hidden="true"></i></div>
+            <div class="icon-chart icon-indigo">
+              <i class="fas fa-tasks" aria-hidden="true"></i>
+            </div>
             <div>
               <h3>Flujo de Fichas por Carrera</h3>
               <p>Relación entre fichas Enviadas vs Validadas</p>
@@ -249,8 +537,7 @@
           </div>
           <div class="chart-header-actions">
             <select class="chart-type-selector" [ngModel]="tipoGraficoCarrera()"
-              (ngModelChange)="cambiarTipoGrafico('carrera', $event)"
-              aria-label="Seleccionar tipo de gráfico de carreras">
+              (ngModelChange)="cambiarTipoGrafico('carrera', $event)" aria-label="Tipo de gráfico de carreras">
               <option value="bar">Barras</option>
               <option value="pie">Pastel</option>
             </select>
@@ -265,7 +552,9 @@
       <article class="chart-card card-full">
         <header class="chart-card-header">
           <div class="chart-header-title">
-            <div class="icon-chart icon-purple"><i class="fas fa-university" aria-hidden="true"></i></div>
+            <div class="icon-chart icon-purple">
+              <i class="fas fa-university" aria-hidden="true"></i>
+            </div>
             <div>
               <h3>Distribución Económica por Carrera</h3>
               <p>Nivel adquisitivo (Alto, Medio, Bajo)</p>
@@ -281,7 +570,9 @@
       <article class="chart-card">
         <header class="chart-card-header">
           <div class="chart-header-title">
-            <div class="icon-chart icon-blue"><i class="fas fa-chart-pie" aria-hidden="true"></i></div>
+            <div class="icon-chart icon-blue">
+              <i class="fas fa-chart-pie" aria-hidden="true"></i>
+            </div>
             <div>
               <h3>Estado de Fichas</h3>
               <p>Desglose porcentual</p>
@@ -297,7 +588,9 @@
       <article class="chart-card">
         <header class="chart-card-header">
           <div class="chart-header-title">
-            <div class="icon-chart icon-emerald"><i class="fas fa-coins" aria-hidden="true"></i></div>
+            <div class="icon-chart icon-emerald">
+              <i class="fas fa-coins" aria-hidden="true"></i>
+            </div>
             <div>
               <h3>Nivel Socioeconómico</h3>
               <p>Relación ingreso/egreso</p>
@@ -313,7 +606,9 @@
       <article class="chart-card card-full">
         <header class="chart-card-header">
           <div class="chart-header-title">
-            <div class="icon-chart icon-rose"><i class="fas fa-heartbeat" aria-hidden="true"></i></div>
+            <div class="icon-chart icon-rose">
+              <i class="fas fa-heartbeat" aria-hidden="true"></i>
+            </div>
             <div>
               <h3>Condiciones Vulnerables Detectadas</h3>
               <p>Métricas acumuladas (NEE)</p>
@@ -326,9 +621,13 @@
           <div class="skeleton-loader chart-skeleton"></div>
           } @else if (condiciones().length === 0) {
           <div class="empty-state-box">
-            <div class="empty-icon-circle"><i class="fas fa-check" aria-hidden="true"></i></div>
+            <div class="empty-icon-circle">
+              <i class="fas fa-check" aria-hidden="true"></i>
+            </div>
             <p class="empty-state-title">Sin casos pendientes</p>
-            <p class="empty-state-text">No existen condiciones de vulnerabilidad registradas en este periodo.</p>
+            <p class="empty-state-text">
+              No existen condiciones de vulnerabilidad registradas con los filtros actuales.
+            </p>
           </div>
           } @else {
           <div class="conditions-list">
@@ -354,9 +653,12 @@
     </div>
   </section>
 
+  <!-- ========== ACCESO RÁPIDO ========== -->
   <section class="quick-access-section slide-up delay-5" aria-label="Módulos clave">
     <div class="section-title-group">
-      <h2 class="section-heading"><i class="fas fa-rocket heading-icon" aria-hidden="true"></i> Módulos Administrativos
+      <h2 class="section-heading">
+        <i class="fas fa-rocket heading-icon" aria-hidden="true"></i>
+        Módulos Administrativos
       </h2>
       <p class="section-subheading">Gestión directa y operaciones frecuentes</p>
     </div>
@@ -364,27 +666,45 @@
     <div class="quick-grid">
       <a routerLink="/admin/revision-fichas" class="quick-card card-critical">
         <span class="badge-critical">Acción Requerida</span>
-        <div class="quick-icon-wrapper icon-critical"><i class="fas fa-clipboard-check" aria-hidden="true"></i></div>
+        <div class="quick-icon-wrapper icon-critical">
+          <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        </div>
         <h3 class="quick-title">Revisión de Fichas</h3>
-        <p class="quick-desc">Validación, aprobación o rechazo de expedientes enviados por estudiantes.</p>
-        <span class="quick-link-action"><span>Ir a Revisión</span> <i class="fas fa-arrow-right"
-            aria-hidden="true"></i></span>
+        <p class="quick-desc">
+          Validación, aprobación o rechazo de expedientes enviados por estudiantes.
+        </p>
+        <span class="quick-link-action">
+          <span>Ir a Revisión</span>
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
 
       <a routerLink="/admin/prioridad-atencion" class="quick-card">
-        <div class="quick-icon-wrapper icon-rose"><i class="fas fa-heartbeat" aria-hidden="true"></i></div>
+        <div class="quick-icon-wrapper icon-rose">
+          <i class="fas fa-heartbeat" aria-hidden="true"></i>
+        </div>
         <h3 class="quick-title">Prioridad de Atención</h3>
-        <p class="quick-desc">Supervisión de casos NEE, embarazos, enfermedades y vulnerabilidades.</p>
-        <span class="quick-link-action"><span>Ver Casos</span> <i class="fas fa-arrow-right"
-            aria-hidden="true"></i></span>
+        <p class="quick-desc">
+          Supervisión de casos NEE, embarazos, enfermedades y vulnerabilidades.
+        </p>
+        <span class="quick-link-action">
+          <span>Ver Casos</span>
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
 
       <a routerLink="/admin/reportes" class="quick-card">
-        <div class="quick-icon-wrapper icon-emerald"><i class="fas fa-file-invoice" aria-hidden="true"></i></div>
+        <div class="quick-icon-wrapper icon-emerald">
+          <i class="fas fa-file-invoice" aria-hidden="true"></i>
+        </div>
         <h3 class="quick-title">Reportes Consolidados</h3>
-        <p class="quick-desc">Generación de archivos Excel, PDF y métricas institucionales.</p>
-        <span class="quick-link-action"><span>Generar Reportes</span> <i class="fas fa-arrow-right"
-            aria-hidden="true"></i></span>
+        <p class="quick-desc">
+          Generación de archivos Excel, PDF y métricas institucionales.
+        </p>
+        <span class="quick-link-action">
+          <span>Generar Reportes</span>
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </span>
       </a>
     </div>
   </section>

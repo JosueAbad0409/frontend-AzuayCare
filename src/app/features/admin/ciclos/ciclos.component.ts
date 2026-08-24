@@ -34,32 +34,36 @@ export class CiclosComponent implements OnInit, OnDestroy {
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
 
-  readonly carrerasDisponibles = computed(() => {
-    return this.carreras();
-  });
+  readonly carrerasDisponibles = computed(() => this.carreras());
 
   readonly ciclosFiltrados = computed(() => {
-    const term = this.filterSearch().toLowerCase().trim();
-    const carreraId = this.filterCarrera();
-    const estadoStr = this.filterEstado();
+  const term = this.filterSearch().toLowerCase().trim();
+  const carreraId = this.filterCarrera();
+  const estadoStr = this.filterEstado();
 
-    return this.ciclos().filter(c => {
-      const coincideNombre = !term || 
-        c.nombre.toLowerCase().includes(term) || 
-        (c.carrera?.nombre || '').toLowerCase().includes(term);
+  return this.ciclos().filter((c) => {
+    const nombresCarreras = (c.ciclosCarreras || [])
+      .map((cc) => (cc.carrera?.nombre || '').toLowerCase())
+      .join(' ');
 
-      const coincideCarrera = carreraId === 'TODOS' || String(c.carrera_id) === carreraId;
+    const coincideNombre =
+      !term ||
+      c.nombre.toLowerCase().includes(term) ||
+      nombresCarreras.includes(term);
 
-      let coincideEstado = true;
-      if (estadoStr === 'ACTIVO') {
-        coincideEstado = !c.fecha_desactivacion;
-      } else if (estadoStr === 'INACTIVO') {
-        coincideEstado = !!c.fecha_desactivacion;
-      }
+    const coincideCarrera =
+      carreraId === 'TODOS' ||
+      (c.ciclosCarreras || []).some(
+        (cc) => String(cc.carrera_id || cc.carrera?.id) === carreraId,
+      );
 
-      return coincideNombre && coincideCarrera && coincideEstado;
-    });
+    let coincideEstado = true;
+    if (estadoStr === 'ACTIVO') coincideEstado = !c.fecha_desactivacion;
+    else if (estadoStr === 'INACTIVO') coincideEstado = !!c.fecha_desactivacion;
+
+    return coincideNombre && coincideCarrera && coincideEstado;
   });
+});
 
   readonly totalCasos = computed(() => this.ciclosFiltrados().length);
 
@@ -109,30 +113,49 @@ export class CiclosComponent implements OnInit, OnDestroy {
   }
 
   cargarCiclos(): void {
-    this.loading.set(true);
-    this.ciclosService.getCiclos().subscribe({
-      next: (data) => {
-        this.ciclos.set(data || []);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        console.error('Error al cargar ciclos:', err);
-        this.toastService.show('Error al cargar los ciclos académicos.', 'error');
-        this.loading.set(false);
-      }
-    });
-  }
+  this.loading.set(true);
+  this.ciclosService.getCiclos().subscribe({
+    next: (data) => {
+      this.ciclos.set(data || []);
+      this.loading.set(false);
+    },
+    error: (err) => {
+      console.error('Error al cargar ciclos:', err);
+      this.toastService.show('Error al cargar los ciclos académicos.', 'error');
+      this.loading.set(false);
+    },
+  });
+}
+
+  /** Nombres de carreras unidos para mostrar en la tabla */
+  getCarrerasTexto(ciclo: Ciclo): string {
+  const lista = (ciclo.ciclosCarreras || [])
+    .map((cc) => cc.carrera?.nombre)
+    .filter(Boolean);
+  return lista.length ? lista.join(', ') : 'Sin carrera';
+}
 
   openModal(ciclo?: Ciclo): void {
     if (this.isSaving()) return;
 
     const isEditing = !!ciclo;
     const titleText = isEditing ? 'Editar Ciclo Académico' : 'Nuevo Ciclo Académico';
+    const selectedIds = new Set(
+  (ciclo?.ciclosCarreras || []).map((cc) =>
+    String(cc.carrera_id || cc.carrera?.id || ''),
+  ),
+);
 
-    let optionsHtml = `<option value="">-- Seleccionar Carrera --</option>`;
+    // Multi-select con checkboxes (más claro que un <select multiple>)
+    let checkboxesHtml = '';
     this.carreras().forEach(c => {
-      const isSelected = isEditing && String(ciclo.carrera_id) === String(c.id) ? 'selected' : '';
-      optionsHtml += `<option value="${c.id}" ${isSelected}>${c.nombre}</option>`;
+      const checked = selectedIds.has(String(c.id)) ? 'checked' : '';
+      checkboxesHtml += `
+        <label class="swal-check-item">
+          <input type="checkbox" class="swal-carrera-check" value="${c.id}" ${checked}>
+          <span>${c.nombre}</span>
+        </label>
+      `;
     });
 
     Swal.fire({
@@ -149,45 +172,45 @@ export class CiclosComponent implements OnInit, OnDestroy {
             <i class="fas fa-list-ol swal-banner-icon"></i>
             <div>
               <p class="swal-banner-title">${titleText}</p>
-              <p class="swal-banner-sub">Configura la secuencia y el nombre del ciclo para la carrera</p>
+              <p class="swal-banner-sub">Un ciclo puede asociarse a una o varias carreras</p>
             </div>
           </div>
           
           <div class="swal-form-group">
             <label for="swal-nombre" class="swal-form-label">Nombre del Ciclo *</label>
-            <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Primer Ciclo, 1er Ciclo" value="${isEditing ? ciclo.nombre : ''}">
+            <input id="swal-nombre" class="swal-input-styled" placeholder="Ej. Primer Ciclo, 1er Ciclo" value="${isEditing ? ciclo!.nombre : ''}">
           </div>
 
           <div class="swal-form-group">
             <label for="swal-orden" class="swal-form-label">Número de Orden *</label>
-            <input id="swal-orden" type="number" min="1" class="swal-input-styled" placeholder="Ej. 1, 2, 3..." value="${isEditing ? (ciclo.orden ?? 1) : 1}">
+            <input id="swal-orden" type="number" min="1" class="swal-input-styled" placeholder="Ej. 1, 2, 3..." value="${isEditing ? (ciclo!.orden ?? 1) : 1}">
             <small class="swal-help-text">Determina la secuencia lógica de ordenamiento (1, 2, 3...).</small>
           </div>
 
           <div class="swal-form-group">
-            <label for="swal-carrera" class="swal-form-label">Carrera Perteneciente *</label>
-            <select id="swal-carrera" class="swal-select-styled">
-              ${optionsHtml}
-            </select>
+            <label class="swal-form-label">Carreras asociadas *</label>
+            <div class="swal-check-list" style="max-height:180px;overflow:auto;text-align:left;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
+              ${checkboxesHtml || '<p class="text-muted">No hay carreras disponibles</p>'}
+            </div>
+            <small class="swal-help-text">Puedes seleccionar una o varias carreras.</small>
           </div>
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
       buttonsStyling: false,
-      confirmButtonText: isEditing 
-        ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>' 
+      confirmButtonText: isEditing
+        ? '<i class="fas fa-rotate" aria-hidden="true"></i> <span>Actualizar</span>'
         : '<i class="fas fa-floppy-disk" aria-hidden="true"></i> <span>Guardar Ciclo</span>',
       cancelButtonText: '<i class="fas fa-xmark" aria-hidden="true"></i> <span>Cancelar</span>',
       preConfirm: () => {
         const nombreEl = document.getElementById('swal-nombre') as HTMLInputElement;
         const ordenEl = document.getElementById('swal-orden') as HTMLInputElement;
-        const carreraEl = document.getElementById('swal-carrera') as HTMLSelectElement;
+        const checks = Array.from(document.querySelectorAll('.swal-carrera-check')) as HTMLInputElement[];
 
-        const nombre = nombreEl ? nombreEl.value.trim() : '';
-        const ordenVal = ordenEl ? ordenEl.value : '';
-        const carrera_id = carreraEl ? carreraEl.value : '';
-        const orden = parseInt(ordenVal, 10);
+        const nombre = nombreEl?.value.trim() || '';
+        const orden = parseInt(ordenEl?.value || '', 10);
+        const carrera_ids = checks.filter(c => c.checked).map(c => c.value);
 
         if (!nombre || nombre.length < 3) {
           Swal.showValidationMessage('El nombre es obligatorio y debe tener al menos 3 caracteres.');
@@ -197,21 +220,21 @@ export class CiclosComponent implements OnInit, OnDestroy {
           Swal.showValidationMessage('El número de orden debe ser mayor o igual a 1.');
           return false;
         }
-        if (!carrera_id) {
-          Swal.showValidationMessage('Debes seleccionar una carrera.');
+        if (!carrera_ids.length) {
+          Swal.showValidationMessage('Debes seleccionar al menos una carrera.');
           return false;
         }
 
-        return { nombre, orden, carrera_id };
+        return { nombre, orden, carrera_ids };
       }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
-        this.guardarCiclo(result.value, isEditing ? ciclo.id! : null);
+        this.guardarCiclo(result.value, isEditing ? ciclo!.id! : null);
       }
     });
   }
 
-  guardarCiclo(formData: any, id: string | null): void {
+  guardarCiclo(formData: { nombre: string; orden: number; carrera_ids: string[] }, id: string | null): void {
     if (this.isSaving()) return;
     this.isSaving.set(true);
 
@@ -283,17 +306,12 @@ export class CiclosComponent implements OnInit, OnDestroy {
             this.toastService.show('Ciclo desactivado con éxito.', 'info');
             this.cargarCiclos();
           },
-          error: (err) => {
+          error: () => {
             this.isSaving.set(false);
             this.toastService.show('Error al eliminar el ciclo.', 'error');
           }
         });
       }
     });
-  }
-
-  getCarreraNombre(carreraId: string): string {
-    const match = this.carreras().find(c => String(c.id) === String(carreraId));
-    return match ? match.nombre : 'Desconocida';
   }
 }

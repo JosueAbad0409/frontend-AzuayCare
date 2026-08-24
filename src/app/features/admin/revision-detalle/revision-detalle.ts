@@ -21,6 +21,8 @@ import { PreguntaDependencia } from '../../../core/models/dependencia.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { forkJoin, of, catchError, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import Swal from 'sweetalert2';
+import { environment } from '../../../../environments/environment'; 
 
 @Component({
   selector: 'app-revision-detalle',
@@ -52,6 +54,8 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
 
   readonly filterPregunta = signal<string>('');
   readonly filterEvidencias = signal<'TODAS' | 'CON_EVIDENCIA' | 'SIN_EVIDENCIA'>('TODAS');
+  readonly exportandoPdf = signal(false);
+
 
   private readonly filterSubject = new Subject<string>();
   private filterSubscription?: Subscription;
@@ -179,6 +183,66 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
       }
     });
   }
+  async exportarPdf(): Promise<void> {
+  const f = this.ficha();
+  if (!f?.id || this.exportandoPdf()) return;
+
+  this.exportandoPdf.set(true);
+
+  Swal.fire({
+    title: 'Generando PDF...',
+    text: 'Esto puede tardar unos segundos. No cierres esta ventana.',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    const token =
+      localStorage.getItem('azuaycare_access_token') ||
+      localStorage.getItem('access_token') ||
+      '';
+
+    const res = await fetch(
+      `${environment.apiUrl}/fichas-respondidas/${f.id}/pdf`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t || `Error ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const nombre = `ficha_${f.usuario?.cedula || f.id}.pdf`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'PDF listo',
+      text: 'La ficha se descargó correctamente.',
+      timer: 1800,
+      showConfirmButton: false,
+    });
+  } catch (e: any) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'No se pudo generar el PDF',
+      text: e?.message || 'Ocurrió un error al exportar la ficha.',
+    });
+  } finally {
+    this.exportandoPdf.set(false);
+  }
+}
 
   private cargarEstructuraFormulario(formularioId: string): void {
     forkJoin({
