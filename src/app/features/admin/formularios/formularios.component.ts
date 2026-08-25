@@ -86,7 +86,7 @@ export class FormulariosComponent implements OnInit {
 
   ngOnInit(): void {
     this.searchSubject.pipe(
-      debounceTime(400),
+      debounceTime(350),
       distinctUntilChanged(),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(term => {

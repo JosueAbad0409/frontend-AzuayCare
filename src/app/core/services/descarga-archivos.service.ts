@@ -11,7 +11,9 @@ export class DescargaArchivosService {
   isDescargando = signal<boolean>(false);
 
   descargar(url: string, nombreArchivo: string, mensajeError = 'No se pudo generar el archivo.'): void {
-    this.descargarConMetodo('GET', url, undefined, nombreArchivo, mensajeError);
+    const timestamp = new Date().getTime();
+    const urlConTimestamp = url.includes('?') ? `${url}&t=${timestamp}` : `${url}?t=${timestamp}`;
+    this.descargarConMetodo('GET', urlConTimestamp, undefined, nombreArchivo, mensajeError);
   }
 
   descargarPost(url: string, body: unknown, nombreArchivo: string, mensajeError = 'No se pudo generar el archivo.'): void {
@@ -28,7 +30,6 @@ export class DescargaArchivosService {
     if (this.isDescargando()) return;
     this.isDescargando.set(true);
 
-    // Loading centrado
     Swal.fire({
       title: 'Generando PDF',
       html: `

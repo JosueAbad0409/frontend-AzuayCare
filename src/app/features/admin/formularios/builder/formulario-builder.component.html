@@ -8,6 +8,7 @@
 } @else if (formulario()) {
 <div class="builder-container animate-fade-in">
 
+  <!-- CABECERA PRINCIPAL -->
   <header class="builder-header">
     <div class="header-left">
       <a routerLink="/admin/formularios" class="btn-back">
@@ -26,12 +27,17 @@
     </div>
 
     <div class="header-actions">
+      <button type="button" class="btn btn-outline" (click)="toggleTodasSecciones()">
+        <i class="fas" [ngClass]="todasColapsadas() ? 'fa-expand-alt' : 'fa-compress-alt'" aria-hidden="true"></i>
+        {{ todasColapsadas() ? 'Desplegar Todo' : 'Ocultar Preguntas' }}
+      </button>
+
       <button type="button" class="btn btn-outline" (click)="showRangosPanel.update(v => !v)">
         <i class="fas fa-calculator" aria-hidden="true"></i> Variables & Rangos
       </button>
 
       @if (!esSoloLectura()) {
-      <button type="button" class="btn btn-outline" (click)="abrirModalNuevaSeccion()" [disabled]="isSavingSeccion()">
+      <button type="button" class="btn btn-purple" (click)="abrirModalNuevaSeccion()" [disabled]="isSavingSeccion()">
         <i class="fas fa-folder-plus" aria-hidden="true"></i> Nueva Sección
       </button>
       @if (!formulario()?.publicado) {
@@ -50,6 +56,7 @@
   </div>
   }
 
+  <!-- PANEL DE RANGOS CALCULADOS DE BALANCE -->
   @if (showRangosPanel()) {
   <div class="bg-amber-50/80 border border-amber-300 rounded-xl p-4 mb-6 shadow-sm animate-fade-in">
     <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
@@ -60,7 +67,7 @@
     </div>
 
     <p class="text-xs text-amber-900/80 mb-3">
-      Estos rangos clasifican el balance (ingresos − egresos) de cada ficha. Puedes cargar los predeterminados y ajustarlos antes o después de guardar.
+      Estos rangos clasifican el balance (ingresos − egresos) de cada ficha. Marca cuáles son considerados de <strong>Vulnerabilidad Económica</strong>.
     </p>
 
     @if (!esSoloLectura()) {
@@ -71,7 +78,7 @@
       </button>
     </div>
 
-    <form [formGroup]="rangoForm" (ngSubmit)="guardarRangoVariable()" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 items-end">
+    <form [formGroup]="rangoForm" (ngSubmit)="guardarRangoVariable()" class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4 items-end">
       <div>
         <label class="text-xs font-semibold text-gray-700 block mb-1">Variable</label>
         <input type="text" formControlName="variable_calculo" class="form-control text-xs bg-gray-100" readonly>
@@ -88,11 +95,17 @@
         <label class="text-xs font-semibold text-gray-700 block mb-1">Máximo</label>
         <input type="number" formControlName="valor_max" class="form-control text-xs" placeholder="Sin límite">
       </div>
+      <div class="flex items-center pb-2">
+        <label class="text-xs font-bold text-rose-700 flex items-center gap-1.5 cursor-pointer bg-rose-50 px-2 py-1.5 rounded border border-rose-200">
+          <input type="checkbox" formControlName="es_vulnerable" class="accent-rose-600 w-4 h-4">
+          ⚠️ ¿Es Vulnerable?
+        </label>
+      </div>
       <div class="flex gap-2">
         @if (editingRangoId()) {
-        <button type="button" class="btn btn-outline btn-sm" (click)="cancelarEdicionRango()" [disabled]="isSavingRango()">Cancelar</button>
+        <button type="button" class="btn btn-outline btn-sm text-xs" (click)="cancelarEdicionRango()" [disabled]="isSavingRango()">Cancelar</button>
         }
-        <button type="submit" class="btn btn-purple btn-sm w-full" [disabled]="rangoForm.invalid || isSavingRango()">
+        <button type="submit" class="btn btn-purple btn-sm w-full text-xs" [disabled]="rangoForm.invalid || isSavingRango()">
           @if (isSavingRango()) {
             <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
           } @else {
@@ -116,11 +129,12 @@
       <table class="admin-table w-full text-left bg-white">
         <thead class="sticky-header">
           <tr class="header-titles">
-            <th scope="col" style="width: 25%">Variable</th>
-            <th scope="col" style="width: 30%">Estatus económico</th>
+            <th scope="col" style="width: 20%">Variable</th>
+            <th scope="col" style="width: 25%">Estatus económico</th>
             <th scope="col" style="width: 15%">Min.</th>
             <th scope="col" style="width: 15%">Max.</th>
-            @if (!esSoloLectura()) { <th scope="col" style="width: 15%" class="text-right">Acciones</th> }
+            <th scope="col" style="width: 15%">Vulnerabilidad</th>
+            @if (!esSoloLectura()) { <th scope="col" style="width: 10%" class="text-right">Acciones</th> }
           </tr>
           <tr class="header-filters">
             <th>
@@ -139,6 +153,7 @@
             </th>
             <th></th>
             <th></th>
+            <th></th>
             @if (!esSoloLectura()) { <th></th> }
           </tr>
         </thead>
@@ -151,6 +166,17 @@
             <td data-label="Estatus"><strong>{{ rango.nombre }}</strong></td>
             <td data-label="Min.">{{ rango.valor_min != null ? ('$' + rango.valor_min) : 'Sin mín.' }}</td>
             <td data-label="Max.">{{ rango.valor_max != null ? ('$' + rango.valor_max) : 'En adelante' }}</td>
+            <td data-label="Vulnerabilidad">
+              @if (rango.es_vulnerable) {
+                <span class="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full border border-rose-300">
+                  <i class="fas fa-exclamation-triangle text-[10px]" aria-hidden="true"></i> VULNERABLE
+                </span>
+              } @else {
+                <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full border border-gray-200">
+                  <i class="fas fa-check-circle text-[10px]" aria-hidden="true"></i> Normal
+                </span>
+              }
+            </td>
             @if (!esSoloLectura()) {
             <td data-label="Acciones" class="text-right">
               <div class="actions-wrapper">
@@ -166,7 +192,7 @@
           </tr>
           } @empty {
           <tr>
-            <td [attr.colspan]="esSoloLectura() ? 4 : 5" class="empty-state">
+            <td [attr.colspan]="esSoloLectura() ? 5 : 6" class="empty-state">
               <div class="empty-state-content text-xs py-4">
                 <p>No se encontraron rangos configurados o las búsquedas no tienen resultados.</p>
               </div>
@@ -179,12 +205,18 @@
   </div>
   }
 
+  <!-- LISTA DE SECCIONES -->
   <main class="sections-list" aria-label="Lista de Secciones">
     @for (seccion of secciones(); track seccion.id || $index; let i = $index) {
     <div class="section-card">
-      <div class="section-header">
+      <div class="section-header cursor-pointer" (click)="toggleSeccionColapso(seccion.id)">
         <div class="section-title items-center gap-2">
-          <span class="section-number">Bloque {{ i + 1 }}</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn-toggle-accordion" [attr.aria-expanded]="!isSeccionColapsada(seccion.id)">
+              <i class="fas" [ngClass]="isSeccionColapsada(seccion.id) ? 'fa-chevron-right' : 'fa-chevron-down'" aria-hidden="true"></i>
+            </button>
+            <span class="section-number">Bloque {{ i + 1 }}</span>
+          </div>
           <h3>{{ seccion.nombre }}</h3>
 
           @if (seccion.tipo_seccion === 'FINANCIERA') {
@@ -204,7 +236,13 @@
         </div>
 
         @if (!esSoloLectura()) {
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1" (click)="$event.stopPropagation()">
+          <button type="button" class="btn-icon text-blue" (click)="moverSeccion(i, 'UP')" [disabled]="i === 0 || isSavingSeccion()" title="Subir Sección">
+            <i class="fas fa-arrow-up" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn-icon text-blue" (click)="moverSeccion(i, 'DOWN')" [disabled]="i === secciones().length - 1 || isSavingSeccion()" title="Bajar Sección">
+            <i class="fas fa-arrow-down" aria-hidden="true"></i>
+          </button>
           <button type="button" class="btn-icon text-purple" (click)="abrirModalEditarSeccion(seccion)" title="Editar Sección" [disabled]="isSavingSeccion()">
             <i class="fas fa-edit" aria-hidden="true"></i>
           </button>
@@ -215,7 +253,16 @@
         }
       </div>
 
-      <div class="questions-container" (dragover)="onDragOver($event)">
+      <!-- CONTENIDO DE PREGUNTAS (COLAPSABLE) -->
+      @if (!isSeccionColapsada(seccion.id)) {
+      <div class="questions-container animate-fade-in" (dragover)="onDragOver($event)">
+        
+        @if (!esSoloLectura() && activeSeccionIdForQuestion() !== seccion.id) {
+        <button type="button" class="btn-add-question btn-add-top" (click)="abrirFormPregunta(seccion.id)" [disabled]="isSavingQuestion()">
+          <i class="fas fa-plus-circle" aria-hidden="true"></i> Añadir Pregunta aquí arriba
+        </button>
+        }
+
         @for (pregunta of preguntasVisibles(seccion); track pregunta.id || $index; let j = $index) {
 
         <div class="question-item flex-col gap-3"
@@ -246,6 +293,9 @@
                   }
                   @if (pregunta.es_obligatorio) {
                   <span class="tag bg-red-100 text-red-700 border-red-200"><i class="fas fa-asterisk text-[9px]" aria-hidden="true"></i> Obligatoria</span>
+                  }
+                  @if (pregunta.revision_manual_obligatoria) {
+                  <span class="tag bg-rose-100 text-rose-800 border-rose-300 font-bold"><i class="fas fa-exclamation-triangle text-[9px]" aria-hidden="true"></i> Prioridad / Vulnerabilidad</span>
                   }
                 </div>
               </div>
@@ -320,11 +370,18 @@
                 </div>
 
                 @if (opcion.id && obtenerSubpreguntaDeOpcion(opcion.id); as subpregunta) {
-                <div class="mt-2 ml-1 md:ml-3 pl-2 md:pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-2 w-full box-border">
-                  <span class="text-[10px] font-extrabold text-emerald-700 uppercase block mb-0.5">
-                    <i class="fas fa-level-down-alt" aria-hidden="true"></i> Se activa al elegir "{{ opcion.texto_opcion }}":
+                <div class="mt-2 ml-1 md:ml-3 pl-2 md:pl-3 border-l-4 border-emerald-400 bg-emerald-50/50 rounded-r-lg p-2 w-full box-border flex justify-between items-center flex-wrap gap-2">
+                  <div>
+                    <span class="text-[10px] font-extrabold text-emerald-700 uppercase block mb-0.5">
+                      <i class="fas fa-level-down-alt" aria-hidden="true"></i> Subpregunta desplegable:
+                    </span>
+                    <span class="text-xs font-semibold text-slate-700 block text-ellipsis overflow-hidden">{{ subpregunta.enunciado }}</span>
+                  </div>
+                  @if (subpregunta.revision_manual_obligatoria) {
+                  <span class="bg-rose-100 text-rose-800 border border-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    ⚠️ MARCA VULNERABILIDAD
                   </span>
-                  <span class="text-xs font-semibold text-slate-700 block text-ellipsis overflow-hidden">{{ subpregunta.enunciado }}</span>
+                  }
                 </div>
                 }
                 }
@@ -358,11 +415,14 @@
         </div>
         }
 
+        <!-- FORMULARIO DE CREACIÓN/EDICIÓN DE PREGUNTA -->
         @if (activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() === null && !esSoloLectura()) {
-        <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
+        <div [id]="'pregunta-box-' + seccion.id">
+          <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
+        </div>
         } @else if (!esSoloLectura() && !(activeSeccionIdForQuestion() === seccion.id && editingPreguntaId() !== null)) {
         <button type="button" class="btn-add-question" (click)="abrirFormPregunta(seccion.id)" [disabled]="isSavingQuestion()">
-          <i class="fas fa-plus" aria-hidden="true"></i> Añadir Pregunta a esta sección
+          <i class="fas fa-plus" aria-hidden="true"></i> Añadir Pregunta al final de esta sección
         </button>
         }
 
@@ -376,7 +436,7 @@
             <form [formGroup]="preguntaForm" (ngSubmit)="guardarPregunta(seccion.id)" class="w-full box-border">
               <div class="form-group mb-3 w-full">
                 <label class="font-semibold text-xs block mb-1">Enunciado o Pregunta *</label>
-                <input type="text" formControlName="enunciado" class="form-control w-full" placeholder="Ej: Evalué los siguientes servicios de la universidad...">
+                <input type="text" formControlName="enunciado" class="form-control w-full" placeholder="Ej: Indique el rango de edad o condición...">
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 w-full">
@@ -396,7 +456,7 @@
                 <div class="form-group">
                   <label class="font-semibold text-xs block mb-1">Categoría Financiera *</label>
                   <select formControlName="categoria_financiera" class="form-control w-full">
-                    <option value="NINGUNO">NINGUNO (Pregunta General)</option>
+                    <option value="NINGUNO">NINGUNO (Pregunta General / Edad / NEE)</option>
                     <option value="INGRESO">INGRESO (Sumar al total de ingresos)</option>
                     <option value="EGRESO">EGRESO (Sumar al total de gastos)</option>
                   </select>
@@ -413,13 +473,13 @@
                   <div class="flex gap-2 relative flex-wrap">
                     <div class="relative inline-block text-left">
                       <button type="button" class="btn btn-sm btn-outline text-xs" (click)="toggleMenuPresets()">
-                        <i class="fas fa-magic" aria-hidden="true"></i> Añadir Plantilla / Rangos <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
+                        <i class="fas fa-magic" aria-hidden="true"></i> Cargar Plantillas / Edades <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                       </button>
 
                       @if (showMenuPresets()) {
-                      <div class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
+                      <div class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('EDAD')">
-                          <span>🕒 Rangos de Edad</span>
+                          <span>🕒 Rangos de Edad (&lt;5, 6-12, &gt;65)</span>
                         </button>
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('SI_NO')">
                           <span>👍 Afirmativo / Negativo (Sí/No)</span>
@@ -446,7 +506,7 @@
                     <div class="flex flex-wrap md:flex-nowrap gap-3 items-start w-full">
                       <div class="flex-grow min-w-[200px] w-full">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Texto de Respuesta *</label>
-                        <input type="text" formControlName="texto_opcion" placeholder="Ej: 18 a 25 años" class="form-control text-xs w-full">
+                        <input type="text" formControlName="texto_opcion" placeholder="Ej: Menor de 5 años / Padece enfermedad" class="form-control text-xs w-full">
                       </div>
 
                       <div class="w-full md:w-24 shrink-0">
@@ -463,7 +523,7 @@
 
                     <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100 w-full box-border">
                       <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-blue-700 bg-blue-100/50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
-                        <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> ¿Es la respuesta correcta?
+                        <input type="checkbox" formControlName="es_correcta" class="accent-blue-600 w-3.5 h-3.5"> ¿Respuesta Correcta?
                       </label>
                       <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
                         <input type="checkbox" formControlName="permite_texto_libre" class="accent-purple-600 w-3.5 h-3.5"> Permite 'Otros'
@@ -481,8 +541,8 @@
 
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full box-border">
                         <div>
-                          <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Enunciado *</label>
-                          <input type="text" formControlName="subpregunta_enunciado" placeholder="Enunciado de la subpregunta..." class="form-control text-xs w-full">
+                          <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Enunciado de la Subpregunta (Opcional)</label>
+                          <input type="text" formControlName="subpregunta_enunciado" placeholder="Ej: Especifique detalle (se autogenera si se omite)..." class="form-control text-xs w-full">
                         </div>
                         <div>
                           <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Tipo de Respuesta *</label>
@@ -501,6 +561,9 @@
                         </label>
                         <label class="text-xs flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
                           <input type="checkbox" formControlName="subpregunta_es_obligatorio" class="accent-red-600 w-3.5 h-3.5"> ¿Obligatoria?
+                        </label>
+                        <label class="text-xs flex items-center gap-1.5 cursor-pointer font-bold text-rose-800 bg-rose-100 px-2.5 py-1 rounded-md border border-rose-300">
+                          <input type="checkbox" formControlName="subpregunta_revision_manual" class="accent-rose-600 w-3.5 h-3.5"> ⚠️ Marcar Subpregunta como Vulnerable
                         </label>
                       </div>
 
@@ -573,6 +636,10 @@
                       </div>
                       }
                     </div>
+                    } @else if (opcGroup.get('subpregunta_id')?.value) {
+                    <div class="text-[10px] text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 mt-1">
+                      ⚠️ Al desmarcar esta casilla, la subpregunta asociada será eliminada de la base de datos al guardar.
+                    </div>
                     }
                   </div>
                   }
@@ -601,9 +668,9 @@
                 <label class="checkbox-label text-xs font-medium cursor-pointer">
                   <input type="checkbox" formControlName="requiere_evidencia"> Requiere Subir Documento / Evidencia
                 </label>
-                <label class="checkbox-label text-xs font-bold cursor-pointer text-rose-700 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors w-full md:w-auto">
-                  <input type="checkbox" formControlName="revision_manual_obligatoria" class="accent-rose-600 w-3.5 h-3.5">
-                  ⚠️ Marcar como Vulnerabilidad / Prioridad
+                <label class="checkbox-label text-xs font-bold cursor-pointer text-rose-800 bg-rose-100/80 px-3 py-1.5 rounded-lg border border-rose-300 hover:bg-rose-200 transition-colors w-full md:w-auto">
+                  <input type="checkbox" formControlName="revision_manual_obligatoria" class="accent-rose-600 w-4 h-4">
+                  ⚠️ Marcar Pregunta Completa como Grupo Vulnerable / Prioritario
                 </label>
               </div>
 
@@ -621,8 +688,10 @@
           </div>
         </ng-template>
       </div>
+      }
     </div>
     }
   </main>
+
 </div>
 }

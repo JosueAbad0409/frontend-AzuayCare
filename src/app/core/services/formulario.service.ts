@@ -27,7 +27,7 @@ export class FormularioService {
   private readonly opcionesUrl = `${environment.apiUrl}/opciones-pregunta`;
   private readonly rangosUrl = `${environment.apiUrl}/rangos-variables`;
 
-  // 🚀 CACHÉ EN MEMORIA
+  // CACHÉ EN MEMORIA
   private cacheFormulario = new Map<string, Observable<Formulario>>();
   private cacheSecciones = new Map<string, Observable<Seccion[]>>();
   private cachePreguntas = new Map<string, Observable<Pregunta[]>>();
@@ -58,10 +58,6 @@ export class FormularioService {
     return this.http.patch<Formulario>(`${this.apiUrl}/${id}`, dto).pipe(
       tap(() => this.cacheFormulario.delete(id))
     );
-  }
-
-  updateSeccion(id: string, data: Partial<Seccion>): Observable<Seccion> {
-    return this.http.patch<Seccion>(`${this.apiUrl}/secciones/${id}`, data);
   }
 
   clonarFormulario(id: string, periodoDestinoId: string): Observable<Formulario> {
@@ -119,6 +115,19 @@ export class FormularioService {
       tap(() => {
         if (dto.formulario_id) {
           this.cacheSecciones.delete(dto.formulario_id);
+        }
+      })
+    );
+  }
+
+  // CORREGIDO: URL correcta a /secciones/:id e invalidación de caché
+  updateSeccion(id: string, data: Partial<Seccion>): Observable<Seccion> {
+    return this.http.patch<Seccion>(`${this.seccionesUrl}/${id}`, data).pipe(
+      tap((seccionActualizada) => {
+        if (seccionActualizada?.formulario_id) {
+          this.cacheSecciones.delete(seccionActualizada.formulario_id);
+        } else {
+          this.cacheSecciones.clear();
         }
       })
     );
@@ -246,9 +255,6 @@ export class FormularioService {
     );
   }
 
-  /**
-   * Limpia toda la caché en memoria.
-   */
   limpiarCache(): void {
     this.cacheFormulario.clear();
     this.cacheSecciones.clear();

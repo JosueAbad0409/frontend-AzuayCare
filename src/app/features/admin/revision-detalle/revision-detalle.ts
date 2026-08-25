@@ -56,7 +56,6 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   readonly filterEvidencias = signal<'TODAS' | 'CON_EVIDENCIA' | 'SIN_EVIDENCIA'>('TODAS');
   readonly exportandoPdf = signal(false);
 
-
   private readonly filterSubject = new Subject<string>();
   private filterSubscription?: Subscription;
 
@@ -65,7 +64,6 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
     return estado === 'ENVIADA' || estado === 'ENVIADO';
   });
 
-  // NUEVO: Computed para saber si se puede reabrir
   readonly puedeReabrir = computed(() => {
     const estado = this.ficha()?.estado_ficha?.toUpperCase();
     return estado === 'VALIDADO' || estado === 'RECHAZADO' || estado === 'RECHAZADA';
@@ -183,66 +181,68 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
       }
     });
   }
+
   async exportarPdf(): Promise<void> {
-  const f = this.ficha();
-  if (!f?.id || this.exportandoPdf()) return;
+    const f = this.ficha();
+    if (!f?.id || this.exportandoPdf()) return;
 
-  this.exportandoPdf.set(true);
+    this.exportandoPdf.set(true);
 
-  Swal.fire({
-    title: 'Generando PDF...',
-    text: 'Esto puede tardar unos segundos. No cierres esta ventana.',
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    didOpen: () => Swal.showLoading(),
-  });
+    Swal.fire({
+      title: 'Generando PDF...',
+      text: 'Esto puede tardar unos segundos. No cierres esta ventana.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading(),
+    });
 
-  try {
-    const token =
-      localStorage.getItem('azuaycare_access_token') ||
-      localStorage.getItem('access_token') ||
-      '';
+    try {
+      const token =
+        localStorage.getItem('azuaycare_access_token') ||
+        localStorage.getItem('access_token') ||
+        '';
 
-    const res = await fetch(
-      `${environment.apiUrl}/fichas-respondidas/${f.id}/pdf`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const timestamp = new Date().getTime();
+      const res = await fetch(
+        `${environment.apiUrl}/fichas-respondidas/${f.id}/pdf?t=${timestamp}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-    );
+      );
 
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(t || `Error ${res.status}`);
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `Error ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const nombre = `ficha_${f.usuario?.cedula || f.id}.pdf`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nombre;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'PDF listo',
+        text: 'La ficha se descargó correctamente.',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (e: any) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo generar el PDF',
+        text: e?.message || 'Ocurrió un error al exportar la ficha.',
+      });
+    } finally {
+      this.exportandoPdf.set(false);
     }
-
-    const blob = await res.blob();
-    const nombre = `ficha_${f.usuario?.cedula || f.id}.pdf`;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = nombre;
-    a.click();
-    URL.revokeObjectURL(a.href);
-
-    await Swal.fire({
-      icon: 'success',
-      title: 'PDF listo',
-      text: 'La ficha se descargó correctamente.',
-      timer: 1800,
-      showConfirmButton: false,
-    });
-  } catch (e: any) {
-    await Swal.fire({
-      icon: 'error',
-      title: 'No se pudo generar el PDF',
-      text: e?.message || 'Ocurrió un error al exportar la ficha.',
-    });
-  } finally {
-    this.exportandoPdf.set(false);
   }
-}
 
   private cargarEstructuraFormulario(formularioId: string): void {
     forkJoin({
@@ -324,11 +324,9 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
     this.tabActiva.set(tab);
   }
 
-  // ACTUALIZADO: Permite recibir un parámetro para forzar la reapertura
   cambiarEstado(nuevoEstado: EstadoFicha, esReapertura: boolean = false): void {
     const f = this.ficha();
     
-    // Si no es una reapertura, aplicamos la regla estricta de que debe estar "ENVIADA"
     if (!f || this.guardando()) return;
     if (!esReapertura && !this.puedeRevisar()) return;
 
@@ -337,9 +335,8 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
       next: (actualizada) => {
         this.ficha.set(actualizada);
         this.guardando.set(false);
-        this.comentario.set(''); // Limpiamos el comentario
+        this.comentario.set('');
         
-        // Mensaje dinámico según la acción
         let mensajeToast = 'Estado actualizado';
         if (nuevoEstado === 'VALIDADO') mensajeToast = 'Ficha validada con éxito.';
         else if (nuevoEstado === 'BORRADOR') mensajeToast = 'Ficha devuelta al estudiante para edición.';

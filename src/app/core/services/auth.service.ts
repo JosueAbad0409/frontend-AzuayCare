@@ -20,7 +20,6 @@ export interface LoginGoogleResponse {
   message?: string;
   accessToken: string;
   usuario?: UsuarioLogueado;
-  // Indica si al estudiante le falta llenar cédula, carrera o ciclo.
   perfilCompleto?: boolean;
 }
 
@@ -37,11 +36,7 @@ interface JwtPayloadCustom {
 export class AuthService {
   readonly token = signal<string | null>(null);
   readonly user = signal<UsuarioLogueado | null>(null);
-
-  // true si no hace falta mostrar el formulario de cédula/carrera/ciclo.
-  // Por defecto true para no bloquear a coordinadores ni invitados.
   readonly perfilCompleto = signal<boolean>(true);
-
   readonly isLoggedIn = computed(() => !!this.token());
 
   private readonly apiUrl = `${environment.apiUrl}/auth`;
@@ -55,7 +50,6 @@ export class AuthService {
     if (cachedToken) {
       this.setToken(cachedToken);
       const cachedPerfilCompleto = localStorage.getItem(PERFIL_COMPLETO_KEY);
-      // Si nunca se guardó el valor, asumimos true para no romper sesiones antiguas.
       this.perfilCompleto.set(cachedPerfilCompleto !== 'false');
     }
   }
@@ -118,10 +112,8 @@ export class AuthService {
   }
 
   async loginWithBackend(googleIdToken: string): Promise<LoginGoogleResponse> {
-    // 🔧 FIX: AbortController para evitar espera indefinida si el backend 
-    // está "frío" o la conexión queda colgada a nivel de red/proxy.
     const controller = new AbortController();
-    const timeoutMs = 20000; // 20s es razonable incluso con cold start
+    const timeoutMs = 20000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     let res: Response;
@@ -130,10 +122,9 @@ export class AuthService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: googleIdToken }),
-        signal: controller.signal, // 🔧 conecta el abort con el fetch
+        signal: controller.signal,
       });
     } catch (err: any) {
-      // 🔧 Distinguimos timeout de otros errores de red
       if (err?.name === 'AbortError') {
         throw new Error('El servidor está tardando más de lo normal en responder. Intenta nuevamente en unos segundos.');
       }
@@ -143,8 +134,15 @@ export class AuthService {
     }
 
     if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Error autenticando con el servidor');
+      let mensajeError = 'Error autenticando con el servidor';
+      try {
+        const errorJson = await res.json();
+        mensajeError = errorJson.message || errorJson.error || mensajeError;
+        if (Array.isArray(mensajeError)) mensajeError = mensajeError.join(', ');
+      } catch {
+        mensajeError = await res.text();
+      }
+      throw new Error(mensajeError);
     }
 
     const data: LoginGoogleResponse = await res.json();
@@ -153,8 +151,6 @@ export class AuthService {
       this.setToken(data.accessToken);
     }
 
-    // El JWT decodificado no trae cedula/ciclo_id/foto_url, así que completamos
-    // el usuario en memoria con lo que vino en el cuerpo de la respuesta.
     if (data?.usuario) {
       this.user.update((actual) =>
         actual
@@ -176,20 +172,12 @@ export class AuthService {
     return data;
   }
 
-  // 🔧 NUEVO: método liviano para "despertar" al backend en segundo plano.
-  // No bloquea la UI, solo dispara la conexión temprano.
   async warmUpBackend(): Promise<void> {
     try {
       await fetch(`${environment.apiUrl}/health`, { method: 'GET' });
-    } catch {
-      // Silencioso a propósito: si falla, el flujo normal de login
-      // igual mostrará el error correspondiente.
-    }
+    } catch {}
   }
 
-  // Se llama al terminar de guardar el pequeño formulario de registro
-  // (cédula, carrera, ciclo) para que el resto de la app deje de bloquear
-  // la navegación del estudiante.
   marcarPerfilCompleto(datos: { cedula: string; carrera_id?: string; ciclo_id?: string }): void {
     this.perfilCompleto.set(true);
     localStorage.setItem(PERFIL_COMPLETO_KEY, 'true');

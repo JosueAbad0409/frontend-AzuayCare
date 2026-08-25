@@ -5,6 +5,7 @@ export interface RangoVariableCalculada {
   nombre: string;
   valor_min: number;
   valor_max?: number | null;
+  es_vulnerable?: boolean;
   orden: number;
 }
 
@@ -14,5 +15,6 @@ export interface CreateRangoVariableDto {
   nombre: string;
   valor_min: number;
   valor_max?: number;
+  es_vulnerable?: boolean;
   orden?: number;
 }
