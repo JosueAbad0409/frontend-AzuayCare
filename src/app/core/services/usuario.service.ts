@@ -51,4 +51,9 @@ export class UsuarioService {
     return this.http.patch<Usuario>(`${this.apiUrl}/foto`, formData);
   }
   
+  actualizarFoto(foto: File) {
+    const formData = new FormData();
+    formData.append('foto', foto); // 'foto' es el nombre que espera el backend
+    return this.http.patch(`${this.apiUrl}/foto`, formData);
+  }
 }

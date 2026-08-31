@@ -46,6 +46,9 @@ export class ReportesComponent implements OnInit, OnDestroy {
   private readonly tableSearchSubject = new Subject<string>();
   private tableSearchSubscription?: Subscription;
 
+  private readonly filtrosChangedSubject = new Subject<void>();
+  private filtrosChangedSubscription?: Subscription;
+
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly carreras = signal<Carrera[]>([]);
   readonly ciclos = signal<Ciclo[]>([]);
@@ -72,6 +75,27 @@ export class ReportesComponent implements OnInit, OnDestroy {
     estado_ficha: ['TODOS'],
     formulario_id: ['']
   });
+  readonly COLUMNAS_BASE_DISPONIBLES: Array<{ clave: string; etiqueta: string }> = [
+    { clave: 'periodo', etiqueta: 'Periodo' },
+    { clave: 'cedula', etiqueta: 'Cédula' },
+    { clave: 'apellidos', etiqueta: 'Apellidos' },
+    { clave: 'nombres', etiqueta: 'Nombres' },
+    { clave: 'email', etiqueta: 'Email' },
+    { clave: 'sexo', etiqueta: 'Sexo' },
+    { clave: 'etnia', etiqueta: 'Etnia' },
+    { clave: 'estado_civil', etiqueta: 'Estado civil' },
+    { clave: 'tiene_hijos', etiqueta: 'Tiene hijos' },
+    { clave: 'carrera', etiqueta: 'Carrera' },
+    { clave: 'ciclo', etiqueta: 'Ciclo' },
+    { clave: 'estado', etiqueta: 'Estado ficha' },
+    { clave: 'ingresos', etiqueta: 'Ingresos' },
+    { clave: 'egresos', etiqueta: 'Egresos' },
+    { clave: 'balance', etiqueta: 'Balance' },
+    { clave: 'nivel_economico', etiqueta: 'Nivel económico' },
+  ];
+
+  readonly columnasBaseSeleccionadas = signal<string[]>([]);
+  readonly preguntasSeleccionadasIds = signal<string[]>([]);
 
   readonly registrosProcesados = computed(() => {
     const dataset = this.datasetFiltrado();
@@ -91,11 +115,12 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
       if (!term) return true;
 
-      return Object.values(row).some(val => 
+      return Object.values(row).some(val =>
         String(val ?? '').toLowerCase().includes(term)
       );
     });
   });
+
 
   readonly totalRegistrosTabla = computed(() => this.registrosProcesados().length);
 
@@ -112,6 +137,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
         this.tableSearchTerm.set(val);
         this.cdRef.markForCheck();
       });
+
+    // 🔴 EN VIVO: cualquier cambio en filtros/columnas dispara una nueva consulta
+    // automáticamente (sin toast, sin necesidad de botones), medio segundo
+    // después de que el usuario deja de interactuar.
+    this.filtrosChangedSubscription = this.filtrosChangedSubject
+      .pipe(debounceTime(900))
+      .subscribe(() => this.ejecutarConsulta(false));
 
     this.cargarFiltrosIniciales();
 
@@ -143,10 +175,22 @@ export class ReportesComponent implements OnInit, OnDestroy {
       }
       this.cargarFiltrosDisponibles(formularioId);
     });
+
+    // Cualquier cambio en periodo/carrera/ciclo/estado/formulario también
+    // dispara la actualización automática del reporte.
+    this.filterForm.valueChanges
+      .pipe(debounceTime(300))
+      .subscribe(() => this.dispararActualizacionAutomatica());
+  }
+
+  private dispararActualizacionAutomatica(): void {
+    if (!this.filterForm.get('periodo_id')?.value) return;
+    this.filtrosChangedSubject.next();
   }
 
   ngOnDestroy(): void {
     this.tableSearchSubscription?.unsubscribe();
+    this.filtrosChangedSubscription?.unsubscribe();
   }
 
   onTableSearchChange(event: Event): void {
@@ -294,40 +338,91 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   aplicarFiltros(): void {
+    this.ejecutarConsulta(true);
+  }
+
+  private ejecutarConsulta(mostrarToast: boolean): void {
     const filtros = this.construirPayload();
 
     if (!filtros.periodo_id) {
-      this.toastService.show('Seleccione un periodo académico.', 'warning');
+      if (mostrarToast) this.toastService.show('Seleccione un periodo académico.', 'warning');
       return;
     }
 
     this.isAplicandoFiltros.set(true);
 
+    // Solo pedimos el "agregado por pregunta" (endpoint pesado, 44 consultas)
+    // si hay un formulario seleccionado. Sin formulario no hay nada que agregar.
+    const agregados$ = filtros.formulario_id
+      ? this.reportesService.getAgregadoPorPregunta(filtros).pipe(catchError(() => of([])))
+      : of([]);
+
     forkJoin({
       dataset: this.reportesService.getDatasetFiltrado(filtros).pipe(catchError(() => of(null))),
-      agregados: this.reportesService.getAgregadoPorPregunta(filtros).pipe(catchError(() => of([]))),
-      fichas: this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').pipe(catchError(() => of({ data: [] })))
+      agregados: agregados$,
     }).subscribe({
-      next: ({ dataset, agregados, fichas }) => {
-        this.datasetFiltrado.set(this.normalizarDataset(dataset));
-        this.agregadosPorPregunta.set(agregados || []);
+      next: ({ dataset, agregados }) => {
+        const normalizado = this.normalizarDataset(dataset);
+        this.datasetFiltrado.set(normalizado);
 
-        const lista: any[] = (fichas as any)?.data || (fichas as any) || [];
-        this.actualizarKpisDesdeFichas(lista, filtros);
+        const listaAgregados = (agregados as any)?.estructura_agregada ?? [];
+        this.agregadosPorPregunta.set(listaAgregados);
+
+        // KPIs según el universo filtrado (no según todas las fichas del periodo)
+        const totalFiltrado = normalizado?.total_registros ?? normalizado?.registros?.length ?? 0;
+        const regs = normalizado?.registros ?? [];
+
+        const contados = this.contarEstadosDesdeRegistros(regs);
+
+        this.estadisticas.set({
+          total_fichas: totalFiltrado,
+          fichas_borrador: contados.borrador,
+          fichas_enviadas: contados.enviadas,
+          fichas_validadas: contados.validadas,
+          fichas_rechazadas: contados.rechazadas,
+          distribucion_rangos: this.estadisticas()?.distribucion_rangos ?? [],
+        });
 
         this.isAplicandoFiltros.set(false);
         this.cdRef.markForCheck();
 
-        const total = this.datasetFiltrado()?.total_registros || 0;
-        this.toastService.show(`Reporte generado: ${total} registro(s).`, 'success');
+        if (mostrarToast) {
+          this.toastService.show(`Reporte generado: ${totalFiltrado} registro(s).`, 'success');
+        }
       },
       error: () => {
         this.isAplicandoFiltros.set(false);
-        this.toastService.show('No se pudo generar el reporte.', 'warning');
+        if (mostrarToast) this.toastService.show('No se pudo generar el reporte.', 'warning');
         this.cdRef.markForCheck();
       }
     });
   }
+
+  private contarEstadosDesdeRegistros(regs: any[]): {
+  total: number;
+  borrador: number;
+  enviadas: number;
+  validadas: number;
+  rechazadas: number;
+} {
+  let borrador = 0, enviadas = 0, validadas = 0, rechazadas = 0;
+
+  for (const r of regs) {
+    const e = String(r.estado_ficha || r.estado || '').toUpperCase();
+    if (e === 'BORRADOR') borrador++;
+    else if (e === 'ENVIADA' || e === 'ENVIADO') enviadas++;
+    else if (e === 'VALIDADO') validadas++;
+    else if (e === 'RECHAZADO' || e === 'RECHAZADA') rechazadas++;
+  }
+
+  return {
+    total: regs.length,
+    borrador,
+    enviadas,
+    validadas,
+    rechazadas,
+  };
+}
 
   private actualizarKpisDesdeFichas(lista: any[], filtros: FiltroReporteRequest): void {
     const filtradas = lista.filter((f) => {
@@ -387,18 +482,21 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   private abrirVistaImpresionPdf(data: DatasetFiltradoResponse): void {
-    const columnas = data.columnas || [];
-    const registros = data.registros || [];
-    const periodo = this.periodoSeleccionadoNombre();
-    const fecha = new Date().toLocaleString('es-EC');
+  const columnas = data.columnas || [];
+  const registros = data.registros || [];
+  const periodo = this.periodoSeleccionadoNombre();
+  const fecha = new Date().toLocaleString('es-EC');
 
-    const thead = columnas.map(c => `<th>${this.esc(c)}</th>`).join('');
-    const rows = registros.map((r: any) => {
-      const tds = columnas.map(c => `<td>${this.esc(String(r[c] ?? ''))}</td>`).join('');
-      return `<tr>${tds}</tr>`;
-    }).join('');
+  // Contar desde las filas que realmente se imprimen
+  const contados = this.contarEstadosDesdeRegistros(registros);
 
-    const html = `
+  const thead = columnas.map(c => `<th>${this.esc(c)}</th>`).join('');
+  const rows = registros.map((r: any) => {
+    const tds = columnas.map(c => `<td>${this.esc(String(r[c] ?? ''))}</td>`).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  const html = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -416,10 +514,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
     th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
     th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; }
     tr:nth-child(even) { background: #f8fafc; }
-    @media print {
-      body { margin: 12px; }
-      .no-print { display: none; }
-    }
+    @media print { body { margin: 12px; } .no-print { display: none; } }
   </style>
 </head>
 <body>
@@ -430,10 +525,10 @@ export class ReportesComponent implements OnInit, OnDestroy {
   </div>
 
   <div class="kpis">
-    <div class="kpi">Total<br><b>${this.estadisticas()?.total_fichas ?? registros.length}</b></div>
-    <div class="kpi">Enviadas<br><b>${this.estadisticas()?.fichas_enviadas ?? 0}</b></div>
-    <div class="kpi">Validadas<br><b>${this.estadisticas()?.fichas_validadas ?? 0}</b></div>
-    <div class="kpi">Rechazadas<br><b>${this.estadisticas()?.fichas_rechazadas ?? 0}</b></div>
+    <div class="kpi">Total<br><b>${registros.length}</b></div>
+    <div class="kpi">Enviadas<br><b>${contados.enviadas}</b></div>
+    <div class="kpi">Validadas<br><b>${contados.validadas}</b></div>
+    <div class="kpi">Rechazadas<br><b>${contados.rechazadas}</b></div>
   </div>
 
   <table>
@@ -448,15 +543,15 @@ export class ReportesComponent implements OnInit, OnDestroy {
 </body>
 </html>`;
 
-    const win = window.open('', '_blank');
-    if (!win) {
-      this.toastService.show('Permite ventanas emergentes para generar el PDF.', 'warning');
-      return;
-    }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+  const win = window.open('', '_blank');
+  if (!win) {
+    this.toastService.show('Permite ventanas emergentes para generar el PDF.', 'warning');
+    return;
   }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
 
   private esc(text: string): string {
     return String(text)
@@ -499,13 +594,86 @@ export class ReportesComponent implements OnInit, OnDestroy {
     let estado = formValue.estado_ficha;
     if (!estado || estado === 'TODOS') estado = undefined;
 
-    return {
+    const payload: FiltroReporteRequest = {
       periodo_id: formValue.periodo_id || '',
       formulario_id: formValue.formulario_id || undefined,
       carrera_id: formValue.carrera_id || undefined,
       ciclo_id: formValue.ciclo_id || undefined,
-      estado_ficha: estado
+      estado_ficha: estado,
     };
+
+    const preguntas = this.construirFiltrosPregunta();
+    if (preguntas.length > 0) {
+      payload.preguntas = preguntas;
+    }
+
+    // Solo lo marcado se envía (modo estricto)
+    if (this.columnasBaseSeleccionadas().length > 0) {
+      payload.columnas_base = this.columnasBaseSeleccionadas();
+    }
+
+    if (this.preguntasSeleccionadasIds().length > 0) {
+      payload.columnas_pregunta_ids = this.preguntasSeleccionadasIds();
+    }
+
+    return payload;
+  }
+
+  private construirFiltrosPregunta(): Array<{
+    pregunta_id: string;
+    opcion_id?: string;
+    valor_min?: number;
+    valor_max?: number;
+    texto?: string;
+  }> {
+    const resultado: Array<{
+      pregunta_id: string;
+      opcion_id?: string;
+      valor_min?: number;
+      valor_max?: number;
+      texto?: string;
+    }> = [];
+
+    for (const filtro of this.filtrosDisponibles()) {
+      const valorCrudo = this.filtrosPreguntaValues[filtro.pregunta_id];
+      if (valorCrudo === undefined || valorCrudo === null || valorCrudo === '') continue;
+
+      const esNumerico = filtro.es_numerico;
+      const esTexto = !esNumerico && (!filtro.opciones || filtro.opciones.length === 0);
+
+      if (esNumerico) {
+        const [minStr, maxStr] = valorCrudo.split(',');
+        const min = minStr !== '' && minStr !== undefined ? Number(minStr) : undefined;
+        const max = maxStr !== '' && maxStr !== undefined ? Number(maxStr) : undefined;
+        if (min === undefined && max === undefined) continue;
+
+        resultado.push({
+          pregunta_id: filtro.pregunta_id,
+          ...(min !== undefined && !Number.isNaN(min) ? { valor_min: min } : {}),
+          ...(max !== undefined && !Number.isNaN(max) ? { valor_max: max } : {}),
+        });
+        continue;
+      }
+
+      if (esTexto) {
+        resultado.push({ pregunta_id: filtro.pregunta_id, texto: valorCrudo });
+        continue;
+      }
+
+      // Selección única/múltiple: el <select> guarda opcion_id (caso normal)
+      // o texto_opcion como respaldo (si el backend no trajo un opcion_id real).
+      const opcionCoincidente = (filtro.opciones || []).find(
+        (op) => (op.opcion_id || op.texto_opcion) === valorCrudo
+      );
+
+      if (opcionCoincidente?.opcion_id) {
+        resultado.push({ pregunta_id: filtro.pregunta_id, opcion_id: opcionCoincidente.opcion_id });
+      } else {
+        resultado.push({ pregunta_id: filtro.pregunta_id, texto: valorCrudo });
+      }
+    }
+
+    return resultado;
   }
 
   private normalizarDataset(dataset: DatasetFiltradoResponse | null): DatasetFiltradoResponse | null {
@@ -520,28 +688,43 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
     const registros = registrosIn.map((row: any) => this.aplanarFila(row));
 
+    // Todas las claves que realmente existen en los datos
     const colSet = new Set<string>();
-    registros.forEach((r: any) => Object.keys(r).forEach(k => colSet.add(k)));
+    registros.forEach((r: any) => Object.keys(r).forEach((k) => colSet.add(k)));
 
-    const prioritarias = [
-      'cedula', 'nombres', 'apellidos', 'email',
-      'carrera', 'ciclo', 'estado_ficha', 'balance', 'nivel_economico'
-    ];
-    const resto = [...colSet].filter(c => !prioritarias.includes(c)).sort();
-    const columnas = [
-      ...prioritarias.filter(c => colSet.has(c)),
-      ...resto
-    ];
+    // 1) Columnas base en el orden del catálogo (solo las que existen en los datos)
+    const ordenBase = this.COLUMNAS_BASE_DISPONIBLES
+      .map((c) => c.clave)
+      .filter((c) => colSet.has(c));
+
+    // 2) Preguntas en el orden del formulario (filtrosDisponibles)
+    //    Matcheamos por enunciado limpio o por clave presente
+    const ordenPreguntas: string[] = [];
+    for (const f of this.filtrosDisponibles()) {
+      const claveLimpia = this.limpiarNombreColumna(f.enunciado);
+      if (colSet.has(claveLimpia) && !ordenBase.includes(claveLimpia)) {
+        ordenPreguntas.push(claveLimpia);
+      } else if (colSet.has(f.enunciado) && !ordenBase.includes(f.enunciado)) {
+        ordenPreguntas.push(f.enunciado);
+      }
+    }
+
+    // 3) Cualquier otra columna que haya quedado fuera
+    const yaOrdenadas = new Set([...ordenBase, ...ordenPreguntas]);
+    const resto = [...colSet].filter((c) => !yaOrdenadas.has(c)).sort();
+
+    const columnas = [...ordenBase, ...ordenPreguntas, ...resto];
 
     return {
       ...dataset,
       registros,
       columnas,
-      total_registros: typeof dataset.total_registros === 'number'
-        ? dataset.total_registros
-        : typeof raw.total === 'number'
-          ? raw.total
-          : registros.length
+      total_registros:
+        typeof dataset.total_registros === 'number'
+          ? dataset.total_registros
+          : typeof raw.total === 'number'
+            ? raw.total
+            : registros.length,
     };
   }
 
@@ -599,18 +782,17 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   private limpiarNombreColumna(nombre: string): string {
-    return String(nombre)
-      .replace(/\s+/g, '_')
-      .replace(/[^\wáéíóúñÁÉÍÓÚÑ]/gi, '')
-      .substring(0, 40);
+    return String(nombre).trim().replace(/\s+/g, ' ').substring(0, 80);
   }
 
   setFiltroPreguntaValor(preguntaId: string, value: string): void {
     this.filtrosPreguntaValues[preguntaId] = value;
+    this.filtrosChangedSubject.next();
   }
 
   setFiltroPreguntaRango(preguntaId: string, min: string, max: string): void {
     this.filtrosPreguntaValues[preguntaId] = `${min || ''},${max || ''}`;
+    this.filtrosChangedSubject.next();
   }
 
   getFiltroPreguntaValor(preguntaId: string): string {
@@ -626,4 +808,36 @@ export class ReportesComponent implements OnInit, OnDestroy {
   toggleAvanzado(): void {
     this.mostrarAvanzado.update(v => !v);
   }
+  toggleColumnaBase(clave: string): void {
+    this.columnasBaseSeleccionadas.update((actuales) =>
+      actuales.includes(clave)
+        ? actuales.filter((c) => c !== clave)
+        : [...actuales, clave],
+    );
+    this.filtrosChangedSubject.next();
+  }
+
+  esColumnaBaseSeleccionada(clave: string): boolean {
+    return this.columnasBaseSeleccionadas().includes(clave);
+  }
+
+  toggleColumnaPregunta(preguntaId: string): void {
+    this.preguntasSeleccionadasIds.update((actuales) =>
+      actuales.includes(preguntaId)
+        ? actuales.filter((id) => id !== preguntaId)
+        : [...actuales, preguntaId],
+    );
+    this.filtrosChangedSubject.next();
+  }
+
+  esColumnaPreguntaSeleccionada(preguntaId: string): boolean {
+    return this.preguntasSeleccionadasIds().includes(preguntaId);
+  }
+
+  limpiarSeleccionColumnas(): void {
+    this.columnasBaseSeleccionadas.set([]);
+    this.preguntasSeleccionadasIds.set([]);
+    this.filtrosChangedSubject.next();
+  }
+
 }

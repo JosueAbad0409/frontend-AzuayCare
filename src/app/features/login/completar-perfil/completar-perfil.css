@@ -13,12 +13,25 @@
     animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.shake-error {
+    animation: shakeError 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
 *:focus-visible {
     outline: 2px solid #2563eb !important;
     outline-offset: 2px !important;
 }
 
-/* Estilos de scrollbar modernos para las listas desplegables */
+input.uppercase, select.uppercase { text-transform: uppercase; }
+input.capitalize { text-transform: capitalize; }
+input.lowercase { text-transform: lowercase; }
+
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -39,8 +52,9 @@
     input[type="number"], 
     input[type="date"],
     input[type="email"],
+    input[type="tel"],
     select {
-        font-size: 16px !important; /* Previene el auto-zoom en iOS */
+        font-size: 16px !important;
         max-width: 100%;
         box-sizing: border-box;
     }

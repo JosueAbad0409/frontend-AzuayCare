@@ -16,7 +16,8 @@ export interface UsuarioLogueado {
   foto_url?: string | null;
 }
 
-export interface LoginGoogleResponse {
+// Renombramos la interfaz porque ahora sirve tanto para Google como para Login Local
+export interface AuthResponse {
   message?: string;
   accessToken: string;
   usuario?: UsuarioLogueado;
@@ -111,7 +112,10 @@ export class AuthService {
     }
   }
 
-  async loginWithBackend(googleIdToken: string): Promise<LoginGoogleResponse> {
+  // ==========================================
+  // FLUJO GOOGLE
+  // ==========================================
+  async loginWithBackend(googleIdToken: string): Promise<AuthResponse> {
     const controller = new AbortController();
     const timeoutMs = 20000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -134,19 +138,87 @@ export class AuthService {
     }
 
     if (!res.ok) {
-      let mensajeError = 'Error autenticando con el servidor';
-      try {
-        const errorJson = await res.json();
-        mensajeError = errorJson.message || errorJson.error || mensajeError;
-        if (Array.isArray(mensajeError)) mensajeError = mensajeError.join(', ');
-      } catch {
-        mensajeError = await res.text();
-      }
-      throw new Error(mensajeError);
+      await this.manejarErrorFetch(res, 'Error autenticando con el servidor');
     }
 
-    const data: LoginGoogleResponse = await res.json();
+    const data: AuthResponse = await res.json();
+    this.procesarRespuestaLogin(data);
+    return data;
+  }
 
+  // ==========================================
+  // FLUJOS LOCALES (CORREO Y CONTRASEÑA)
+  // ==========================================
+  async registroLocal(datos: any): Promise<{ message: string }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    let res: Response;
+    try {
+      res = await fetch(`${this.apiUrl}/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw new Error('El servidor tardó demasiado en responder.');
+      throw new Error('No se pudo conectar con el servidor.');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!res.ok) {
+      await this.manejarErrorFetch(res, 'Error al registrar la cuenta');
+    }
+
+    return await res.json();
+  }
+
+  async loginLocal(credenciales: any): Promise<AuthResponse> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    let res: Response;
+    try {
+      res = await fetch(`${this.apiUrl}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credenciales),
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw new Error('El servidor tardó demasiado en responder.');
+      throw new Error('No se pudo conectar con el servidor.');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!res.ok) {
+      await this.manejarErrorFetch(res, 'Error al iniciar sesión');
+    }
+
+    const data: AuthResponse = await res.json();
+    this.procesarRespuestaLogin(data);
+    return data;
+  }
+
+  // ==========================================
+  // HELPERS INTERNOS
+  // ==========================================
+  private async manejarErrorFetch(res: Response, mensajePorDefecto: string): Promise<never> {
+    let mensajeError = mensajePorDefecto;
+    try {
+      const errorJson = await res.json();
+      mensajeError = errorJson.message || errorJson.error || mensajeError;
+      if (Array.isArray(mensajeError)) mensajeError = mensajeError.join(', ');
+    } catch {
+      mensajeError = await res.text();
+    }
+    throw new Error(mensajeError);
+  }
+
+  private procesarRespuestaLogin(data: AuthResponse): void {
     if (data?.accessToken) {
       this.setToken(data.accessToken);
     }
@@ -168,8 +240,6 @@ export class AuthService {
     const completo = data?.perfilCompleto ?? true;
     this.perfilCompleto.set(completo);
     localStorage.setItem(PERFIL_COMPLETO_KEY, String(completo));
-
-    return data;
   }
 
   async warmUpBackend(): Promise<void> {

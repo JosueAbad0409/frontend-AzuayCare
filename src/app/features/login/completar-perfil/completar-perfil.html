@@ -1,16 +1,14 @@
 <main class="bg-slate-50 min-h-screen text-slate-800 p-4 md:p-8 font-sans w-full max-w-full overflow-hidden flex items-start justify-center">
   <div class="max-w-6xl w-full animate-fade-in">
     
-    <!-- Botón Volver -->
     <button (click)="cancelar()" type="button" [disabled]="loading()"
       class="mb-5 px-4 py-2 bg-white text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 shadow-sm w-fit focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
       <i class="fas fa-arrow-left"></i> Salir al Login
     </button>
 
-    <!-- PANEL DE ALERTAS GLOBALES -->
     <div class="alert-panel mb-6 w-full">
       @if (error()) {
-      <div class="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 shadow-sm mb-3" role="alert" aria-live="assertive">
+      <div class="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 shadow-sm mb-3 shake-error" role="alert">
         <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 text-lg"></i>
         <div>
           <strong class="text-red-800 text-sm block font-extrabold">Atención requerida</strong>
@@ -18,35 +16,26 @@
         </div>
       </div>
       }
-      @if (alertas().length) {
-      <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm">
-        <ul class="list-disc pl-5 text-amber-700 text-xs space-y-1 font-medium">
-          @for (a of alertas(); track a) { <li>{{ a }}</li> }
-        </ul>
+      @if (exito()) {
+      <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-start gap-3 shadow-sm mb-3" role="alert">
+        <i class="fas fa-check-circle text-emerald-500 mt-0.5 text-lg"></i>
+        <span class="text-emerald-800 font-bold text-sm">{{ exito() }}</span>
       </div>
       }
     </div>
 
-    <!-- LAYOUT A DOS COLUMNAS -->
     <div class="flex flex-col lg:flex-row gap-6 items-start w-full">
-
-      <!-- ASIDE: NAVEGACIÓN Y PROGRESO -->
       <aside class="w-full lg:w-72 shrink-0 lg:sticky lg:top-8">
         <nav class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4">
           <h3 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-4 ml-2">Secciones Ficha</h3>
           <ul class="space-y-1.5">
             @for (paso of pasosNavegacion; track paso; let i = $index) {
             <li>
-              <button type="button" (click)="irAPaso(i)" [disabled]="loading()"
-                class="w-full flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50"
-                [ngClass]="pasoActual() === i ? 'text-blue-900 bg-blue-50/80 shadow-sm' : 'text-slate-500 hover:bg-slate-50'">
+              <button type="button" (click)="scrollToSection(i)"
+                class="w-full flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-blue-50 text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-500">
                 <span class="flex items-center gap-3 text-left">
-                  <i class="fas" [ngClass]="[paso.icono, pasoActual() === i ? 'text-blue-600' : 'text-slate-400']"></i>
-                  {{ i + 1 }}. {{ paso.nombre }}
+                  <i class="fas text-blue-500" [ngClass]="paso.icono"></i> {{ i + 1 }}. {{ paso.nombre }}
                 </span>
-                @if (pasoActual() > i) {
-                  <i class="fas fa-check-circle text-emerald-500 ml-auto text-xs"></i>
-                }
               </button>
             </li>
             }
@@ -55,278 +44,331 @@
 
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4">
           <div class="flex justify-between text-xs text-slate-500 mb-2 font-bold">
-            <span class="flex items-center gap-1.5"><i class="fas fa-layer-group text-blue-500"></i>Progreso</span>
-            <span class="text-blue-600">{{ progreso() | number:'1.0-0' }}%</span>
+            <span class="flex items-center gap-1.5"><i class="fas fa-layer-group text-emerald-500"></i>Campos Llenados</span>
+            <span class="text-emerald-600">{{ progreso() }}%</span>
           </div>
           <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
             <div class="bg-emerald-500 h-full rounded-full transition-all duration-500 ease-out" [style.width.%]="progreso()"></div>
           </div>
         </div>
-
-        <div class="bg-blue-50/50 rounded-2xl border border-blue-100 p-5 hidden lg:block">
-          <h4 class="text-sm font-bold text-blue-800 flex items-center gap-2 mb-2">
-            <i class="far fa-question-circle"></i> ¿Necesitas ayuda?
-          </h4>
-          <p class="text-xs text-slate-600 leading-relaxed">
-            Completa tus datos reales para habilitar el uso del sistema. Toda la información es tratada de forma confidencial.
-          </p>
-        </div>
       </aside>
 
-      <!-- MAIN: CONTENIDO DEL FORMULARIO -->
       <main class="flex-1 w-full bg-white rounded-2xl border border-slate-200 shadow-sm min-w-0">
-        
         <header class="p-6 md:p-8 border-b border-slate-100">
-          <div class="flex flex-wrap justify-between items-center gap-4">
-            <div>
-              <h1 class="text-xl md:text-2xl font-black text-slate-800">Completar Perfil</h1>
-              <p class="text-xs md:text-sm text-slate-500 mt-1">Registra tu información para continuar.</p>
-            </div>
-            <span class="px-4 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-              <i class="fas fa-circle text-[8px]"></i> Nuevo Registro
-            </span>
-          </div>
+          <h1 class="text-xl md:text-2xl font-black text-slate-800">Completar Perfil</h1>
+          <p class="text-xs md:text-sm text-slate-500 mt-1">Completa todos los datos demográficos y personales.</p>
         </header>
 
         <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="p-6 md:p-8" novalidate>
 
-          <header class="flex justify-between items-end mb-6 pb-4 border-b border-slate-100">
-            <h2 class="text-lg font-extrabold text-blue-900">{{ pasosNavegacion[pasoActual()].nombre }}</h2>
-            <span class="text-[11px] font-bold px-3 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-200">
-              Paso {{ pasoActual() + 1 }} de {{ pasosNavegacion.length }}
-            </span>
-          </header>
-
-          <!-- PASO 1: IDENTIFICACIÓN -->
-          @if (pasoActual() === 0) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 animate-fade-in">
-            <div class="flex flex-col gap-1.5">
-              <label for="cedula" class="text-sm font-bold text-slate-700">Cédula *</label>
-              <input id="cedula" type="text" formControlName="cedula" maxlength="10" inputmode="numeric" placeholder="Ej. 0102030405" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('cedula')}" />
-              @if (campoInvalido('cedula')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('cedula') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="numero_celular" class="text-sm font-bold text-slate-700">Celular *</label>
-              <input id="numero_celular" type="text" formControlName="numero_celular" maxlength="10" inputmode="numeric" placeholder="09XXXXXXXX" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('numero_celular')}" />
-              @if (campoInvalido('numero_celular')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('numero_celular') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="primer_nombre" class="text-sm font-bold text-slate-700">Primer nombre *</label>
-              <input id="primer_nombre" type="text" formControlName="primer_nombre" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('primer_nombre')}" />
-              @if (campoInvalido('primer_nombre')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_nombre') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="segundo_nombre" class="text-sm font-bold text-slate-700">Segundo nombre</label>
-              <input id="segundo_nombre" type="text" formControlName="segundo_nombre" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="primer_apellido" class="text-sm font-bold text-slate-700">Primer apellido *</label>
-              <input id="primer_apellido" type="text" formControlName="primer_apellido" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('primer_apellido')}" />
-              @if (campoInvalido('primer_apellido')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_apellido') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="segundo_apellido" class="text-sm font-bold text-slate-700">Segundo apellido</label>
-              <input id="segundo_apellido" type="text" formControlName="segundo_apellido" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="email_institucional" class="text-sm font-bold text-slate-700">Correo institucional</label>
-              <input id="email_institucional" type="email" formControlName="email_institucional" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm text-slate-500 cursor-not-allowed" readonly />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="email_personal" class="text-sm font-bold text-slate-700">Correo personal</label>
-              <input id="email_personal" type="email" formControlName="email_personal" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('email_personal')}" />
-              @if (campoInvalido('email_personal')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('email_personal') }}</span> }
-            </div>
-          </div>
-          }
-
-          <!-- PASO 2: DATOS ACADÉMICOS (MEJORADO CON AUTOCOMPLETE) -->
-          @if (pasoActual() === 1) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 animate-fade-in">
+          <!-- ✅ TARJETA INTERACTIVA DE FOTOGRAFÍA CON ALERTA VISUAL -->
+          <div class="mb-10 border rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm relative overflow-hidden group transition-all duration-300"
+               [ngClass]="fotoInvalida() ? 'bg-red-50 border-red-400 shake-error' : 'bg-indigo-50 border-indigo-200'">
+            <div class="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
             
-            <div class="flex flex-col gap-1.5 md:col-span-2 relative">
-              <label for="buscarCarrera" class="text-sm font-bold text-slate-700">Carrera *</label>
-              
-              <!-- Buscador / Input principal -->
-              <div class="relative w-full">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i class="fas fa-search text-slate-400"></i>
-                </div>
-                
-                <input id="buscarCarrera" type="text" [formControl]="filtroCarreraControl" autocomplete="off" placeholder="Escribe para buscar tu carrera..."
-                  (focus)="dropdownCarreraAbierto.set(true)" (blur)="cerrarDropdownCarrera()" (click)="dropdownCarreraAbierto.set(true)"
-                  class="w-full bg-white border rounded-xl p-3 pl-10 pr-10 text-sm text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-                  [ngClass]="campoInvalido('carrera_id') ? 'border-red-400 bg-red-50 focus:ring-red-200' : 'border-slate-300 shadow-sm'" />
-                
-                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <i class="fas fa-chevron-down text-slate-400 text-xs transition-transform duration-200" [class.rotate-180]="dropdownCarreraAbierto()"></i>
-                </div>
-
-                <!-- Menú Desplegable Flotante -->
-                @if (dropdownCarreraAbierto()) {
-                <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
-                  @for (c of carrerasFiltradas(); track c.id) {
-                  <li (mousedown)="seleccionarCarrera(c)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer text-slate-700 transition-colors border-b border-slate-50 last:border-0 flex items-center gap-2 group">
-                    <div class="w-5 flex justify-center">
-                      @if (perfilForm.get('carrera_id')?.value === c.id) { <i class="fas fa-check text-blue-600"></i> }
-                    </div>
-                    <span [class.font-bold]="perfilForm.get('carrera_id')?.value === c.id" [class.text-blue-700]="perfilForm.get('carrera_id')?.value === c.id" class="group-hover:text-blue-700">{{ c.nombre }}</span>
-                  </li>
-                  }
-                  @if (carrerasFiltradas().length === 0) {
-                  <li class="p-4 text-slate-500 text-center italic text-xs">No se encontraron carreras que coincidan.</li>
-                  }
-                </ul>
-                }
-              </div>
-              @if (campoInvalido('carrera_id')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('carrera_id') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5 md:col-span-2">
-              <label for="ciclo" class="text-sm font-bold text-slate-700">Ciclo académico *</label>
-              <select id="ciclo" formControlName="ciclo_id" class="w-full bg-white border border-slate-300 shadow-sm rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none cursor-pointer disabled:opacity-60 disabled:bg-slate-50 transition-all" [ngClass]="{'border-red-400 bg-red-50 focus:ring-red-200': campoInvalido('ciclo_id')}">
-                <option value="" disabled>{{ perfilForm.get('carrera_id')?.value ? 'Selecciona tu ciclo de la lista...' : 'Primero selecciona una carrera' }}</option>
-                @for (c of ciclosDisponibles(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-              </select>
-              @if (campoInvalido('ciclo_id')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('ciclo_id') }}</span> }
-            </div>
-          </div>
-          }
-
-          <!-- PASO 3: DATOS PERSONALES -->
-          @if (pasoActual() === 2) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 animate-fade-in">
-            <div class="flex flex-col gap-1.5">
-              <label for="sexo" class="text-sm font-bold text-slate-700">Sexo *</label>
-              <select id="sexo" formControlName="sexo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('sexo')}">
-                <option value="" disabled>Selecciona...</option>
-                @for (s of sexos; track s) { <option [value]="s">{{ s }}</option> }
-              </select>
-              @if (campoInvalido('sexo')) { <span class="text-xs font-semibold text-red-500 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('sexo') }}</span> }
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="estado_civil" class="text-sm font-bold text-slate-700">Estado civil *</label>
-              <select id="estado_civil" formControlName="estado_civil" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('estado_civil')}">
-                <option value="" disabled>Selecciona...</option>
-                @for (e of estadosCiviles; track e) { <option [value]="e">{{ e }}</option> }
-              </select>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="tiene_hijos" class="text-sm font-bold text-slate-700">¿Tiene hijos/as? *</label>
-              <select id="tiene_hijos" formControlName="tiene_hijos" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer">
-                <option [ngValue]="null" disabled>Selecciona...</option>
-                <option [ngValue]="false">No</option>
-                <option [ngValue]="true">Sí</option>
-              </select>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="etnia" class="text-sm font-bold text-slate-700">Etnia / raza *</label>
-              <select id="etnia" formControlName="etnia" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer">
-                <option value="" disabled>Selecciona...</option>
-                @for (e of etnias; track e) { <option [value]="e">{{ e }}</option> }
-              </select>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="idioma" class="text-sm font-bold text-slate-700">Idioma *</label>
-              <input id="idioma" type="text" formControlName="idioma" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="lugar_nacimiento" class="text-sm font-bold text-slate-700">Lugar de nacimiento *</label>
-              <input id="lugar_nacimiento" type="text" formControlName="lugar_nacimiento" placeholder="Ciudad / Provincia" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="fecha_nacimiento" class="text-sm font-bold text-slate-700">F. Nacimiento <span class="text-xs font-normal text-slate-400">(DD/MM/AAAA)</span> *</label>
-              <input id="fecha_nacimiento" type="text" formControlName="fecha_nacimiento" placeholder="15/03/2002" maxlength="10" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('fecha_nacimiento')}" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="rango_edad" class="text-sm font-bold text-slate-700">Rango de edad *</label>
-              <select id="rango_edad" formControlName="rango_edad" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer">
-                <option value="" disabled>Selecciona...</option>
-                @for (r of rangosEdad; track r) { <option [value]="r">{{ r }}</option> }
-              </select>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="nacionalidad" class="text-sm font-bold text-slate-700">Nacionalidad *</label>
-              <input id="nacionalidad" type="text" formControlName="nacionalidad" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label for="zona_residencia" class="text-sm font-bold text-slate-700">Zona de residencia *</label>
-              <select id="zona_residencia" formControlName="zona_residencia" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer">
-                <option value="" disabled>Selecciona...</option>
-                @for (z of zonas; track z) { <option [value]="z">{{ z }}</option> }
-              </select>
-            </div>
-
-            @if (perfilForm.get('sexo')?.value === 'Mujer') {
-            <div class="flex flex-col gap-1.5 md:col-span-2 p-4 rounded-xl border border-rose-200 bg-rose-50/50">
-              <label for="mes_embarazo" class="text-sm font-bold text-rose-900 flex items-center gap-2">
-                <i class="fas fa-baby"></i> Embarazo *
-              </label>
-              <select id="mes_embarazo" formControlName="mes_embarazo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all cursor-pointer" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('mes_embarazo')}">
-                @for (o of opcionesEmbarazo; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
-              </select>
-            </div>
-            }
-
-            <div class="flex flex-col gap-1.5">
-              <label for="tiene_discapacidad" class="text-sm font-bold text-slate-700">¿Tiene discapacidad? *</label>
-              <select id="tiene_discapacidad" formControlName="tiene_discapacidad" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer">
-                <option [ngValue]="null" disabled>Selecciona...</option>
-                <option [ngValue]="false">No</option>
-                <option [ngValue]="true">Sí</option>
-              </select>
-            </div>
-
-            @if (perfilForm.get('tiene_discapacidad')?.value === true) {
-            <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-amber-200 bg-amber-50/50">
-              <label for="tipo_discapacidad" class="text-sm font-bold text-amber-900">Tipo discapacidad *</label>
-              <select id="tipo_discapacidad" formControlName="tipo_discapacidad" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all cursor-pointer" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('tipo_discapacidad')}">
-                <option value="" disabled>Selecciona...</option>
-                @for (t of tiposDiscapacidad; track t) { <option [value]="t">{{ t }}</option> }
-              </select>
-            </div>
-            }
-          </div>
-          }
-
-          <footer class="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center gap-4">
-            <button type="button" (click)="anterior()"
-              class="px-5 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-              [ngClass]="{'opacity-0 pointer-events-none': pasoActual() === 0}">
-              <i class="fas fa-arrow-left"></i> Atrás
-            </button>
-
-            @if (pasoActual() < pasosNavegacion.length - 1) {
-            <button type="button" (click)="siguiente()"
-              class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer">
-              Siguiente <i class="fas fa-arrow-right"></i>
-            </button>
-            } @else {
-            <button type="submit" [disabled]="loading() || cargandoCatalogos()"
-              class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-sm shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 uppercase tracking-wide cursor-pointer">
-              @if (loading()) {
-                <i class="fas fa-circle-notch fa-spin"></i> Procesando...
+            <div class="shrink-0 relative cursor-pointer" (click)="fotoInput.click()">
+              @if (fotoUrl()) {
+                <img [src]="fotoUrl()" alt="Foto de perfil" class="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 shadow-md transition-transform duration-300 hover:scale-105"
+                     [ngClass]="fotoInvalida() ? 'border-red-400' : 'border-white'">
               } @else {
-                <i class="fas fa-check"></i> Finalizar Registro
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 shadow-md flex items-center justify-center text-4xl transition-transform duration-300 hover:scale-105"
+                     [ngClass]="fotoInvalida() ? 'bg-red-100 border-red-400 text-red-500' : 'bg-indigo-200 border-white text-indigo-500'">
+                  <i class="fas fa-user"></i>
+                </div>
               }
+              <div class="absolute bottom-0 right-0 w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white shadow-md transition-colors"
+                   [ngClass]="fotoInvalida() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'">
+                <i class="fas fa-camera text-xs"></i>
+              </div>
+            </div>
+            
+            <div class="flex-1 text-center sm:text-left z-10">
+              <h3 class="text-lg font-extrabold mb-1" [ngClass]="fotoInvalida() ? 'text-red-900' : 'text-indigo-900'">Fotografía del Estudiante</h3>
+              <p class="text-sm leading-relaxed mb-3" [ngClass]="fotoInvalida() ? 'text-red-800' : 'text-indigo-800'">
+                <strong [ngClass]="fotoInvalida() ? 'text-red-900' : 'text-rose-600'"><i class="fas fa-exclamation-triangle mr-1"></i> OBLIGATORIO:</strong> 
+                Para tu ficha académica, debes tener una foto tuya de frente, clara y formal.
+              </p>
+              
+              <input type="file" hidden #fotoInput accept="image/jpeg, image/jpg, image/png, image/webp" (change)="onFileSelected($event)">
+              
+              <button type="button" (click)="fotoInput.click()" 
+                      class="px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2 mx-auto sm:mx-0"
+                      [ngClass]="fotoInvalida() ? 'bg-red-600 hover:bg-red-700 focus:ring-red-300' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-300'">
+                <i class="fas fa-upload"></i> Subir Nueva Fotografía
+              </button>
+
+              <!-- MUESTRA EL ERROR DIRECTAMENTE DEBAJO DEL BOTÓN SI FALTÓ -->
+              @if (fotoInvalida()) {
+                <span class="text-[12px] font-bold text-red-600 block mt-3"><i class="fas fa-arrow-up mr-1"></i> Falta subir tu fotografía para poder continuar.</span>
+              }
+            </div>
+          </div>
+
+          <!-- 1. IDENTIFICACIÓN -->
+          <div id="seccion-0" class="mb-10">
+            <header class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">1</div>
+              <h2 class="text-lg font-extrabold text-blue-900">Identificación</h2>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div class="flex flex-col gap-1.5">
+                <label for="tipo_documento" class="text-sm font-bold text-slate-700">Tipo de Documento *</label>
+                <select id="tipo_documento" formControlName="tipo_documento" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('tipo_documento')}">
+                  @for (td of tiposDocumento; track td) { <option [value]="td">{{ td }}</option> }
+                </select>
+                @if (campoInvalido('tipo_documento')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('tipo_documento') }}</span> }
+              </div>
+
+              <!-- ✅ CÉDULA PROTEGIDA -->
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="cedula" class="text-sm font-bold text-slate-700">Cédula de Identidad/Pasaporte *</label>
+                <input id="cedula" type="text" formControlName="cedula" (input)="onIdentificacionInput($event)" placeholder="Ej. 0102030405" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('cedula')}" />
+                @if (campoInvalido('cedula')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('cedula') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="numero_celular" class="text-sm font-bold text-slate-700">Número Celular *</label>
+                <input id="numero_celular" type="tel" formControlName="numero_celular" (input)="onCelularInput($event)" placeholder="Ej. 0987654321" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('numero_celular')}" />
+                @if (campoInvalido('numero_celular')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('numero_celular') }}</span> }
+              </div>
+
+              <!-- ✅ NOMBRES PROTEGIDOS -->
+              <div class="flex flex-col gap-1.5">
+                <label for="primer_nombre" class="text-sm font-bold text-slate-700">Primer Nombre *</label>
+                <input id="primer_nombre" type="text" formControlName="primer_nombre" (input)="onLetrasInput('primer_nombre', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_nombre')}" />
+                @if (campoInvalido('primer_nombre')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_nombre') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="segundo_nombre" class="text-sm font-bold text-slate-700">Segundo Nombre <span class="text-xs font-normal text-slate-400">(Opcional)</span></label>
+                <input id="segundo_nombre" type="text" formControlName="segundo_nombre" (input)="onLetrasInput('segundo_nombre', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_nombre')}" />
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="primer_apellido" class="text-sm font-bold text-slate-700">Primer Apellido *</label>
+                <input id="primer_apellido" type="text" formControlName="primer_apellido" (input)="onLetrasInput('primer_apellido', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_apellido')}" />
+                @if (campoInvalido('primer_apellido')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_apellido') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="segundo_apellido" class="text-sm font-bold text-slate-700">Segundo Apellido <span class="text-xs font-normal text-slate-400">(Opcional)</span></label>
+                <input id="segundo_apellido" type="text" formControlName="segundo_apellido" (input)="onLetrasInput('segundo_apellido', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_apellido')}" />
+              </div>
+
+              <!-- ✅ CORREO VALIDADO -->
+              <div class="flex flex-col gap-1.5 md:col-span-2">
+                <label for="email_institucional" class="text-sm font-bold text-slate-700">Correo Electrónico Institucional</label>
+                <input id="email_institucional" type="email" formControlName="email_institucional" 
+                  class="w-full rounded-xl p-3 text-sm transition-all lowercase" 
+                  [ngClass]="esInstitucionalBloqueado ? 'bg-slate-50 border border-slate-200 text-slate-500 shadow-inner cursor-not-allowed' : (campoInvalido('email_institucional') ? 'border-red-400 bg-red-50 shake-error' : 'bg-white border border-slate-300 focus:border-blue-500')" 
+                  [readonly]="esInstitucionalBloqueado" />
+                @if (campoInvalido('email_institucional')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('email_institucional') }}</span> }
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. DATOS ACADÉMICOS -->
+          <div id="seccion-1" class="mb-10">
+            <header class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 mt-10">
+              <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">2</div>
+              <h2 class="text-lg font-extrabold text-blue-900">Datos Académicos</h2>
+            </header>
+
+            <div class="grid grid-cols-1 gap-y-5">
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="buscarCarrera" class="text-sm font-bold text-slate-700">Carrera *</label>
+                <div class="relative w-full">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-slate-400"></i></div>
+                  <input id="buscarCarrera" type="text" [formControl]="filtroCarreraControl" autocomplete="off" placeholder="Buscar carrera..." (focus)="dropdownCarreraAbierto.set(true)" (blur)="cerrarDropdownCarrera()" class="w-full bg-white border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500 uppercase" [ngClass]="campoInvalido('carrera_id') ? 'border-red-400 bg-red-50 shake-error' : 'border-slate-300'" />
+                  @if (dropdownCarreraAbierto()) {
+                  <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
+                    @for (c of carrerasFiltradas(); track c.id) {
+                    <li (mousedown)="seleccionarCarrera(c)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
+                      <span [class.font-bold]="perfilForm.get('carrera_id')?.value === c.id">{{ c.nombre }}</span>
+                    </li>
+                    }
+                  </ul>
+                  }
+                </div>
+                @if (campoInvalido('carrera_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('carrera_id') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="ciclo" class="text-sm font-bold text-slate-700">Ciclo académico *</label>
+                <select id="ciclo" formControlName="ciclo_id" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-50 uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('ciclo_id')}">
+                  <option [ngValue]="null" disabled>Selecciona ciclo...</option>
+                  @for (c of ciclosDisponibles(); track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
+                </select>
+                @if (campoInvalido('ciclo_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('ciclo_id') }}</span> }
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. DATOS PERSONALES -->
+          <div id="seccion-2" class="mb-10">
+            <header class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 mt-10">
+              <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">3</div>
+              <h2 class="text-lg font-extrabold text-blue-900">Datos Personales</h2>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              
+              <div class="flex flex-col gap-1.5">
+                <label for="sexo" class="text-sm font-bold text-slate-700">Sexo *</label>
+                <select id="sexo" formControlName="sexo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('sexo')}">
+                  <option value="" disabled>Selecciona...</option>
+                  @for (s of sexos; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                @if (campoInvalido('sexo')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('sexo') }}</span> }
+              </div>
+
+              @if (perfilForm.get('sexo')?.value === 'Mujer') {
+              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-rose-200 bg-rose-50/50">
+                <label for="mes_embarazo" class="text-sm font-bold text-rose-900">Especifique Su Estado (Gestación) *</label>
+                <select id="mes_embarazo" formControlName="mes_embarazo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-rose-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('mes_embarazo')}">
+                  @for (o of opcionesEmbarazo; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+                </select>
+                @if (campoInvalido('mes_embarazo')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('mes_embarazo') }}</span> }
+              </div>
+              }
+
+              <div class="flex flex-col gap-1.5">
+                <label for="genero" class="text-sm font-bold text-slate-700">Género *</label>
+                <select id="genero" formControlName="genero" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('genero')}">
+                  <option value="" disabled>Selecciona...</option>
+                  @for (g of generos; track g) { <option [value]="g">{{ g }}</option> }
+                </select>
+                @if (campoInvalido('genero')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('genero') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="estado_civil" class="text-sm font-bold text-slate-700">Estado Civil *</label>
+                <select id="estado_civil" formControlName="estado_civil" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('estado_civil')}">
+                  <option value="" disabled>Selecciona...</option>
+                  @for (e of estadosCiviles; track e) { <option [value]="e">{{ e }}</option> }
+                </select>
+                @if (campoInvalido('estado_civil')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('estado_civil') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="tiene_hijos" class="text-sm font-bold text-slate-700">¿Tiene Hijos? *</label>
+                <select id="tiene_hijos" formControlName="tiene_hijos" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('tiene_hijos')}">
+                  <option [ngValue]="null" disabled>Selecciona...</option>
+                  <option [ngValue]="false">No</option>
+                  <option [ngValue]="true">Sí</option>
+                </select>
+                @if (campoInvalido('tiene_hijos')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('tiene_hijos') }}</span> }
+              </div>
+
+              @if (perfilForm.get('tiene_hijos')?.value === true) {
+              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+                <label for="hijos_menores_5_anios" class="text-sm font-bold text-blue-900">Menores de 5 Años *</label>
+                <input id="hijos_menores_5_anios" type="number" min="0" max="20" formControlName="hijos_menores_5_anios" placeholder="Ej. 1" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('hijos_menores_5_anios')}" />
+                @if (campoInvalido('hijos_menores_5_anios')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('hijos_menores_5_anios') }}</span> }
+              </div>
+              }
+
+              <div class="flex flex-col gap-1.5">
+                <label for="etnia" class="text-sm font-bold text-slate-700">Etnia *</label>
+                <select id="etnia" formControlName="etnia" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia')}">
+                  <option value="" disabled>Selecciona...</option>
+                  @for (e of etnias; track e) { <option [value]="e">{{ e }}</option> }
+                </select>
+                @if (campoInvalido('etnia')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('etnia') }}</span> }
+              </div>
+
+              @if (perfilForm.get('etnia')?.value?.includes('Indígena')) {
+              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+                <label for="pueblo_nacionalidad" class="text-sm font-bold text-emerald-900">Especifique a qué Pueblo o Nacionalidad Pertenece *</label>
+                <input id="pueblo_nacionalidad" type="text" formControlName="pueblo_nacionalidad" (input)="onLetrasInput('pueblo_nacionalidad', $event)" placeholder="Ej. Kichwa, Shuar..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('pueblo_nacionalidad')}" />
+                @if (campoInvalido('pueblo_nacionalidad')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('pueblo_nacionalidad') }}</span> }
+              </div>
+              }
+
+              @if (perfilForm.get('etnia')?.value === 'Otro') {
+              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-purple-200 bg-purple-50/50">
+                <label for="etnia_otra" class="text-sm font-bold text-purple-900">Especifique su etnia *</label>
+                <input id="etnia_otra" type="text" formControlName="etnia_otra" (input)="onLetrasInput('etnia_otra', $event)" placeholder="Especifique..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-purple-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia_otra')}" />
+                @if (campoInvalido('etnia_otra')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('etnia_otra') }}</span> }
+              </div>
+              }
+
+              <!-- ✅ SELECT DE IDIOMA -->
+              <div class="flex flex-col gap-1.5">
+                <label for="idioma" class="text-sm font-bold text-slate-700">Idioma *</label>
+                <select id="idioma" formControlName="idioma" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('idioma')}">
+                  <option value="" disabled>Selecciona...</option>
+                  @for (i of idiomas; track i) { <option [value]="i">{{ i }}</option> }
+                </select>
+                @if (campoInvalido('idioma')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('idioma') }}</span> }
+              </div>
+
+              @if (perfilForm.get('idioma')?.value === 'Otro') {
+              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-sky-200 bg-sky-50/50">
+                <label for="idioma_otro" class="text-sm font-bold text-sky-900">Especifique su idioma *</label>
+                <input id="idioma_otro" type="text" formControlName="idioma_otro" (input)="onLetrasInput('idioma_otro', $event)" placeholder="Ej. Portugués, Francés..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-sky-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('idioma_otro')}" />
+                @if (campoInvalido('idioma_otro')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('idioma_otro') }}</span> }
+              </div>
+              }
+
+              <div class="flex flex-col gap-1.5">
+                <label for="fecha_nacimiento" class="text-sm font-bold text-slate-700">Fecha de Nacimiento *</label>
+                <input id="fecha_nacimiento" type="date" formControlName="fecha_nacimiento" [min]="minDateNacimiento" [max]="maxDateNacimiento" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 cursor-pointer uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('fecha_nacimiento')}" />
+                @if (campoInvalido('fecha_nacimiento')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('fecha_nacimiento') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="nacionalidad_id" class="text-sm font-bold text-slate-700">Nacionalidad *</label>
+                <select id="nacionalidad_id" formControlName="nacionalidad_id" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('nacionalidad_id')}">
+                  <option value="" disabled>Selecciona tu país...</option>
+                  @for (p of paises(); track p.id) { <option [value]="p.id">{{ p.nacionalidad }}</option> }
+                </select>
+                @if (campoInvalido('nacionalidad_id')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('nacionalidad_id') }}</span> }
+              </div>
+
+              <!-- ✅ CASCADA: LUGAR DE NACIMIENTO -->
+              <div class="flex flex-col gap-1.5">
+                <label for="pais_nacimiento_id" class="text-sm font-bold text-slate-700">País de Nacimiento *</label>
+                <select id="pais_nacimiento_id" formControlName="pais_nacimiento_id" 
+                  class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
+                  [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('pais_nacimiento_id')}">
+                  <option value="" disabled>Se llena automáticamente con tu nacionalidad...</option>
+                  @for (p of paises(); track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
+                </select>
+                @if (campoInvalido('pais_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('pais_nacimiento_id') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="provincia_nacimiento_id" class="text-sm font-bold text-slate-700">Provincia / Estado de Nacimiento *</label>
+                <select id="provincia_nacimiento_id" formControlName="provincia_nacimiento_id" 
+                  class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
+                  [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('provincia_nacimiento_id')}">
+                  <option value="" disabled>{{ perfilForm.get('pais_nacimiento_id')?.value && provinciasNacimiento().length === 0 ? 'No hay provincias registradas para este país' : 'Selecciona provincia...' }}</option>
+                  @for (prov of provinciasNacimiento(); track prov.id) { <option [value]="prov.id">{{ prov.nombre }}</option> }
+                </select>
+                @if (campoInvalido('provincia_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('provincia_nacimiento_id') }}</span> }
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="canton_nacimiento_id" class="text-sm font-bold text-slate-700">Cantón / Ciudad de Nacimiento *</label>
+                <select id="canton_nacimiento_id" formControlName="canton_nacimiento_id" 
+                  class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
+                  [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('canton_nacimiento_id')}">
+                  <option value="" disabled>{{ perfilForm.get('provincia_nacimiento_id')?.value && cantonesNacimiento().length === 0 ? 'No hay ciudades registradas en esta provincia' : 'Selecciona ciudad...' }}</option>
+                  @for (can of cantonesNacimiento(); track can.id) { <option [value]="can.id">{{ can.nombre }}</option> }
+                </select>
+                @if (campoInvalido('canton_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('canton_nacimiento_id') }}</span> }
+              </div>
+
+            </div>
+          </div>
+
+          <footer class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+            <button type="submit" [disabled]="loading() || cargandoCatalogos()" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-sm shadow-md transition-all hover:shadow-lg disabled:opacity-50 flex items-center gap-2">
+              @if (loading()) { <i class="fas fa-circle-notch fa-spin"></i> Procesando... } 
+              @else { <i class="fas fa-save"></i> Finalizar Registro }
             </button>
-            }
           </footer>
         </form>
       </main>

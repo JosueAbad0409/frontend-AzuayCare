@@ -10,7 +10,8 @@
       <p class="eyebrow">Instituto Superior Universitario Tecnológico del Azuay</p>
       <h1 class="visual-title">Del papel<br><span class="highlight">al sistema.</span></h1>
       <p class="visual-subtitle">
-        Un mismo acceso para tus trámites académicos y tu ficha de bienestar estudiantil, con el respaldo institucional del ISTA.
+        Un mismo acceso para tus trámites académicos y tu ficha de bienestar estudiantil, con el respaldo institucional
+        del ISTA.
       </p>
     </div>
   </section>
@@ -19,10 +20,11 @@
     <div class="pane-ambient-light"></div>
     <div class="watermark-symbol" aria-hidden="true">
       <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="20" y="20" width="160" height="160" rx="16" stroke="currentColor" stroke-width="2" stroke-dasharray="8 8"/>
-        <line x1="40" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="2"/>
-        <line x1="40" y1="90" x2="120" y2="90" stroke="currentColor" stroke-width="2"/>
-        <line x1="40" y1="120" x2="140" y2="120" stroke="currentColor" stroke-width="2"/>
+        <rect x="20" y="20" width="160" height="160" rx="16" stroke="currentColor" stroke-width="2"
+          stroke-dasharray="8 8" />
+        <line x1="40" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="2" />
+        <line x1="40" y1="90" x2="120" y2="90" stroke="currentColor" stroke-width="2" />
+        <line x1="40" y1="120" x2="140" y2="120" stroke="currentColor" stroke-width="2" />
       </svg>
     </div>
 
@@ -43,49 +45,186 @@
         </header>
 
         <div class="auth-box">
-          <div class="auth-instruction">
-            <span class="step-num">01</span>
-            <p>Acceso seguro mediante tu cuenta institucional <strong>@tecazuay.edu.ec</strong></p>
+          <!-- ✅ Pestañas de Navegación -->
+          <div class="auth-tabs" [class.is-hidden]="isLoading()">
+            <button type="button" (click)="toggleMode('login')" [class.active]="authMode() === 'login'">
+              Iniciar Sesión
+            </button>
+            <button type="button" (click)="toggleMode('register')" [class.active]="authMode() === 'register'">
+              Crear Cuenta
+            </button>
           </div>
 
+          <div class="auth-instruction">
+            <span class="step-num">01</span>
+            @if (authMode() === 'login') {
+            <p>Ingresa con tu correo institucional (<strong>@tecazuay.edu.ec</strong>) o personal.</p>
+            } @else {
+            <p>Regístrate de forma segura para obtener acceso a la plataforma.</p>
+            }
+          </div>
+
+          <!-- Alertas -->
           @if (error()) {
-            <div class="alert error-alert" role="alert">
-              <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>{{ error() }}</span>
-            </div>
+          <div class="alert error-alert" role="alert">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>{{ error() }}</span>
+          </div>
+          }
+
+          @if (successMessage()) {
+          <div class="alert success-alert" role="alert">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            <span>{{ successMessage() }}</span>
+          </div>
           }
 
           @if (isLoading()) {
-            <div class="loader-wrapper" role="status" aria-live="polite">
-              <div class="spinner" aria-hidden="true"></div>
-              <p>Verificando credenciales con Google Workspace...</p>
+          <div class="loader-wrapper" role="status" aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Verificando credenciales...</p>
+          </div>
+          }
+
+          <!-- ✅ Formulario de LOGIN -->
+          @if (authMode() === 'login' && !isLoading()) {
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" class="local-auth-form">
+            <div class="form-group">
+              <label for="login-email">Correo Electrónico</label>
+              <input id="login-email" type="email" formControlName="email" placeholder="ejemplo@tecazuay.edu.ec"
+                [class.is-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+              @if (loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched) {
+              <span class="error-msg">El correo es obligatorio.</span>
+              }
+              @if (loginForm.get('email')?.hasError('email') && loginForm.get('email')?.touched) {
+              <span class="error-msg">Formato de correo no válido.</span>
+              }
             </div>
+
+            <div class="form-group">
+              <label for="login-password">Contraseña</label>
+              <div class="password-wrapper">
+                <input id="login-password" [type]="showLoginPassword() ? 'text' : 'password'" formControlName="password"
+                  placeholder="••••••••"
+                  [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" />
+                <button type="button" class="toggle-password" (click)="showLoginPassword.set(!showLoginPassword())"
+                  [attr.aria-label]="showLoginPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                  @if (!showLoginPassword()) {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  } @else {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                  }
+                </button>
+              </div>
+              @if (loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched) {
+              <span class="error-msg">La contraseña es obligatoria.</span>
+              }
+            </div>
+
+            <button type="submit" class="btn-primary" [disabled]="loginForm.invalid">Ingresar a AzuayCare</button>
+          </form>
+          }
+
+          <!-- ✅ Formulario de REGISTRO -->
+          @if (authMode() === 'register' && !isLoading()) {
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()" class="local-auth-form">
+            <div class="form-group">
+              <label for="reg-email">Correo Electrónico</label>
+              <input id="reg-email" type="email" formControlName="email" placeholder="ejemplo@tecazuay.edu.ec"
+                [class.is-invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+              @if (registerForm.get('email')?.hasError('required') && registerForm.get('email')?.touched) {
+              <span class="error-msg">El correo es obligatorio.</span>
+              }
+              @if (registerForm.get('email')?.hasError('email') && registerForm.get('email')?.touched) {
+              <span class="error-msg">Formato de correo no válido.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="reg-password">Crea una Contraseña</label>
+              <div class="password-wrapper">
+                <input id="reg-password" [type]="showRegisterPassword() ? 'text' : 'password'"
+                  formControlName="password" placeholder="Mínimo 6 caracteres"
+                  [class.is-invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched" />
+                <button type="button" class="toggle-password"
+                  (click)="showRegisterPassword.set(!showRegisterPassword())"
+                  [attr.aria-label]="showRegisterPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                  @if (!showRegisterPassword()) {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  } @else {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                  }
+                </button>
+              </div>
+              @if (registerForm.get('password')?.hasError('required') && registerForm.get('password')?.touched) {
+              <span class="error-msg">La contraseña es obligatoria.</span>
+              }
+              @if (registerForm.get('password')?.hasError('minlength') && registerForm.get('password')?.touched) {
+              <span class="error-msg">Debe tener al menos 6 caracteres.</span>
+              }
+            </div>
+
+            <button type="submit" class="btn-primary" [disabled]="registerForm.invalid">Crear Cuenta</button>
+          </form>
           }
 
           <div class="action-area" [class.is-hidden]="isLoading()">
+            <div class="divider">
+              <span>o continuar con</span>
+            </div>
             <div id="googleBtn" class="google-wrapper"></div>
           </div>
 
           @if (isServerWarming()) {
-            <p class="text-xs text-muted" style="text-align: center; margin-top: 1rem; opacity: 0.7;">
-              Preparando el servicio de autenticación…
-            </p>
+          <p class="text-xs text-muted" style="text-align: center; margin-top: 1rem; opacity: 0.7;">
+            Preparando el servicio de autenticación…
+          </p>
           }
         </div>
 
         <div class="security-grid">
           <div class="security-item">
-            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.6" />
+            </svg>
             <span>Google SSL</span>
           </div>
           <div class="security-item">
-            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.6" />
+            </svg>
             <span>Datos Encriptados</span>
           </div>
           <div class="security-item">
-            <svg class="sec-icon" viewBox="0 0 24 24" fill="none"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1" stroke="currentColor" stroke-width="1.6"/></svg>
+            <svg class="sec-icon" viewBox="0 0 24 24" fill="none">
+              <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1"
+                stroke="currentColor" stroke-width="1.6" />
+            </svg>
             <span>Red ITSA</span>
           </div>
         </div>

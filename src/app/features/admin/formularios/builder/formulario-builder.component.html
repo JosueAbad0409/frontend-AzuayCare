@@ -36,6 +36,10 @@
         <i class="fas fa-calculator" aria-hidden="true"></i> Variables & Rangos
       </button>
 
+      <button type="button" class="btn btn-outline border-blue-400 text-blue-700" (click)="generarSeccionPerfilPlantilla()" [disabled]="isSavingSeccion()">
+        <i class="fas fa-id-card" aria-hidden="true"></i> Cargar Perfil Auto
+      </button>
+
       @if (!esSoloLectura()) {
       <button type="button" class="btn btn-purple" (click)="abrirModalNuevaSeccion()" [disabled]="isSavingSeccion()">
         <i class="fas fa-folder-plus" aria-hidden="true"></i> Nueva Sección
@@ -476,8 +480,10 @@
                         <i class="fas fa-magic" aria-hidden="true"></i> Cargar Plantillas / Edades <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                       </button>
 
+                      
                       @if (showMenuPresets()) {
                       <div class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
+                        <!-- Tus plantillas anteriores -->
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('EDAD')">
                           <span>🕒 Rangos de Edad (&lt;5, 6-12, &gt;65)</span>
                         </button>
@@ -489,6 +495,15 @@
                         </button>
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('VIVIENDA')">
                           <span>🏠 Tipo de Vivienda</span>
+                        </button>
+
+                        <!-- ✅ NUEVOS BOTONES DE CATÁLOGOS DE BASE DE DATOS -->
+                        <div class="border-t border-slate-200 my-1"></div>
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 border-none bg-transparent cursor-pointer font-bold" (click)="cargarCatalogoEnOpciones('PAISES')">
+                          <i class="fas fa-globe-americas"></i> Llenar con todos los Países
+                        </button>
+                        <button type="button" class="w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 border-none bg-transparent cursor-pointer font-bold" (click)="cargarCatalogoEnOpciones('PROVINCIAS_ECUADOR')">
+                          <i class="fas fa-map-marked-alt"></i> Llenar con Provincias (Ecuador)
                         </button>
                       </div>
                       }

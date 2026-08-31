@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, D
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import { MatricesService } from '../../../../core/services/matrices.service';
 import { DependenciasService } from '../../../../core/services/dependencias.service';
 import { RangosVariableService } from '../../../../core/services/rangos-variable.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { UbicacionesService } from '../../../../core/services/ubicaciones.service';
 import { Formulario, Seccion, Pregunta, TipoCampoForm, OpcionPregunta } from '../../../../core/models/formulario.model';
 import { PreguntaDependencia } from '../../../../core/models/dependencia.model';
 import { RangoVariableCalculada } from '../../../../core/models/rango-variable.model';
@@ -33,6 +34,7 @@ export class FormularioBuilderComponent implements OnInit {
   private readonly matricesService = inject(MatricesService);
   private readonly dependenciasService = inject(DependenciasService);
   private readonly rangosVariableService = inject(RangosVariableService);
+  private readonly ubicacionesService = inject(UbicacionesService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -62,7 +64,10 @@ export class FormularioBuilderComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
 
   readonly seccionesColapsadas = signal<Record<string, boolean>>({});
+  
+  // ✅ Detecta si el formulario está bloqueado (Solo lectura) o si YA TIENE RESPUESTAS
   readonly esSoloLectura = computed(() => this.formulario()?.bloqueado === true);
+  readonly tieneRespuestas = computed(() => Boolean((this.formulario() as any)?.tiene_respuestas));
 
   readonly isSavingSeccion = signal<boolean>(false);
   readonly isSavingQuestion = signal<boolean>(false);
@@ -235,6 +240,25 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
+  // ✅ VALIDADOR GLOBAL: Impide eliminar si hay respuestas
+  private verificarSiSePuedeEliminar(): boolean {
+    if (this.esSoloLectura()) {
+      this.toastService.show('El formulario está bloqueado (versión anterior).', 'warning');
+      return false;
+    }
+    if (this.tieneRespuestas()) {
+      Swal.fire({
+        title: '¡Acción Bloqueada!',
+        text: 'No puedes eliminar este elemento porque el formulario ya tiene fichas respondidas por estudiantes. Eliminarlo corrompería los datos históricos.',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        customClass: this.SWAL_CUSTOM_CLASS
+      });
+      return false;
+    }
+    return true;
+  }
+
   toggleSeccionColapso(seccionId: string): void {
     this.seccionesColapsadas.update(map => ({ ...map, [seccionId]: !map[seccionId] }));
   }
@@ -278,6 +302,82 @@ export class FormularioBuilderComponent implements OnInit {
     const searchInput = document.getElementById('search-rango-input') as HTMLInputElement;
     if (searchInput) searchInput.value = '';
     this.toastService.show('Filtros de rangos limpiados.', 'info');
+  }
+
+  // ✅ GENERADOR AUTOMÁTICO DE PERFIL
+  async generarSeccionPerfilPlantilla(): Promise<void> {
+    if (this.esSoloLectura() || !this.formulario()) return;
+
+    const result = await Swal.fire({
+      title: '¿Generar Sección de Perfil Completa?',
+      text: 'Se crearán todas las preguntas del perfil sociodemográfico.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fas fa-magic"></i> Sí, generar',
+      cancelButtonText: 'Cancelar',
+      customClass: this.SWAL_CUSTOM_CLASS
+    });
+
+    if (!result.isConfirmed) return;
+
+    this.isSavingSeccion.set(true);
+
+    try {
+      const payloadSeccion = {
+        formulario_id: this.formulario()!.id,
+        nombre: '1. DATOS GENERALES DEL ESTUDIANTE',
+        descripcion: 'Verifique que sus datos precargados sean correctos.',
+        tipo_seccion: 'INFORMACION_GENERAL' as const,
+        subcategoria_financiera: 'NINGUNO' as const,
+        orden: 1 
+      };
+
+      const nuevaSeccion = await firstValueFrom(this.formularioService.createSeccion(payloadSeccion));
+      if (!nuevaSeccion?.id) throw new Error('No se pudo crear la sección');
+
+      const tipoTexto = this.tiposCampo().find(t => t.nombre === 'TEXTO')?.id || this.tiposCampo()[0].id;
+      const tipoFecha = this.tiposCampo().find(t => t.nombre === 'FECHA')?.id || tipoTexto;
+
+      const preguntasPlantilla = [
+        { enunciado: 'Número de Cédula o Pasaporte', tipo_campo_id: tipoTexto },
+        { enunciado: 'Nombres Completos', tipo_campo_id: tipoTexto },
+        { enunciado: 'Apellidos Completos', tipo_campo_id: tipoTexto },
+        { enunciado: 'Número Celular', tipo_campo_id: tipoTexto },
+        { enunciado: 'Correo Electrónico Institucional', tipo_campo_id: tipoTexto },
+        { enunciado: 'Fecha de Nacimiento', tipo_campo_id: tipoFecha },
+        { enunciado: 'Nacionalidad', tipo_campo_id: tipoTexto },
+        { enunciado: 'País, Provincia y Ciudad de Nacimiento', tipo_campo_id: tipoTexto },
+        { enunciado: 'Sexo y Estado de Gestación', tipo_campo_id: tipoTexto },
+        { enunciado: 'Género', tipo_campo_id: tipoTexto },
+        { enunciado: 'Estado Civil', tipo_campo_id: tipoTexto },
+        { enunciado: '¿Tiene Hijos? (Menores de 5 años)', tipo_campo_id: tipoTexto },
+        { enunciado: 'Etnia / Pueblo o Nacionalidad', tipo_campo_id: tipoTexto },
+        { enunciado: 'Idioma(s)', tipo_campo_id: tipoTexto }
+      ];
+
+      let ordenPregunta = 1;
+      for (const p of preguntasPlantilla) {
+        await firstValueFrom(this.formularioService.createPregunta({
+          seccion_id: nuevaSeccion.id,
+          orden: ordenPregunta++,
+          enunciado: p.enunciado,
+          tipo_campo_id: p.tipo_campo_id,
+          categoria_financiera: 'NINGUNO',
+          es_obligatorio: true,
+          requiere_evidencia: false,
+          revision_manual_obligatoria: false
+        }));
+      }
+
+      this.toastService.show('Sección de Perfil generada con éxito.', 'success');
+      this.cargarSecciones(this.formulario()!.id); 
+
+    } catch (error: any) {
+      this.toastService.show('Ocurrió un error al generar la plantilla.', 'error');
+      console.error(error);
+    } finally {
+      this.isSavingSeccion.set(false);
+    }
   }
 
   abrirModalNuevaSeccion(): void {
@@ -472,8 +572,9 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE SECCIÓN (Actualizado)
   eliminarSeccion(seccionId: string, index: number): void {
-    if (this.esSoloLectura() || this.isSavingSeccion()) return;
+    if (this.isSavingSeccion() || !this.verificarSiSePuedeEliminar()) return;
 
     Swal.fire({
       title: '¿Eliminar sección?',
@@ -500,7 +601,16 @@ export class FormularioBuilderComponent implements OnInit {
             },
             error: (err: HttpErrorResponse) => {
               this.isSavingSeccion.set(false);
-              this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar sección'), 'error');
+              const errorReal = this.extraerMensajeError(err, 'No se pudo eliminar la sección por reglas de base de datos.');
+              
+              // Mostrar ALERTA GRANDE en caso de rechazo del servidor
+              Swal.fire({
+                title: 'Acción Rechazada',
+                text: errorReal,
+                icon: 'error',
+                confirmButtonText: 'Entendido',
+                customClass: this.SWAL_CUSTOM_CLASS
+              });
             }
           });
         } else {
@@ -616,7 +726,6 @@ export class FormularioBuilderComponent implements OnInit {
       return;
     }
 
-    // Refrescar dependencias del servidor antes de armar la vista para no perder subpreguntas en la edición
     if (this.formulario()?.id) {
       this.dependenciasService.getDependenciasByFormulario(this.formulario()!.id).subscribe({
         next: (deps) => {
@@ -708,8 +817,9 @@ export class FormularioBuilderComponent implements OnInit {
     this.toastService.show('Formulario de pregunta cerrado.', 'info');
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE PREGUNTA (Actualizado)
   eliminarPregunta(preguntaId: string, seccionId: string): void {
-    if (this.esSoloLectura() || this.isSavingQuestion()) return;
+    if (this.isSavingQuestion() || !this.verificarSiSePuedeEliminar()) return;
 
     Swal.fire({
       title: '¿Eliminar pregunta?',
@@ -735,7 +845,15 @@ export class FormularioBuilderComponent implements OnInit {
           },
           error: (err: HttpErrorResponse) => {
             this.isSavingQuestion.set(false);
-            this.toastService.show(this.extraerMensajeError(err, 'Error al eliminar pregunta'), 'error');
+            const errorReal = this.extraerMensajeError(err, 'No se pudo eliminar la pregunta.');
+            
+            Swal.fire({
+              title: 'No se puede eliminar',
+              text: errorReal,
+              icon: 'error',
+              confirmButtonText: 'Entendido',
+              customClass: this.SWAL_CUSTOM_CLASS
+            });
           }
         });
       }
@@ -842,7 +960,6 @@ export class FormularioBuilderComponent implements OnInit {
                 const subTipoId = opc.subpregunta_tipo_id && String(opc.subpregunta_tipo_id).trim() !== '' ? opc.subpregunta_tipo_id : tipoCampoIdFinal;
                 if (!subTipoId) throw new Error('Falta el tipo de campo de la subpregunta.');
 
-                // Fallback automático si no escribió enunciado
                 const enunciadoSub = opc.subpregunta_enunciado?.trim() || `Especifique detalle para ${opc.texto_opcion.trim()}`;
 
                 const subpreguntaGuardada = await firstValueFrom(
@@ -1091,6 +1208,35 @@ export class FormularioBuilderComponent implements OnInit {
     this.toastService.show(`Plantilla "${tipo}" cargada en las opciones.`, 'success');
   }
 
+  // ✅ NUEVOS CARGADORES DESDE LA BD
+  async cargarCatalogoEnOpciones(tipo: 'PAISES' | 'PROVINCIAS_ECUADOR'): Promise<void> {
+    this.showMenuPresets.set(false);
+    this.toastService.show('Consultando base de datos...', 'info');
+
+    try {
+      if (tipo === 'PAISES') {
+        const paises = await firstValueFrom(this.ubicacionesService.getPaises());
+        this.opcionesTempArray.clear();
+        paises.forEach((p: any) => this.agregarOpcionTemp(p.nombre, 0));
+        this.toastService.show(`Se cargaron ${paises.length} países automáticamente.`, 'success');
+      } else if (tipo === 'PROVINCIAS_ECUADOR') {
+        const paises = await firstValueFrom(this.ubicacionesService.getPaises());
+        const ecuador = paises.find((p: any) => p.nombre.toUpperCase().includes('ECUADOR'));
+        if (!ecuador) {
+          this.toastService.show('No se encontró Ecuador en la base de datos.', 'warning');
+          return;
+        }
+        const provincias = await firstValueFrom(this.ubicacionesService.getProvincias(ecuador.id));
+        this.opcionesTempArray.clear();
+        provincias.forEach((prov: any) => this.agregarOpcionTemp(prov.nombre, 0));
+        this.toastService.show(`Se cargaron ${provincias.length} provincias.`, 'success');
+      }
+    } catch (error) {
+      console.error(error);
+      this.toastService.show('Error al conectar con la base de datos.', 'error');
+    }
+  }
+
   cargarOpcionesPregunta(preguntaId: string): void {
     this.formularioService.getOpcionesByPregunta(preguntaId).subscribe({
       next: (opciones: OpcionPregunta[]) => {
@@ -1112,10 +1258,12 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE OPCIÓN
   eliminarOpcionExistente(opcionId: string, preguntaId: string): void {
-    if (this.esSoloLectura()) return;
+    if (!this.verificarSiSePuedeEliminar()) return;
     this.formularioService.deleteOpcion(opcionId).subscribe({
-      next: () => { this.toastService.show('Opción eliminada.', 'info'); this.cargarOpcionesPregunta(preguntaId); }
+      next: () => { this.toastService.show('Opción eliminada.', 'info'); this.cargarOpcionesPregunta(preguntaId); },
+      error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la opción.'), 'error')
     });
   }
 
@@ -1187,13 +1335,15 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE FILA
   eliminarFilaExistente(filaId: string, preguntaId: string): void {
-    if (this.esSoloLectura()) return;
+    if (!this.verificarSiSePuedeEliminar()) return;
     this.matricesService.deleteFila(filaId).subscribe({ 
       next: () => {
         this.toastService.show('Fila eliminada.', 'info');
         this.cargarMatrizDetalles(preguntaId); 
-      }
+      },
+      error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la fila.'), 'error')
     });
   }
 
@@ -1207,13 +1357,15 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE COLUMNA
   eliminarColumnaExistente(columnaId: string, preguntaId: string): void {
-    if (this.esSoloLectura()) return;
+    if (!this.verificarSiSePuedeEliminar()) return;
     this.matricesService.deleteColumna(columnaId).subscribe({ 
       next: () => {
         this.toastService.show('Columna eliminada.', 'info');
         this.cargarMatrizDetalles(preguntaId); 
-      }
+      },
+      error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la columna.'), 'error')
     });
   }
 
@@ -1411,8 +1563,9 @@ export class FormularioBuilderComponent implements OnInit {
     this.toastService.show('Edición de rango cancelada.', 'info');
   }
 
+  // ✅ BLINDAJE DE ELIMINACIÓN DE RANGO
   eliminarRangoVariable(id: string): void {
-    if (this.esSoloLectura() || this.isSavingRango()) return;
+    if (!this.verificarSiSePuedeEliminar()) return;
 
     Swal.fire({
       title: '¿Eliminar rango?',
@@ -1490,10 +1643,40 @@ export class FormularioBuilderComponent implements OnInit {
     return div.innerHTML;
   }
 
+  // ✅ TRADUCTOR INTELIGENTE Y AGRESIVO DE ERRORES (Actualizado)
   private extraerMensajeError(err: HttpErrorResponse, fallback: string): string {
-    if (!err?.error) return fallback;
-    if (Array.isArray(err.error.message)) return err.error.message.join(' | ');
-    if (typeof err.error.message === 'string') return err.error.message;
-    return fallback;
+    let msg = fallback;
+
+    // Buscar en todas las capas del error que envía NestJS/Postgres
+    if (err?.error) {
+      if (typeof err.error === 'string') {
+        msg = err.error;
+      } else if (err.error.message) {
+        msg = Array.isArray(err.error.message) ? err.error.message.join(' | ') : err.error.message;
+      } else if (err.error.detail) {
+        msg = err.error.detail;
+      }
+    }
+
+    const msgLower = msg.toLowerCase();
+    
+    // Si el backend tiró un 400 (Bad Request) o 409 (Conflict) por integridad de datos
+    if (
+      msgLower.includes('violates foreign key') || 
+      msgLower.includes('llave foránea') || 
+      msgLower.includes('está siendo usado') ||
+      msgLower.includes('depende de') ||
+      err.status === 409 ||
+      err.status === 400
+    ) {
+      // Si el backend mandó un mensaje entendible (ej: "La sección tiene preguntas"), lo mostramos.
+      // Si no, mostramos un mensaje estándar de bloqueo.
+      if (msg.length < 150 && !msgLower.includes('http failure')) {
+        return msg; 
+      }
+      return 'No se puede eliminar porque este elemento ya está siendo usado por estudiantes o tiene elementos que dependen de él.';
+    }
+
+    return msg;
   }
 }

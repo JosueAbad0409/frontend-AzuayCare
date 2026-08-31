@@ -8,6 +8,12 @@ export interface FiltroPreguntaDisponible {
     texto_opcion: string;
   }>;
   es_numerico?: boolean;
+  // Dependencias (subpreguntas)
+  es_dependiente?: boolean;
+  depende_de_pregunta_id?: string | null;
+  depende_de_enunciado?: string | null;
+  depende_de_opcion_id?: string | null;
+  depende_de_opcion_texto?: string | null;
 }
 
 export interface FiltroReporteRequest {
@@ -25,6 +31,8 @@ export interface FiltroReporteRequest {
     valor_max?: number;
     texto?: string;
   }>;
+  columnas_base?: string[];
+  columnas_pregunta_ids?: string[];
 }
 
 export interface DatasetFiltradoResponse {
@@ -36,13 +44,33 @@ export interface DatasetFiltradoResponse {
   columnas_dataset?: string[];
 }
 
+export interface AgregadoOpcion {
+  opcion_id?: string;
+  texto: string;
+  conteo: number;
+  porcentaje: number;
+}
+
+export interface AgregadoMetricas {
+  tipo_grafico: 'PIE_O_BARRA' | 'METRICA_NUMERICA' | 'TEXTO_LIBRE' | 'MATRIZ_AGREGADA' | string;
+  opciones?: AgregadoOpcion[];
+  promedio?: number;
+  minimo?: number;
+  maximo?: number;
+  suma?: number;
+  total_respuestas?: number;
+  matriz_respuestas?: any[];
+}
+
 export interface AgregadoPorPregunta {
+  seccion_id?: string;
+  seccion_nombre?: string;
   pregunta_id: string;
   enunciado: string;
-  seccion_nombre?: string;
   tipo_campo?: string;
-  total_respuestas: number;
-  agregados: Array<{
+  metricas?: AgregadoMetricas;
+  total_respuestas?: number;
+  agregados?: Array<{
     etiqueta: string;
     total: number;
     porcentaje: number;
@@ -56,7 +84,7 @@ export interface DashboardResumenBackend {
   periodoActivo: any;
   graficos: {
     nivelesEconomicos: { labels: string[]; data: number[] };
-    nivelesVulnerabilidad: { labels: string[]; data: number[] }; // 🔥 El nuevo gráfico
+    nivelesVulnerabilidad: { labels: string[]; data: number[] };
     fichasPorCarrera: { labels: string[]; enviadas: number[]; validadas: number[] };
   };
 }

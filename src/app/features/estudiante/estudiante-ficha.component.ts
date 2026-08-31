@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { debounceTime, catchError, forkJoin, of } from 'rxjs';
+import { debounceTime, catchError, forkJoin, of, firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { environment } from '../../../environments/environment';
@@ -24,6 +24,7 @@ import { PreguntaDependencia } from '../../core/models/dependencia.model';
 import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
+import { UbicacionesService } from '../../core/services/ubicaciones.service';
 
 export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
 
@@ -95,6 +96,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly descargaService = inject(DescargaArchivosService);
+  private readonly ubicacionesService = inject(UbicacionesService);
 
   isDescargandoPdf = this.descargaService.isDescargando;
   formulariosDisponibles = signal<FormularioUI[]>([]);
@@ -108,12 +110,14 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   dependencias = signal<PreguntaDependencia[]>([]);
   periodoActivo = signal<PeriodoMatricula | null>(null);
 
+  // ✅ VARIABLE PARA GUARDAR EL PERFIL COMPLETO DE LA BD
+  datosCompletosPerfil: any = null;
+
   isLoading = signal<boolean>(true);
   enviando = signal<boolean>(false);
   isSavingLocal = signal<boolean>(false);
   mostrarBannerPrecarga = signal<boolean>(false);
 
-  // Signal UX para saber exactamente cuál evidencia se está subiendo en tiempo real
   subiendoEvidenciaId = signal<string | null>(null);
 
   misDocumentosGuardados = signal<DocumentoEstudiante[]>([]);
@@ -204,20 +208,22 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   });
 
   resumenRespuestas = computed<Record<string, string>>(() => {
-    const map: Record<string, string> = {};
-    const valores = this.valormap();
-    const matricesValores = this.matricesGroup.getRawValue();
+  const map: Record<string, string> = {};
+  void this.valormap();
+  // 🔥 getRawValue SÍ OBTIENE LOS CAMPOS BLOQUEADOS (Nombres, Cédula)
+  const valores = this.respuestasGroup.getRawValue();
+  const matricesValores = this.matricesGroup.getRawValue();
 
-    for (const sec of this.secciones()) {
-      for (const p of sec.preguntas || []) {
-        map[p.id] = this.calcularTexto(p, valores, matricesValores);
-        for (const sub of this.getSubpreguntas(p.id)) {
-          map[sub.id] = this.calcularTexto(sub, valores, matricesValores);
-        }
+  for (const sec of this.secciones()) {
+    for (const p of sec.preguntas || []) {
+      map[p.id] = this.calcularTexto(p, valores, matricesValores);
+      for (const sub of this.getSubpreguntas(p.id)) {
+        map[sub.id] = this.calcularTexto(sub, valores, matricesValores);
       }
     }
-    return map;
-  });
+  }
+  return map;
+});
 
   private autosaveData: any = null;
   private respuestasBDCache: any[] = [];
@@ -232,23 +238,29 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   get matricesGroup(): FormGroup { return this.respuestasForm.get('matrices') as FormGroup; }
   get evidenciasGroup(): FormGroup { return this.respuestasForm.get('evidencias') as FormGroup; }
 
+
   ngOnInit(): void {
-    this.cargarPerfilUsuario();
-    this.cargarDatosEstudiante();
+  this.cargarPerfilUsuario();
+  this.cargarDatosEstudiante();
 
-    this.respuestasForm.valueChanges
-      .pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
-      .subscribe(val => {
-        if (!this.esEditable()) return;
+  this.respuestasForm.valueChanges
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(val => {
+      if (!this.esEditable()) return;
+      this.valormap.set(val.respuestas || {});
+      this.limpiarPreguntasOcultas();
+      this.recalcularTotalesFinancieros();
+    });
 
-        this.isSavingLocal.set(true);
-        this.valormap.set(val.respuestas || {});
-        this.limpiarPreguntasOcultas();
-        this.recalcularTotalesFinancieros();
-        this.persistirAutosave();
-        setTimeout(() => this.isSavingLocal.set(false), 500);
-      });
-  }
+  this.respuestasForm.valueChanges
+    .pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => {
+      if (!this.esEditable()) return;
+      this.isSavingLocal.set(true);
+      this.persistirAutosave();
+      setTimeout(() => this.isSavingLocal.set(false), 500);
+    });
+}
 
   // ---------- AUTOSAVE 24h POR FICHA ----------
 
@@ -325,61 +337,128 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     this.perfilEstudiante.update((p) => (p ? { ...p, cedula } : p));
   }
 
-  private precargarCamposPerfil(): void {
-    const user = this.authService.user() as any;
-    const perfil = this.perfilEstudiante();
-    const cedula = user?.cedula || user?.identificacion || user?.numero_documento || user?.usuario?.cedula || perfil?.cedula;
+  // 🔥 MAGIA: PRECARGA E INYECCIÓN DE PERFIL EN RESPUESTAS
+  private async precargarCamposPerfil(): Promise<void> {
+    const p = this.datosCompletosPerfil;
+    if (!p) return;
 
-    if (!cedula || cedula === 'N/A') return;
+    // 1. Extraemos y formateamos la data básica
+    const cedula = p.cedula || '';
+    const nombres = [p.primer_nombre, p.segundo_nombre].filter(Boolean).join(' ');
+    const apellidos = [p.primer_apellido, p.segundo_apellido].filter(Boolean).join(' ');
+    const celular = p.numero_celular || 'No registrado';
+    const correo = p.email_institucional || p.email || '';
+    
+    let fechaNacimiento = '';
+    if (p.fecha_nacimiento) {
+      fechaNacimiento = new Date(p.fecha_nacimiento).toISOString().split('T')[0];
+    }
 
+    // Datos demográficos
+    let sexoGestacion = p.sexo || 'No registrado';
+    if (p.sexo === 'Mujer' && p.esta_embarazada) sexoGestacion += ' (En estado de gestación)';
+    
+    const genero = p.genero || 'No registrado';
+    const estadoCivil = p.estado_civil || 'No registrado';
+    
+    let hijos = 'No';
+    if (p.tiene_hijos) hijos = `Sí (Menores de 5 años: ${p.hijos_menores_5_anios || 0})`;
+
+    let etnia = p.etnia || 'No registrado';
+    if (p.etnia === 'Indígena' && p.pueblo_nacionalidad) etnia += ` - ${p.pueblo_nacionalidad}`;
+    if (p.etnia === 'Otro' && p.etnia_otra) etnia += ` - ${p.etnia_otra}`;
+
+    let idioma = p.idioma || 'No registrado';
+    if (p.idioma === 'Otro' && p.idioma_otro) idioma += ` - ${p.idioma_otro}`;
+
+    // 2. GEOLOCALIZACIÓN: Traducción de UUIDs (Códigos raros) a Nombres Reales
+    let nacionalidad = p.nacionalidad?.nacionalidad || p.nacionalidad?.nombre || p.nacionalidad_id || 'No registrado';
+    let pais = p.pais_nacimiento?.nombre || p.pais_nacimiento_id || '';
+    let prov = p.provincia_nacimiento?.nombre || p.provincia_nacimiento_id || '';
+    let can = p.canton_nacimiento?.nombre || p.canton_nacimiento_id || '';
+
+    try {
+      // Si detecta un código UUID, consulta la Base de Datos para traer el nombre real
+      if (UUID_REGEX.test(nacionalidad) || UUID_REGEX.test(pais)) {
+        const paises = await firstValueFrom(this.ubicacionesService.getPaises());
+        const nacObj = paises.find((x: any) => x.id === p.nacionalidad_id);
+        if (nacObj) nacionalidad = nacObj.nacionalidad;
+
+        const paisObj = paises.find((x: any) => x.id === p.pais_nacimiento_id);
+        if (paisObj) pais = paisObj.nombre;
+      }
+
+      if (p.pais_nacimiento_id && UUID_REGEX.test(prov)) {
+        const provs = await firstValueFrom(this.ubicacionesService.getProvincias(p.pais_nacimiento_id));
+        const provObj = provs.find((x: any) => x.id === p.provincia_nacimiento_id);
+        if (provObj) prov = provObj.nombre;
+      }
+
+      if (p.provincia_nacimiento_id && UUID_REGEX.test(can)) {
+        const cantones = await firstValueFrom(this.ubicacionesService.getCantones(p.provincia_nacimiento_id));
+        const canObj = cantones.find((x: any) => x.id === p.canton_nacimiento_id);
+        if (canObj) can = canObj.nombre;
+      }
+    } catch (e) {
+      console.warn('No se pudieron traducir algunas ubicaciones geográficas.');
+    }
+
+    const lugarNacimiento = [pais, prov, can].filter(Boolean).join(' - ') || 'No registrado';
+
+    // 3. Inyectamos los datos cuidadosamente sin cruzar preguntas
     for (const sec of this.secciones()) {
-      for (const p of sec.preguntas || []) {
-        const codigo = ((p as any).codigo_sistema || '').toUpperCase();
-        const enunciado = (p.enunciado || '').toLowerCase();
-
-        const esCedula =
-          codigo === 'CEDULA' ||
-          codigo === 'REGISTRO_UNICO' ||
-          codigo === 'DOCUMENTO_IDENTIDAD' ||
-          enunciado.includes('cédula') ||
-          enunciado.includes('cedula') ||
-          enunciado.includes('identificación') ||
-          enunciado.includes('identificacion') ||
-          enunciado.includes('registro único') ||
-          enunciado.includes('registro unico');
-
-        if (!esCedula) continue;
-
-        const ctrl = this.respuestasGroup.get(p.id);
+      for (const preg of sec.preguntas || []) {
+        const enunciado = (preg.enunciado || '').toLowerCase().trim();
+        const ctrl = this.respuestasGroup.get(preg.id);
         if (!ctrl) continue;
 
-        const actual = ctrl.value;
-        const vacio =
-          actual === null ||
-          actual === undefined ||
-          actual === '' ||
-          (Array.isArray(actual) && actual.length === 0);
+        let valorAInyectar = null;
 
-        if (vacio) {
-          ctrl.setValue(cedula, { emitEvent: false });
+        // Búsqueda estricta para evitar que "Etnia / Nacionalidad" choque con "Nacionalidad"
+        if (enunciado.includes('cédula') || enunciado.includes('pasaporte')) valorAInyectar = cedula;
+        else if (enunciado.includes('nombres completos')) valorAInyectar = nombres;
+        else if (enunciado.includes('apellidos completos')) valorAInyectar = apellidos;
+        else if (enunciado.includes('celular')) valorAInyectar = celular;
+        else if (enunciado.includes('correo') || enunciado.includes('email')) valorAInyectar = correo;
+        else if (enunciado.includes('fecha de nacimiento')) valorAInyectar = fechaNacimiento;
+        else if (enunciado.includes('país') || enunciado.includes('ciudad de nacimiento')) valorAInyectar = lugarNacimiento;
+        else if (enunciado === 'nacionalidad') valorAInyectar = nacionalidad; // Búsqueda exacta
+        else if (enunciado.includes('sexo')) valorAInyectar = sexoGestacion;
+        else if (enunciado === 'género' || enunciado === 'genero') valorAInyectar = genero; // Búsqueda exacta
+        else if (enunciado.includes('estado civil')) valorAInyectar = estadoCivil;
+        else if (enunciado.includes('hijos')) valorAInyectar = hijos;
+        else if (enunciado.includes('etnia')) valorAInyectar = etnia;
+        else if (enunciado.includes('idioma')) valorAInyectar = idioma;
+
+        if (valorAInyectar !== null && valorAInyectar !== '') {
+          ctrl.setValue(valorAInyectar, { emitEvent: false });
+          ctrl.disable({ emitEvent: false }); 
         }
       }
     }
 
     this.valormap.set(this.respuestasGroup.getRawValue());
+    this.recalcularTotalesFinancieros();
   }
 
   // ---------- NAVEGACIÓN DE PASOS ----------
 
   irAPaso(index: number): void {
-    if (index <= this.seccionActualIndex() || this.validarSeccionActual()) {
-      this.seccionActualIndex.set(index);
-      this.guardarPasoEnLocal();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      this.toastService.show('Por favor, completa los campos obligatorios antes de avanzar.', 'warning');
-    }
+  if (!this.esEditable() || index <= this.seccionActualIndex()) {
+    this.seccionActualIndex.set(index);
+    this.guardarPasoEnLocal();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
   }
+
+  if (this.validarHastaSeccion(index)) {
+    this.seccionActualIndex.set(index);
+    this.guardarPasoEnLocal();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    this.toastService.show('Por favor, completa los campos obligatorios de las secciones anteriores antes de avanzar.', 'warning');
+  }
+}
 
   siguiente(): void {
     if (this.validarSeccionActual()) {
@@ -401,37 +480,98 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     }
   }
 
-  validarSeccionActual(): boolean {
-    if (this.esPasoResumen() || !this.esEditable()) return true;
+  private validarSeccionPorIndice(index: number): boolean {
+  if (!this.esEditable()) return true;
 
+  const seccion = this.secciones()[index];
+  if (!seccion) return true;
+
+  let esValido = true;
+
+  if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+    esValido = false;
+  }
+
+  for (const preg of seccion.preguntas || []) {
+    if (!this.esPreguntaVisible(preg.id)) continue;
+
+    if (!this.validarPreguntaIndividual(preg)) esValido = false;
+
+    for (const sub of this.getSubpreguntas(preg.id)) {
+      if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
+        esValido = false;
+      }
+    }
+  }
+
+  return esValido;
+}
+
+validarSeccionActual(): boolean {
+  if (this.esPasoResumen() || !this.esEditable()) return true;
+
+  const esValido = this.validarSeccionPorIndice(this.seccionActualIndex());
+
+  if (!esValido) {
     const seccionActual = this.secciones()[this.seccionActualIndex()];
-    if (!seccionActual) return true;
-
-    let esValido = true;
-
-    if (seccionActual.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+    if (seccionActual?.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
       this.toastService.show(
         'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
         'error'
       );
-      return false;
     }
-
-    for (const preg of seccionActual.preguntas || []) {
-      if (!this.esPreguntaVisible(preg.id)) continue;
-
-      if (!this.validarPreguntaIndividual(preg)) esValido = false;
-
-      for (const sub of this.getSubpreguntas(preg.id)) {
-        if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
-          esValido = false;
-        }
-      }
-    }
-
-    return esValido;
   }
 
+  return esValido;
+}
+
+private validarHastaSeccion(index: number): boolean {
+  for (let i = 0; i < index; i++) {
+    if (!this.validarSeccionPorIndice(i)) return false;
+  }
+  return true;
+}
+seccionEstaCompleta(index: number): boolean {
+  if (!this.esEditable()) return true;
+
+  const seccion = this.secciones()[index];
+  if (!seccion) return true;
+
+  if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+    return false;
+  }
+
+  for (const preg of seccion.preguntas || []) {
+    if (!this.esPreguntaVisible(preg.id)) continue;
+
+    if (!this.preguntaEstaCompleta(preg)) return false;
+
+    for (const sub of this.getSubpreguntas(preg.id)) {
+      if (this.esPreguntaVisible(sub.id) && !this.preguntaEstaCompleta(sub)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+private preguntaEstaCompleta(preg: Pregunta): boolean {
+  const ctrl = this.respuestasGroup.get(preg.id);
+  if (ctrl && ctrl.invalid) return false;
+
+  if (preg.tipoCampo?.nombre === 'MATRIZ') {
+    const matGroup = this.matricesGroup.get(preg.id) as FormGroup;
+    if (matGroup && matGroup.invalid) return false;
+  }
+
+  if (preg.requiere_evidencia) {
+    const evidenciaCtrl = this.evidenciasGroup.get(preg.id);
+    if (evidenciaCtrl && evidenciaCtrl.invalid) return false;
+  }
+
+  return true;
+}
   private validarPreguntaIndividual(preg: Pregunta): boolean {
     let esValido = true;
 
@@ -461,22 +601,32 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   private guardarPasoEnLocal(): void {
-    this.persistirAutosave();
+  if (this.esEditable()) {
+    this.valormap.set(this.respuestasGroup.getRawValue());
+    this.recalcularTotalesFinancieros();
   }
+  this.persistirAutosave();
+}
 
   // ---------- CARGA INICIAL ----------
 
   cargarDatosEstudiante(): void {
     this.isLoading.set(true);
+    // Recuperamos el ID del usuario desde el token
+    const userId = (this.authService.user() as any)?.id || (this.authService.user() as any)?.sub;
 
+    // 🔥 Agregamos la petición extra para descargar el perfil completo y tener todos sus datos
     forkJoin({
       periodos: this.periodoService.getPeriodos(),
       fichas: this.fichaService.getMisFichas(),
-      formularios: this.formularioService.getFormularios()
+      formularios: this.formularioService.getFormularios(),
+      perfil: userId ? this.http.get<any>(`${environment.apiUrl}/usuarios/${userId}`).pipe(catchError(() => of(null))) : of(null)
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ periodos, fichas, formularios }) => {
+        next: ({ periodos, fichas, formularios, perfil }) => {
+          this.datosCompletosPerfil = perfil; // Guardamos el perfil para la precarga
+          
           const pActivo = periodos.find(p => p.activo);
           this.periodoActivo.set(pActivo || null);
           this.misFichas.set(fichas);
@@ -729,7 +879,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
     preguntasTodas.forEach((p) => this.construirControlesPreguntas(p));
     this.aplicarRespuestasGuardadas(this.respuestasBDCache);
+    
+    // ✅ LLAMAMOS A LA PRECARGA DE DATOS AQUÍ
     this.precargarCamposPerfil();
+    
     this.recalcularTotalesFinancieros();
 
     if (!this.esEditable()) {
@@ -1183,6 +1336,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
       this.enviando.set(true);
 
+      // Usamos getRawValue para que sí incluya las cajitas bloqueadas de Cédula y Nombres
       const respuestasValores = this.respuestasGroup.getRawValue();
       const evidenciasValores = this.evidenciasGroup.getRawValue();
       const payloadRespuestas: any[] = [];

@@ -59,9 +59,15 @@ export class ReportesService {
     return this.http.post<DatasetFiltradoResponse>(`${this.apiUrl}/dataset-filtrado`, filtros);
   }
 
-  getAgregadoPorPregunta(filtros: FiltroReporteRequest): Observable<AgregadoPorPregunta[]> {
-    return this.http.post<AgregadoPorPregunta[]>(`${this.apiUrl}/agregado-por-pregunta`, filtros);
-  }
+  getAgregadoPorPregunta(filtros: FiltroReporteRequest): Observable<{
+  total_fichas_respondidas: number;
+  estructura_agregada: AgregadoPorPregunta[];
+}> {
+  return this.http.post<{
+    total_fichas_respondidas: number;
+    estructura_agregada: AgregadoPorPregunta[];
+  }>(`${this.apiUrl}/agregado-por-pregunta`, filtros);
+}
 
   descargarExcelMatriz(periodoId: string): void {
     this.descargaService.descargar(
