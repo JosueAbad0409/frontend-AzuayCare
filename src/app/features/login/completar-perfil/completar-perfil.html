@@ -61,7 +61,7 @@
 
         <form [formGroup]="perfilForm" (ngSubmit)="guardar()" class="p-6 md:p-8" novalidate>
 
-          <!-- ✅ TARJETA INTERACTIVA DE FOTOGRAFÍA CON ALERTA VISUAL -->
+          <!-- TARJETA INTERACTIVA DE FOTOGRAFÍA CON ALERTA VISUAL -->
           <div class="mb-10 border rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm relative overflow-hidden group transition-all duration-300"
                [ngClass]="fotoInvalida() ? 'bg-red-50 border-red-400 shake-error' : 'bg-indigo-50 border-indigo-200'">
             <div class="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -97,7 +97,6 @@
                 <i class="fas fa-upload"></i> Subir Nueva Fotografía
               </button>
 
-              <!-- MUESTRA EL ERROR DIRECTAMENTE DEBAJO DEL BOTÓN SI FALTÓ -->
               @if (fotoInvalida()) {
                 <span class="text-[12px] font-bold text-red-600 block mt-3"><i class="fas fa-arrow-up mr-1"></i> Falta subir tu fotografía para poder continuar.</span>
               }
@@ -120,46 +119,46 @@
                 @if (campoInvalido('tipo_documento')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('tipo_documento') }}</span> }
               </div>
 
-              <!-- ✅ CÉDULA PROTEGIDA -->
+              <!-- CÉDULA PROTEGIDA -->
               <div class="flex flex-col gap-1.5 relative">
                 <label for="cedula" class="text-sm font-bold text-slate-700">Cédula de Identidad/Pasaporte *</label>
-                <input id="cedula" type="text" formControlName="cedula" (input)="onIdentificacionInput($event)" placeholder="Ej. 0102030405" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('cedula')}" />
+                <input id="cedula" type="text" formControlName="cedula" (input)="onIdentificacionInput($event)" (blur)="perfilForm.controls['cedula'].markAsTouched()" placeholder="Ej. 0102030405" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('cedula')}" />
                 @if (campoInvalido('cedula')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('cedula') }}</span> }
               </div>
 
               <div class="flex flex-col gap-1.5">
                 <label for="numero_celular" class="text-sm font-bold text-slate-700">Número Celular *</label>
-                <input id="numero_celular" type="tel" formControlName="numero_celular" (input)="onCelularInput($event)" placeholder="Ej. 0987654321" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('numero_celular')}" />
+                <input id="numero_celular" type="tel" formControlName="numero_celular" (input)="onCelularInput($event)" (blur)="perfilForm.controls['numero_celular'].markAsTouched()" placeholder="Ej. 0987654321" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('numero_celular')}" />
                 @if (campoInvalido('numero_celular')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('numero_celular') }}</span> }
               </div>
 
-              <!-- ✅ NOMBRES PROTEGIDOS -->
+              <!-- NOMBRES PROTEGIDOS -->
               <div class="flex flex-col gap-1.5">
                 <label for="primer_nombre" class="text-sm font-bold text-slate-700">Primer Nombre *</label>
-                <input id="primer_nombre" type="text" formControlName="primer_nombre" (input)="onLetrasInput('primer_nombre', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_nombre')}" />
+                <input id="primer_nombre" type="text" formControlName="primer_nombre" (input)="onLetrasInput('primer_nombre', $event)" (blur)="perfilForm.controls['primer_nombre'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_nombre')}" />
                 @if (campoInvalido('primer_nombre')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_nombre') }}</span> }
               </div>
 
               <div class="flex flex-col gap-1.5">
                 <label for="segundo_nombre" class="text-sm font-bold text-slate-700">Segundo Nombre <span class="text-xs font-normal text-slate-400">(Opcional)</span></label>
-                <input id="segundo_nombre" type="text" formControlName="segundo_nombre" (input)="onLetrasInput('segundo_nombre', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_nombre')}" />
+                <input id="segundo_nombre" type="text" formControlName="segundo_nombre" (input)="onLetrasInput('segundo_nombre', $event)" (blur)="perfilForm.controls['segundo_nombre'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_nombre')}" />
               </div>
 
               <div class="flex flex-col gap-1.5">
                 <label for="primer_apellido" class="text-sm font-bold text-slate-700">Primer Apellido *</label>
-                <input id="primer_apellido" type="text" formControlName="primer_apellido" (input)="onLetrasInput('primer_apellido', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_apellido')}" />
+                <input id="primer_apellido" type="text" formControlName="primer_apellido" (input)="onLetrasInput('primer_apellido', $event)" (blur)="perfilForm.controls['primer_apellido'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('primer_apellido')}" />
                 @if (campoInvalido('primer_apellido')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('primer_apellido') }}</span> }
               </div>
 
               <div class="flex flex-col gap-1.5">
                 <label for="segundo_apellido" class="text-sm font-bold text-slate-700">Segundo Apellido <span class="text-xs font-normal text-slate-400">(Opcional)</span></label>
-                <input id="segundo_apellido" type="text" formControlName="segundo_apellido" (input)="onLetrasInput('segundo_apellido', $event)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_apellido')}" />
+                <input id="segundo_apellido" type="text" formControlName="segundo_apellido" (input)="onLetrasInput('segundo_apellido', $event)" (blur)="perfilForm.controls['segundo_apellido'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all capitalize" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('segundo_apellido')}" />
               </div>
 
-              <!-- ✅ CORREO VALIDADO -->
+              <!-- CORREO VALIDADO -->
               <div class="flex flex-col gap-1.5 md:col-span-2">
                 <label for="email_institucional" class="text-sm font-bold text-slate-700">Correo Electrónico Institucional</label>
-                <input id="email_institucional" type="email" formControlName="email_institucional" 
+                <input id="email_institucional" type="email" formControlName="email_institucional" (blur)="perfilForm.controls['email_institucional'].markAsTouched()" 
                   class="w-full rounded-xl p-3 text-sm transition-all lowercase" 
                   [ngClass]="esInstitucionalBloqueado ? 'bg-slate-50 border border-slate-200 text-slate-500 shadow-inner cursor-not-allowed' : (campoInvalido('email_institucional') ? 'border-red-400 bg-red-50 shake-error' : 'bg-white border border-slate-300 focus:border-blue-500')" 
                   [readonly]="esInstitucionalBloqueado" />
@@ -181,12 +180,19 @@
                 <div class="relative w-full">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-slate-400"></i></div>
                   <input id="buscarCarrera" type="text" [formControl]="filtroCarreraControl" autocomplete="off" placeholder="Buscar carrera..." (focus)="dropdownCarreraAbierto.set(true)" (blur)="cerrarDropdownCarrera()" class="w-full bg-white border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500 uppercase" [ngClass]="campoInvalido('carrera_id') ? 'border-red-400 bg-red-50 shake-error' : 'border-slate-300'" />
+                  @if (filtroCarreraControl.value) {
+                    <button type="button" (click)="limpiarFiltroCarrera()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  }
                   @if (dropdownCarreraAbierto()) {
                   <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
                     @for (c of carrerasFiltradas(); track c.id) {
                     <li (mousedown)="seleccionarCarrera(c)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
                       <span [class.font-bold]="perfilForm.get('carrera_id')?.value === c.id">{{ c.nombre }}</span>
                     </li>
+                    } @empty {
+                    <li class="px-4 py-3 text-slate-400 text-xs text-center">No se encontraron carreras coincidentes.</li>
                     }
                   </ul>
                   }
@@ -196,7 +202,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <label for="ciclo" class="text-sm font-bold text-slate-700">Ciclo académico *</label>
-                <select id="ciclo" formControlName="ciclo_id" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-50 uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('ciclo_id')}">
+                <select id="ciclo" formControlName="ciclo_id" (blur)="perfilForm.controls['ciclo_id'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-50 uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('ciclo_id')}">
                   <option [ngValue]="null" disabled>Selecciona ciclo...</option>
                   @for (c of ciclosDisponibles(); track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
                 </select>
@@ -216,7 +222,7 @@
               
               <div class="flex flex-col gap-1.5">
                 <label for="sexo" class="text-sm font-bold text-slate-700">Sexo *</label>
-                <select id="sexo" formControlName="sexo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('sexo')}">
+                <select id="sexo" formControlName="sexo" (blur)="perfilForm.controls['sexo'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('sexo')}">
                   <option value="" disabled>Selecciona...</option>
                   @for (s of sexos; track s) { <option [value]="s">{{ s }}</option> }
                 </select>
@@ -226,7 +232,7 @@
               @if (perfilForm.get('sexo')?.value === 'Mujer') {
               <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-rose-200 bg-rose-50/50">
                 <label for="mes_embarazo" class="text-sm font-bold text-rose-900">Especifique Su Estado (Gestación) *</label>
-                <select id="mes_embarazo" formControlName="mes_embarazo" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-rose-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('mes_embarazo')}">
+                <select id="mes_embarazo" formControlName="mes_embarazo" (blur)="perfilForm.controls['mes_embarazo'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-rose-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('mes_embarazo')}">
                   @for (o of opcionesEmbarazo; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
                 </select>
                 @if (campoInvalido('mes_embarazo')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('mes_embarazo') }}</span> }
@@ -235,7 +241,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <label for="genero" class="text-sm font-bold text-slate-700">Género *</label>
-                <select id="genero" formControlName="genero" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('genero')}">
+                <select id="genero" formControlName="genero" (blur)="perfilForm.controls['genero'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('genero')}">
                   <option value="" disabled>Selecciona...</option>
                   @for (g of generos; track g) { <option [value]="g">{{ g }}</option> }
                 </select>
@@ -244,7 +250,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <label for="estado_civil" class="text-sm font-bold text-slate-700">Estado Civil *</label>
-                <select id="estado_civil" formControlName="estado_civil" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('estado_civil')}">
+                <select id="estado_civil" formControlName="estado_civil" (blur)="perfilForm.controls['estado_civil'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('estado_civil')}">
                   <option value="" disabled>Selecciona...</option>
                   @for (e of estadosCiviles; track e) { <option [value]="e">{{ e }}</option> }
                 </select>
@@ -253,7 +259,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <label for="tiene_hijos" class="text-sm font-bold text-slate-700">¿Tiene Hijos? *</label>
-                <select id="tiene_hijos" formControlName="tiene_hijos" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('tiene_hijos')}">
+                <select id="tiene_hijos" formControlName="tiene_hijos" (blur)="perfilForm.controls['tiene_hijos'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('tiene_hijos')}">
                   <option [ngValue]="null" disabled>Selecciona...</option>
                   <option [ngValue]="false">No</option>
                   <option [ngValue]="true">Sí</option>
@@ -264,14 +270,14 @@
               @if (perfilForm.get('tiene_hijos')?.value === true) {
               <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-blue-200 bg-blue-50/50">
                 <label for="hijos_menores_5_anios" class="text-sm font-bold text-blue-900">Menores de 5 Años *</label>
-                <input id="hijos_menores_5_anios" type="number" min="0" max="20" formControlName="hijos_menores_5_anios" placeholder="Ej. 1" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('hijos_menores_5_anios')}" />
+                <input id="hijos_menores_5_anios" type="number" min="0" max="20" formControlName="hijos_menores_5_anios" (blur)="perfilForm.controls['hijos_menores_5_anios'].markAsTouched()" placeholder="Ej. 1" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50': campoInvalido('hijos_menores_5_anios')}" />
                 @if (campoInvalido('hijos_menores_5_anios')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('hijos_menores_5_anios') }}</span> }
               </div>
               }
 
               <div class="flex flex-col gap-1.5">
                 <label for="etnia" class="text-sm font-bold text-slate-700">Etnia *</label>
-                <select id="etnia" formControlName="etnia" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia')}">
+                <select id="etnia" formControlName="etnia" (blur)="perfilForm.controls['etnia'].markAsTouched()" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia')}">
                   <option value="" disabled>Selecciona...</option>
                   @for (e of etnias; track e) { <option [value]="e">{{ e }}</option> }
                 </select>
@@ -281,7 +287,7 @@
               @if (perfilForm.get('etnia')?.value?.includes('Indígena')) {
               <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
                 <label for="pueblo_nacionalidad" class="text-sm font-bold text-emerald-900">Especifique a qué Pueblo o Nacionalidad Pertenece *</label>
-                <input id="pueblo_nacionalidad" type="text" formControlName="pueblo_nacionalidad" (input)="onLetrasInput('pueblo_nacionalidad', $event)" placeholder="Ej. Kichwa, Shuar..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('pueblo_nacionalidad')}" />
+                <input id="pueblo_nacionalidad" type="text" formControlName="pueblo_nacionalidad" (input)="onLetrasInput('pueblo_nacionalidad', $event)" (blur)="perfilForm.controls['pueblo_nacionalidad'].markAsTouched()" placeholder="Ej. Kichwa, Shuar..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-emerald-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('pueblo_nacionalidad')}" />
                 @if (campoInvalido('pueblo_nacionalidad')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('pueblo_nacionalidad') }}</span> }
               </div>
               }
@@ -289,48 +295,81 @@
               @if (perfilForm.get('etnia')?.value === 'Otro') {
               <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-purple-200 bg-purple-50/50">
                 <label for="etnia_otra" class="text-sm font-bold text-purple-900">Especifique su etnia *</label>
-                <input id="etnia_otra" type="text" formControlName="etnia_otra" (input)="onLetrasInput('etnia_otra', $event)" placeholder="Especifique..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-purple-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia_otra')}" />
+                <input id="etnia_otra" type="text" formControlName="etnia_otra" (input)="onLetrasInput('etnia_otra', $event)" (blur)="perfilForm.controls['etnia_otra'].markAsTouched()" placeholder="Especifique..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-purple-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('etnia_otra')}" />
                 @if (campoInvalido('etnia_otra')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('etnia_otra') }}</span> }
               </div>
               }
 
-              <!-- ✅ SELECT DE IDIOMA -->
-              <div class="flex flex-col gap-1.5">
-                <label for="idioma" class="text-sm font-bold text-slate-700">Idioma *</label>
-                <select id="idioma" formControlName="idioma" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('idioma')}">
-                  <option value="" disabled>Selecciona...</option>
-                  @for (i of idiomas; track i) { <option [value]="i">{{ i }}</option> }
-                </select>
-                @if (campoInvalido('idioma')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('idioma') }}</span> }
+              <!-- IDIOMA CON BÚSQUEDA Y FILTRADO DINÁMICO -->
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="buscarIdioma" class="text-sm font-bold text-slate-700">Idioma *</label>
+                <div class="relative w-full">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-slate-400"></i></div>
+                  <input id="buscarIdioma" type="text" [formControl]="filtroIdiomaControl" autocomplete="off" placeholder="Buscar idioma..." (focus)="dropdownIdiomaAbierto.set(true)" (blur)="cerrarDropdownIdioma()" class="w-full bg-white border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500" [ngClass]="campoInvalido('idioma') ? 'border-red-400 bg-red-50 shake-error' : 'border-slate-300'" />
+                  @if (filtroIdiomaControl.value) {
+                    <button type="button" (click)="limpiarFiltroIdioma()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  }
+                  @if (dropdownIdiomaAbierto()) {
+                  <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
+                    @for (i of idiomasFiltrados(); track i) {
+                    <li (mousedown)="seleccionarIdioma(i)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
+                      <span [class.font-bold]="perfilForm.get('idioma')?.value === i">{{ i }}</span>
+                    </li>
+                    } @empty {
+                    <li class="px-4 py-3 text-slate-400 text-xs text-center">No se encontraron idiomas coincidentes.</li>
+                    }
+                  </ul>
+                  }
+                </div>
+                @if (campoInvalido('idioma')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('idioma') }}</span> }
               </div>
 
               @if (perfilForm.get('idioma')?.value === 'Otro') {
               <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-sky-200 bg-sky-50/50">
                 <label for="idioma_otro" class="text-sm font-bold text-sky-900">Especifique su idioma *</label>
-                <input id="idioma_otro" type="text" formControlName="idioma_otro" (input)="onLetrasInput('idioma_otro', $event)" placeholder="Ej. Portugués, Francés..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-sky-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('idioma_otro')}" />
+                <input id="idioma_otro" type="text" formControlName="idioma_otro" (input)="onLetrasInput('idioma_otro', $event)" (blur)="perfilForm.controls['idioma_otro'].markAsTouched()" placeholder="Ej. Portugués, Francés..." class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-sky-500 capitalize" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('idioma_otro')}" />
                 @if (campoInvalido('idioma_otro')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('idioma_otro') }}</span> }
               </div>
               }
 
               <div class="flex flex-col gap-1.5">
                 <label for="fecha_nacimiento" class="text-sm font-bold text-slate-700">Fecha de Nacimiento *</label>
-                <input id="fecha_nacimiento" type="date" formControlName="fecha_nacimiento" [min]="minDateNacimiento" [max]="maxDateNacimiento" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 cursor-pointer uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('fecha_nacimiento')}" />
+                <input id="fecha_nacimiento" type="date" formControlName="fecha_nacimiento" (blur)="perfilForm.controls['fecha_nacimiento'].markAsTouched()" [min]="minDateNacimiento" [max]="maxDateNacimiento" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 cursor-pointer uppercase" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('fecha_nacimiento')}" />
                 @if (campoInvalido('fecha_nacimiento')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('fecha_nacimiento') }}</span> }
               </div>
 
-              <div class="flex flex-col gap-1.5">
-                <label for="nacionalidad_id" class="text-sm font-bold text-slate-700">Nacionalidad *</label>
-                <select id="nacionalidad_id" formControlName="nacionalidad_id" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500" [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('nacionalidad_id')}">
-                  <option value="" disabled>Selecciona tu país...</option>
-                  @for (p of paises(); track p.id) { <option [value]="p.id">{{ p.nacionalidad }}</option> }
-                </select>
-                @if (campoInvalido('nacionalidad_id')) { <span class="text-[11px] font-bold text-red-500"><i class="fas fa-exclamation-circle"></i> {{ mensajeCampo('nacionalidad_id') }}</span> }
+              <!-- NACIONALIDAD CON BÚSQUEDA Y FILTRADO DINÁMICO -->
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="buscarNacionalidad" class="text-sm font-bold text-slate-700">Nacionalidad *</label>
+                <div class="relative w-full">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-slate-400"></i></div>
+                  <input id="buscarNacionalidad" type="text" [formControl]="filtroNacionalidadControl" autocomplete="off" placeholder="Buscar nacionalidad..." (focus)="dropdownNacionalidadAbierto.set(true)" (blur)="cerrarDropdownNacionalidad()" class="w-full bg-white border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500" [ngClass]="campoInvalido('nacionalidad_id') ? 'border-red-400 bg-red-50 shake-error' : 'border-slate-300'" />
+                  @if (filtroNacionalidadControl.value) {
+                    <button type="button" (click)="limpiarFiltroNacionalidad()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  }
+                  @if (dropdownNacionalidadAbierto()) {
+                  <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
+                    @for (p of nacionalidadesFiltradas(); track p.id) {
+                    <li (mousedown)="seleccionarNacionalidad(p)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
+                      <span [class.font-bold]="perfilForm.get('nacionalidad_id')?.value === p.id">{{ p.nacionalidad }}</span>
+                    </li>
+                    } @empty {
+                    <li class="px-4 py-3 text-slate-400 text-xs text-center">No se encontraron nacionalidades coincidentes.</li>
+                    }
+                  </ul>
+                  }
+                </div>
+                @if (campoInvalido('nacionalidad_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('nacionalidad_id') }}</span> }
               </div>
 
-              <!-- ✅ CASCADA: LUGAR DE NACIMIENTO -->
+              <!-- CASCADA: LUGAR DE NACIMIENTO -->
               <div class="flex flex-col gap-1.5">
                 <label for="pais_nacimiento_id" class="text-sm font-bold text-slate-700">País de Nacimiento *</label>
-                <select id="pais_nacimiento_id" formControlName="pais_nacimiento_id" 
+                <select id="pais_nacimiento_id" formControlName="pais_nacimiento_id" (blur)="perfilForm.controls['pais_nacimiento_id'].markAsTouched()" 
                   class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
                   [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('pais_nacimiento_id')}">
                   <option value="" disabled>Se llena automáticamente con tu nacionalidad...</option>
@@ -339,25 +378,63 @@
                 @if (campoInvalido('pais_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('pais_nacimiento_id') }}</span> }
               </div>
 
-              <div class="flex flex-col gap-1.5">
-                <label for="provincia_nacimiento_id" class="text-sm font-bold text-slate-700">Provincia / Estado de Nacimiento *</label>
-                <select id="provincia_nacimiento_id" formControlName="provincia_nacimiento_id" 
-                  class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
-                  [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('provincia_nacimiento_id')}">
-                  <option value="" disabled>{{ perfilForm.get('pais_nacimiento_id')?.value && provinciasNacimiento().length === 0 ? 'No hay provincias registradas para este país' : 'Selecciona provincia...' }}</option>
-                  @for (prov of provinciasNacimiento(); track prov.id) { <option [value]="prov.id">{{ prov.nombre }}</option> }
-                </select>
+              <!-- PROVINCIA CON BÚSQUEDA DINÁMICA BLOQUEADA HASTA SELECCIONAR PAÍS DE NACIMIENTO -->
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="buscarProvincia" class="text-sm font-bold text-slate-700">Provincia / Estado de Nacimiento *</label>
+                <div class="relative w-full">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-lock text-slate-400"></i></div>
+                  <input id="buscarProvincia" type="text" [formControl]="filtroProvinciaControl" autocomplete="off" 
+                    [placeholder]="filtroProvinciaControl.disabled ? '🔒 Selecciona tu nacionalidad primero...' : 'Buscar provincia...'" 
+                    (focus)="dropdownProvinciaAbierto.set(true)" (blur)="cerrarDropdownProvincia()" 
+                    class="w-full border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-slate-200 transition-all" 
+                    [ngClass]="campoInvalido('provincia_nacimiento_id') ? 'border-red-400 bg-red-50 shake-error' : 'bg-white border-slate-300'" />
+                  @if (filtroProvinciaControl.value && !filtroProvinciaControl.disabled) {
+                    <button type="button" (click)="limpiarFiltroProvincia()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  }
+                  @if (dropdownProvinciaAbierto() && !filtroProvinciaControl.disabled) {
+                  <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
+                    @for (prov of provinciasFiltradas(); track prov.id) {
+                    <li (mousedown)="seleccionarProvincia(prov)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
+                      <span [class.font-bold]="perfilForm.get('provincia_nacimiento_id')?.value === prov.id">{{ prov.nombre }}</span>
+                    </li>
+                    } @empty {
+                    <li class="px-4 py-3 text-slate-400 text-xs text-center">No se encontraron provincias coincidentes.</li>
+                    }
+                  </ul>
+                  }
+                </div>
                 @if (campoInvalido('provincia_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('provincia_nacimiento_id') }}</span> }
               </div>
 
-              <div class="flex flex-col gap-1.5">
-                <label for="canton_nacimiento_id" class="text-sm font-bold text-slate-700">Cantón / Ciudad de Nacimiento *</label>
-                <select id="canton_nacimiento_id" formControlName="canton_nacimiento_id" 
-                  class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-500 transition-all cursor-pointer disabled:opacity-70 disabled:bg-slate-100 disabled:cursor-not-allowed" 
-                  [ngClass]="{'border-red-400 bg-red-50 shake-error': campoInvalido('canton_nacimiento_id')}">
-                  <option value="" disabled>{{ perfilForm.get('provincia_nacimiento_id')?.value && cantonesNacimiento().length === 0 ? 'No hay ciudades registradas en esta provincia' : 'Selecciona ciudad...' }}</option>
-                  @for (can of cantonesNacimiento(); track can.id) { <option [value]="can.id">{{ can.nombre }}</option> }
-                </select>
+              <!-- CANTÓN CON BÚSQUEDA DINÁMICA BLOQUEADA HASTA SELECCIONAR PROVINCIA -->
+              <div class="flex flex-col gap-1.5 relative">
+                <label for="buscarCanton" class="text-sm font-bold text-slate-700">Cantón / Ciudad de Nacimiento *</label>
+                <div class="relative w-full">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-lock text-slate-400"></i></div>
+                  <input id="buscarCanton" type="text" [formControl]="filtroCantonControl" autocomplete="off" 
+                    [placeholder]="filtroCantonControl.disabled ? '🔒 Selecciona una provincia primero...' : 'Buscar cantón / ciudad...'" 
+                    (focus)="dropdownCantonAbierto.set(true)" (blur)="cerrarDropdownCanton()" 
+                    class="w-full border rounded-xl p-3 pl-10 pr-10 text-sm focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-slate-200 transition-all" 
+                    [ngClass]="campoInvalido('canton_nacimiento_id') ? 'border-red-400 bg-red-50 shake-error' : 'bg-white border-slate-300'" />
+                  @if (filtroCantonControl.value && !filtroCantonControl.disabled) {
+                    <button type="button" (click)="limpiarFiltroCanton()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  }
+                  @if (dropdownCantonAbierto() && !filtroCantonControl.disabled) {
+                  <ul class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl max-h-56 rounded-xl overflow-auto text-sm">
+                    @for (can of cantonesFiltrados(); track can.id) {
+                    <li (mousedown)="seleccionarCanton(can)" class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50">
+                      <span [class.font-bold]="perfilForm.get('canton_nacimiento_id')?.value === can.id">{{ can.nombre }}</span>
+                    </li>
+                    } @empty {
+                    <li class="px-4 py-3 text-slate-400 text-xs text-center">No se encontraron cantones coincidentes.</li>
+                    }
+                  </ul>
+                  }
+                </div>
                 @if (campoInvalido('canton_nacimiento_id')) { <span class="text-[11px] font-bold text-red-500 flex items-start gap-1 mt-1"><i class="fas fa-exclamation-circle mt-0.5"></i> {{ mensajeCampo('canton_nacimiento_id') }}</span> }
               </div>
 

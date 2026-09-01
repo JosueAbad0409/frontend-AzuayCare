@@ -22,7 +22,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { forkJoin, of, catchError, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
-import { environment } from '../../../../environments/environment'; 
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-revision-detalle',
@@ -55,6 +55,7 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   readonly filterPregunta = signal<string>('');
   readonly filterEvidencias = signal<'TODAS' | 'CON_EVIDENCIA' | 'SIN_EVIDENCIA'>('TODAS');
   readonly exportandoPdf = signal(false);
+  readonly imageError = signal<boolean>(false);
 
   private readonly filterSubject = new Subject<string>();
   private filterSubscription?: Subscription;
@@ -146,8 +147,13 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
     this.filterEvidencias.set('TODAS');
   }
 
+  onImageError(): void {
+    this.imageError.set(true);
+  }
+
   private cargarTodo(id: string): void {
     this.isLoading.set(true);
+    this.imageError.set(false);
 
     this.revisionService.getFichaDetalle(id).subscribe({
       next: (ficha) => {
@@ -326,7 +332,7 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
 
   cambiarEstado(nuevoEstado: EstadoFicha, esReapertura: boolean = false): void {
     const f = this.ficha();
-    
+
     if (!f || this.guardando()) return;
     if (!esReapertura && !this.puedeRevisar()) return;
 
@@ -336,14 +342,14 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
         this.ficha.set(actualizada);
         this.guardando.set(false);
         this.comentario.set('');
-        
+
         let mensajeToast = 'Estado actualizado';
         if (nuevoEstado === 'VALIDADO') mensajeToast = 'Ficha validada con éxito.';
         else if (nuevoEstado === 'BORRADOR') mensajeToast = 'Ficha devuelta al estudiante para edición.';
         else mensajeToast = 'Ficha rechazada.';
 
         this.toastService.show(mensajeToast, nuevoEstado === 'VALIDADO' ? 'success' : 'info');
-        
+
         this.historialService.getHistorialByFicha(f.id).subscribe({
           next: (h) => this.historial.set(h)
         });

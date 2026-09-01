@@ -1028,8 +1028,9 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
     return formArray.controls.some(ctrl => ctrl.value === opcionId);
   }
 
-  onToggleMatrizMultiple(preguntaId: string, filaId: string, columnaId: string, event: Event): void {
-    if (!this.esEditable()) return;
+  // 🔧 CORREGIDO: filaId y columnaId ahora aceptan undefined y agregamos esMultiple con comportamiento tipo radio
+  onToggleMatrizMultiple(preguntaId: string, filaId: string | undefined, columnaId: string | undefined, event: Event, esMultiple: boolean = true): void {
+    if (!this.esEditable() || !filaId || !columnaId) return;
 
     const checked = (event.target as HTMLInputElement).checked;
     const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
@@ -1039,6 +1040,10 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
     if (!filaArray) return;
 
     if (checked) {
+      // 🔧 Comportamiento tipo radio: si la fila NO es múltiple, solo una columna seleccionada a la vez
+      if (!esMultiple && filaArray.length > 0) {
+        filaArray.clear();
+      }
       filaArray.push(this.fb.control(columnaId));
     } else {
       const idx = filaArray.controls.findIndex(ctrl => ctrl.value === columnaId);
@@ -1049,7 +1054,10 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
     this.valormap.set(this.respuestasGroup.getRawValue());
   }
 
-  esColumnaMatrizSeleccionada(preguntaId: string, filaId: string, columnaId: string): boolean {
+  // 🔧 CORREGIDO: filaId y columnaId ahora aceptan undefined
+  esColumnaMatrizSeleccionada(preguntaId: string, filaId: string | undefined, columnaId: string | undefined): boolean {
+    if (!filaId || !columnaId) return false;
+
     const matrizGroup = this.matricesGroup.get(preguntaId) as FormGroup;
     if (!matrizGroup) return false;
 

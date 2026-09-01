@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Usuario, CreateUsuarioDto, CompletarPerfilDto } from '../models/usuario.model';
 import { environment } from '../../../environments/environment';
@@ -9,8 +9,12 @@ export class UsuarioService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/usuarios`;
 
-  getUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl);
+  getUsuarios(skip = 0, take = 1000): Observable<Usuario[]> {
+    const params = new HttpParams()
+      .set('skip', skip.toString())
+      .set('take', take.toString());
+
+    return this.http.get<Usuario[]>(this.apiUrl, { params });
   }
 
   getUsuarioById(id: string): Observable<Usuario> {
@@ -21,39 +25,43 @@ export class UsuarioService {
     return this.http.post<Usuario>(this.apiUrl, dto);
   }
 
-  updateUsuario(id: string, dto: Partial<CreateUsuarioDto>): Observable<Usuario> {
+  updateUsuario(id: string, dto: Partial<CreateUsuarioDto> | any): Observable<Usuario> {
     return this.http.patch<Usuario>(`${this.apiUrl}/${id}`, dto);
   }
 
-  deleteUsuario(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  update(id: string, dto: Partial<CreateUsuarioDto> | any): Observable<Usuario> {
+    return this.updateUsuario(id, dto);
   }
 
-    getEstadoPerfil() {
+  deleteUsuario(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  delete(id: string): Observable<{ message: string }> {
+    return this.deleteUsuario(id);
+  }
+
+  getEstadoPerfil(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/perfil/estado`);
   }
 
-  completarPerfil(payload: any) {
-    return this.http.patch(`${this.apiUrl}/perfil/completar`, payload);
+  completarPerfil(payload: CompletarPerfilDto | any): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/perfil/completar`, payload);
   }
 
-  update(id: string, data: any) {
-    return this.http.patch(`${environment.apiUrl}/usuarios/${id}`, data);
+  // ✅ Firma completa para llamadas administrativas desde usuarios.component.ts
+  completarPerfilEstudiante(usuarioId: string, rol: string, dto: CompletarPerfilDto | any): Observable<any> {
+    const params = new HttpParams().set('rol', rol);
+    return this.http.post<any>(`${this.apiUrl}/${usuarioId}/completar-perfil`, dto, { params });
   }
 
-  delete(id: string) {
-    return this.http.delete(`${environment.apiUrl}/usuarios/${id}`);
-  }
-  
-  subirFoto(file: File): Observable<Usuario> {
+  subirFoto(file: Blob | File): Observable<Usuario> {
     const formData = new FormData();
     formData.append('foto', file);
     return this.http.patch<Usuario>(`${this.apiUrl}/foto`, formData);
   }
-  
-  actualizarFoto(foto: File) {
-    const formData = new FormData();
-    formData.append('foto', foto); // 'foto' es el nombre que espera el backend
-    return this.http.patch(`${this.apiUrl}/foto`, formData);
+
+  actualizarFoto(file: Blob | File): Observable<Usuario> {
+    return this.subirFoto(file);
   }
 }

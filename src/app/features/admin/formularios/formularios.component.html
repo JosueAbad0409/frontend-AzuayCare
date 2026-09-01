@@ -1,167 +1,273 @@
-<main class="carreras-card animate-fade-in" aria-labelledby="main-title">
+<main class="formularios-card animate-fade-in" aria-labelledby="main-title">
+  <!-- Header Principal -->
   <header class="header-section">
-    <div>
-      <h3 id="main-title" class="title">Gestión de Formularios / Fichas</h3>
+    <div class="title-group">
+      <h1 id="main-title" class="title">Gestión de Formularios y Fichas</h1>
       <p class="subtitle">Crea, edita, clona y gestiona el versionamiento de las fichas socioeconómicas.</p>
     </div>
 
-    <div class="actions-group">
-      <button type="button" class="btn btn-purple" (click)="abrirModalCrear()" [disabled]="isLoading() || isSaving()">
-        <i class="fas fa-plus" aria-hidden="true"></i> Crear Nueva Ficha
+    <div class="header-actions">
+      <button 
+        type="button" 
+        class="btn btn-purple" 
+        (click)="abrirModalCrear()" 
+        [disabled]="isLoading() || isSaving()"
+        aria-label="Crear una nueva ficha socioeconómica"
+      >
+        <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-plus'" aria-hidden="true"></i>
+        <span>Nueva Ficha</span>
       </button>
     </div>
   </header>
 
+  <!-- Toolbar de Filtros y Control -->
   @if (!isLoading()) {
-  <section class="search-bar-wrapper" aria-label="Controles de búsqueda y filtros">
-    <div class="header-actions-left">
-      <span class="count-badge" aria-live="polite">
-        Total: {{ formulariosFiltrados().length }} Ficha(s)
-      </span>
-      @if (hayFiltrosActivos()) {
-        <button type="button" class="btn-clear-filters" (click)="limpiarFiltros()">
-          <i class="fas fa-filter-slash" aria-hidden="true"></i> Limpiar Filtros
-        </button>
-      }
-    </div>
-  </section>
+    <section class="toolbar-section" aria-label="Controles de búsqueda y filtrado de fichas">
+      <div class="search-box">
+        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+        <input 
+          id="search-title-input" 
+          type="text" 
+          placeholder="Buscar por título o descripción..." 
+          [value]="searchTerm()" 
+          (input)="onSearchChange($event)" 
+          class="search-control"
+          aria-label="Buscar formularios por título o descripción"
+        >
+        @if (searchTerm()) {
+          <button type="button" class="btn-clear-search" (click)="limpiarSearch()" aria-label="Limpiar campo de búsqueda">
+            <i class="fas fa-times-circle" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+
+      <div class="filter-controls">
+        <!-- Filtro por Tipo -->
+        <div class="select-group">
+          <i class="fas fa-folder select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filtroTipo()" 
+            (change)="onTipoChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por tipo de formulario"
+          >
+            <option value="TODOS">Todos los Tipos</option>
+            @for (t of tiposFormulario(); track t.id) {
+              <option [value]="t.id">{{ t.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro por Versión -->
+        <div class="select-group">
+          <i class="fas fa-code-branch select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filtroVersion()" 
+            (change)="onVersionChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por versión"
+          >
+            <option value="TODOS">Todas las Versiones</option>
+            @for (v of versionesDisponibles(); track v) {
+              <option [value]="v.toString()">Versión {{ v }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro por Estado -->
+        <div class="select-group">
+          <i class="fas fa-toggle-on select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filtroEstado()" 
+            (change)="onEstadoChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por estado de publicación"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="PUBLICADO">Publicadas</option>
+            <option value="BORRADOR">Borradores</option>
+            <option value="BLOQUEADO">Bloqueadas</option>
+          </select>
+        </div>
+
+        <!-- Contador de Resultados -->
+        <div class="summary-badge" role="status" aria-live="polite">
+          <span class="summary-label">Resultados:</span>
+          <span class="summary-count">{{ formulariosFiltrados().length }}</span>
+        </div>
+
+        <!-- Restablecer Filtros -->
+        @if (hayFiltrosActivos()) {
+          <button 
+            type="button" 
+            class="btn btn-outline btn-sm" 
+            (click)="limpiarFiltros()"
+            aria-label="Restablecer todos los filtros aplicados"
+          >
+            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+            <span>Limpiar</span>
+          </button>
+        }
+      </div>
+    </section>
   }
 
+  <!-- Estado Carga (Skeleton) -->
   @if (isLoading()) {
-  <div class="skeleton-wrapper" aria-live="polite" aria-busy="true">
-    <div class="skeleton-row header-skel"></div>
-    <div class="skeleton-row"></div>
-    <div class="skeleton-row"></div>
-    <div class="skeleton-row"></div>
-  </div>
+    <div class="skeleton-wrapper" aria-busy="true" aria-label="Cargando fichas socioeconómicas">
+      <div class="skeleton-row skeleton-header"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
   } @else {
-  <div class="table-container">
-    <table class="admin-table">
-      <thead class="sticky-header">
-        <tr class="header-titles">
-          <th class="col-titulo" scope="col">Título de la Ficha</th>
-          <th class="col-tipo" scope="col">Tipo</th>
-          <th class="col-vers" scope="col">Versión</th>
-          <th class="col-estado" scope="col">Estado</th>
-          <th class="col-acc" scope="col">Acciones</th>
-        </tr>
-        
-        <tr class="header-filters">
-          <th class="col-titulo">
-            <div class="input-filter-wrapper">
-              <i class="fas fa-search filter-icon" aria-hidden="true"></i>
-              <input id="search-title-input" type="text" placeholder="Buscar título o descripción..." 
-                [value]="searchTerm()" (input)="onSearchChange($event)" class="table-column-input"
-                aria-label="Buscar por título o descripción">
-            </div>
-          </th>
-          <th class="col-tipo">
-            <select [value]="filtroTipo()" (change)="onTipoChange($event)" class="table-column-select-centered"
-              aria-label="Filtrar por tipo">
-              <option value="TODOS">TODOS</option>
-              @for (t of tiposFormulario(); track t.id) {
-              <option [value]="t.id">{{ t.nombre | uppercase }}</option>
-              }
-            </select>
-          </th>
-          <th class="col-vers">
-            <select [value]="filtroVersion()" (change)="onVersionChange($event)" class="table-column-select-centered"
-              aria-label="Filtrar por versión">
-              <option value="TODOS">TODAS</option>
-              @for (v of versionesDisponibles(); track v) {
-              <option [value]="v.toString()">v{{ v }}</option>
-              }
-            </select>
-          </th>
-          <th class="col-estado">
-            <select [value]="filtroEstado()" (change)="onEstadoChange($event)" class="table-column-select-centered"
-              aria-label="Filtrar por estado">
-              <option value="TODOS">TODOS</option>
-              <option value="PUBLICADO">PUBLICADAS</option>
-              <option value="BORRADOR">BORRADORES</option>
-              <option value="BLOQUEADO">BLOQUEADAS</option>
-            </select>
-          </th>
-          <th class="col-acc"></th>
-        </tr>
-      </thead>
+    <!-- Tabla / Tarjetas Responsivas -->
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th scope="col" class="col-titulo">Ficha / Descripción</th>
+            <th scope="col" class="col-tipo">Categoría</th>
+            <th scope="col" class="col-vers text-center">Versión</th>
+            <th scope="col" class="col-estado text-center">Estado</th>
+            <th scope="col" class="col-acc text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (form of formulariosFiltrados(); track form.id) {
+            <tr>
+              <!-- Título y Descripción -->
+              <td class="col-titulo" data-label="Ficha">
+                <div class="form-title-block">
+                  <a [routerLink]="['/admin/formularios/builder', form.id]" class="form-title-link">
+                    {{ form.titulo }}
+                  </a>
+                  <p class="form-desc-text">{{ form.descripcion || 'Sin descripción asignada' }}</p>
+                </div>
+              </td>
 
-      <tbody>
-        @for (form of formulariosFiltrados(); track form.id) {
-        <tr style="cursor: pointer;" [routerLink]="['/admin/formularios/builder', form.id]">
-          <td data-label="Título / Desc">
-            <div class="cell-info">
-              <span class="title-text">{{ form.titulo }}</span>
-              <span class="sub-text">{{ form.descripcion || 'Sin descripción' }}</span>
-            </div>
-          </td>
-          <td data-label="Tipo">
-            <span class="badge badge-purple">{{ getNombreTipoFormulario(form) }}</span>
-          </td>
-          <td data-label="Versión">
-            <span class="badge badge-blue">v{{ form.version }}</span>
-          </td>
-          <td data-label="Estado">
-            <span class="badge" [ngClass]="form.publicado ? 'badge-success' : 'badge-danger'">
-              {{ form.publicado ? 'PUBLICADO' : 'BORRADOR' }}
-            </span>
-          </td>
+              <!-- Categoría / Tipo -->
+              <td class="col-tipo" data-label="Categoría">
+                <span class="category-chip">
+                  <i class="fas fa-folder-open chip-icon" aria-hidden="true"></i>
+                  <span>{{ getNombreTipoFormulario(form) }}</span>
+                </span>
+              </td>
 
-          <td data-label="Acciones" (click)="$event.stopPropagation()">
-            <div class="actions-wrapper">
-              <button type="button" class="btn-icon" [ngClass]="form.publicado ? 'text-orange' : 'text-green'"
-                (click)="togglePublicacion(form, $event)"
-                [title]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'" 
-                [disabled]="isTogglingState() || isSaving() || isCloning()"
-                [attr.aria-label]="form.publicado ? 'Despublicar Ficha' : 'Publicar Ficha'">
-                <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-              </button>
+              <!-- Versión -->
+              <td class="col-vers text-center" data-label="Versión">
+                <span class="version-chip font-mono">v{{ form.version }}</span>
+              </td>
 
-              <a [routerLink]="['/admin/formularios/builder', form.id]" class="btn-icon text-blue"
-                title="Diseñar Preguntas" aria-label="Diseñar Preguntas"
-                [class.disabled-link]="isTogglingState() || isSaving() || isCloning()">
-                <i class="fas fa-tools" aria-hidden="true"></i>
-              </a>
+              <!-- Estado -->
+              <td class="col-estado text-center" data-label="Estado">
+                @if (form.bloqueado) {
+                  <span class="badge badge-locked">
+                    <span class="status-dot"></span>
+                    <span>Bloqueado</span>
+                  </span>
+                } @else if (form.publicado) {
+                  <span class="badge badge-success">
+                    <span class="status-dot"></span>
+                    <span>Publicado</span>
+                  </span>
+                } @else {
+                  <span class="badge badge-draft">
+                    <span class="status-dot"></span>
+                    <span>Borrador</span>
+                  </span>
+                }
+              </td>
 
-              <button type="button" class="btn-icon text-purple" (click)="abrirModalEditar(form, $event)"
-                title="Editar Formulario" aria-label="Editar Formulario"
-                [disabled]="isTogglingState() || isSaving() || isCloning()">
-                <i class="fas fa-edit" aria-hidden="true"></i>
-              </button>
+              <!-- Acciones -->
+              <td class="col-acc text-right" data-label="Acciones">
+                <div class="actions-wrapper">
+                  <!-- Diseñador -->
+                  <a 
+                    [routerLink]="['/admin/formularios/builder', form.id]" 
+                    class="btn-icon btn-blue"
+                    title="Diseñar Estructura de Preguntas" 
+                    aria-label="Diseñar preguntas"
+                    [class.disabled-link]="isTogglingState() || isSaving() || isCloning()"
+                  >
+                    <i class="fas fa-sliders" aria-hidden="true"></i>
+                  </a>
 
-              <button type="button" class="btn-icon text-amber" (click)="abrirModalClonar(form.id, $event)"
-                title="Clonar / Crear nueva versión" aria-label="Clonar Formulario"
-                [disabled]="isTogglingState() || isSaving() || isCloning()">
-                <i class="fas fa-clone" aria-hidden="true"></i>
-              </button>
+                  <!-- Publicar / Despublicar -->
+                  <button 
+                    type="button" 
+                    class="btn-icon"
+                    [ngClass]="form.publicado ? 'btn-amber' : 'btn-green'"
+                    (click)="togglePublicacion(form, $event)"
+                    [title]="form.publicado ? 'Despublicar Formulario' : 'Publicar Formulario'" 
+                    [disabled]="isTogglingState() || isSaving() || isCloning()"
+                    [attr.aria-label]="form.publicado ? 'Despublicar formulario' : 'Publicar formulario'"
+                  >
+                    <i class="fas" [ngClass]="form.publicado ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
+                  </button>
 
-              @if (!form.publicado) {
-              <button type="button" class="btn-icon text-red" (click)="eliminarFormulario(form.id, $event)"
-                title="Eliminar Borrador" aria-label="Eliminar Borrador"
-                [disabled]="isTogglingState() || isSaving() || isCloning()">
-                <i class="fas fa-trash-alt" aria-hidden="true"></i>
-              </button>
-              }
-            </div>
-          </td>
-        </tr>
-        } @empty {
-        <tr>
-          <td colspan="5" class="empty-state">
-            <div class="empty-state-content">
-              <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
-              <p>No hay formularios que coincidan con los criterios seleccionados.</p>
-              @if (hayFiltrosActivos()) {
-                <button type="button" class="btn btn-outline" (click)="limpiarFiltros()">
-                  Limpiar filtros
-                </button>
-              }
-            </div>
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+                  <!-- Editar Metadatos -->
+                  <button 
+                    type="button" 
+                    class="btn-icon btn-purple" 
+                    (click)="abrirModalEditar(form, $event)"
+                    title="Editar Título y Propiedades" 
+                    aria-label="Editar propiedades de ficha"
+                    [disabled]="isTogglingState() || isSaving() || isCloning()"
+                  >
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                  </button>
+
+                  <!-- Clonar / Versionar -->
+                  <button 
+                    type="button" 
+                    class="btn-icon btn-indigo" 
+                    (click)="abrirModalClonar(form.id, $event)"
+                    title="Clonar a un nuevo periodo académico" 
+                    aria-label="Clonar o crear nueva versión"
+                    [disabled]="isTogglingState() || isSaving() || isCloning()"
+                  >
+                    <i class="fas fa-copy" aria-hidden="true"></i>
+                  </button>
+
+                  <!-- Eliminar Borrador -->
+                  @if (!form.publicado && !form.bloqueado) {
+                    <button 
+                      type="button" 
+                      class="btn-icon btn-red" 
+                      (click)="eliminarFormulario(form.id, $event)"
+                      title="Eliminar borrador permanentemente" 
+                      aria-label="Eliminar borrador"
+                      [disabled]="isTogglingState() || isSaving() || isCloning()"
+                    >
+                      <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <!-- Empty State -->
+            <tr>
+              <td colspan="5" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon-wrapper">
+                    <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+                  </div>
+                  <h3 class="state-title">No se encontraron fichas socioeconómicas</h3>
+                  <p class="state-desc">No existen formularios que coincidan con los criterios de búsqueda aplicados.</p>
+                  @if (hayFiltrosActivos()) {
+                    <button type="button" class="btn btn-outline btn-sm mt-3" (click)="limpiarFiltros()">
+                      <i class="fas fa-arrow-rotate-left" aria-hidden="true"></i>
+                      <span>Restablecer Filtros</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
 </main>

@@ -1,444 +1,368 @@
 <main class="perfil-layout">
   <div class="perfil-container">
-    <header class="hero-profile">
-      <div class="hero-cover"></div>
+
+    <!-- HERO PROFILE HEADER -->
+    <header class="hero-card">
+      <div class="hero-banner">
+        <div class="banner-pattern"></div>
+      </div>
       
-      <div class="hero-body">
-        <div class="avatar-wrapper">
-          @if (fotoUrl()) {
-            <img [src]="fotoUrl()" [alt]="'Foto de perfil de ' + (usuario()?.nombre || 'usuario')" class="avatar-img" />
-          } @else {
-            <div class="avatar-fallback" aria-hidden="true">{{ iniciales() }}</div>
-          }
+      <div class="hero-content">
+        <!-- AVATAR CONTAINER -->
+        <div class="avatar-container" (click)="abrirSelectorFoto()">
+          <div class="avatar-ring">
+            @if (fotoUrl()) {
+              <img [src]="fotoUrl()" [alt]="'Perfil de ' + getNombreCompleto()" class="avatar-image" />
+            } @else {
+              <div class="avatar-fallback">{{ iniciales() }}</div>
+            }
+
+            <div class="avatar-backdrop">
+              <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span>Actualizar</span>
+            </div>
+          </div>
 
           <button 
             type="button" 
-            class="avatar-edit-btn" 
+            class="action-fab" 
             [class.is-loading]="subiendoFoto()"
-            (click)="abrirSelectorFoto()"
-            [disabled]="subiendoFoto()" 
-            title="Cambiar foto de perfil"
-          >
-            <span class="visually-hidden">Cambiar foto de perfil</span>
+            (click)="$event.stopPropagation(); abrirSelectorFoto()"
+            [disabled]="subiendoFoto()"
+            title="Cambiar foto de perfil">
             @if (!subiendoFoto()) {
-              <svg class="icon-camera" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="fab-icon">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
               </svg>
             } @else {
-              <i class="fas fa-spinner fa-spin icon-camera" aria-hidden="true"></i>
+              <i class="fas fa-spinner fa-spin fab-icon"></i>
             }
           </button>
           
-          <label for="fotoInputUpload" class="visually-hidden">Seleccionar foto de perfil</label>
           <input id="fotoInputUpload" #fotoInput type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" (change)="onFotoSeleccionada($event)" />
         </div>
 
-        <div class="hero-info">
-          <div class="role-badge">
-            <span class="badge-dot" aria-hidden="true"></span>
-            <span>{{ etiquetaRol() }}</span>
+        <!-- USER IDENTITY -->
+        <div class="identity-block">
+          <div class="status-pill">
+            <span class="pulse-indicator"></span>
+            <span class="pill-text">{{ etiquetaRol() }}</span>
           </div>
-          <h1 class="user-name">{{ usuario()?.nombre || 'Usuario' }}</h1>
-          <p class="user-email">{{ usuario()?.email || 'Sin correo registrado' }}</p>
+          <h1 class="user-display-name">{{ getNombreCompleto() }}</h1>
+          <p class="user-email-text">{{ getDato('email_institucional', usuario()?.email || 'sin_correo@tecazuay.edu.ec') }}</p>
         </div>
       </div>
     </header>
 
     @if (errorFoto()) {
-      <div class="alert alert-error" role="alert">
-        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2"/>
+      <div class="toast-notification toast-error" role="alert">
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span>{{ errorFoto() }}</span>
       </div>
     }
 
-    <section class="cards-stack">
-      <article class="perfil-card">
-        <header class="card-header">
-          <div class="header-title">
-            <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
-              <circle cx="9" cy="10" r="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M15 8h2m-2 4h2m-8 4h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <h2>Información de la Cuenta</h2>
-          </div>
-        </header>
+    <!-- DASHBOARD CARDS GRID -->
+    <div class="dashboard-grid">
 
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">Nombre completo</span>
-            <span class="info-value">{{ usuario()?.nombre || 'No especificado' }}</span>
+      <!-- INFORMACIÓN DE CUENTA -->
+      <section class="card-widget">
+        <div class="card-head">
+          <div class="icon-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
           </div>
-          <div class="info-item">
-            <span class="info-label">Rol asignado</span>
-            <span class="info-value">{{ etiquetaRol() }}</span>
+          <h3>Cuenta e Identificación</h3>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box full-col">
+            <span class="metric-label">Nombre Completo Registrado</span>
+            <span class="metric-value">{{ getNombreCompleto() }}</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Cédula / Documento</span>
+            <span class="metric-value">{{ getDato('cedula') }}</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Rol del Sistema</span>
+            <span class="metric-value badge-highlight">{{ etiquetaRol() }}</span>
           </div>
         </div>
-      </article>
+      </section>
 
       @if (esEstudianteOInvitado()) {
-        <!-- DATOS ACADÉMICOS Y CONTACTO -->
-        <article class="perfil-card">
-          <header class="card-header">
-            <div class="header-title">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- INFORMACIÓN ACADÉMICA Y CONTACTO -->
+        <section class="card-widget">
+          <div class="card-head">
+            <div class="icon-badge badge-academic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
               </svg>
-              <h2>Académico y Contacto</h2>
             </div>
-          </header>
+            <h3>Información Académica y Contacto</h3>
+          </div>
 
           @if (cargandoAcademico() || cargandoPerfilEstudiante()) {
-            <div class="loading-state" aria-busy="true">
-              <div class="spinner-small" aria-hidden="true"></div>
-              <span>Cargando datos...</span>
+            <div class="loading-state">
+              <div class="spinner-small"></div>
+              <span>Cargando expediente académico...</span>
             </div>
           } @else {
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Cédula de Identidad</span>
-                <span class="info-value">{{ getDato('cedula') }}</span>
+            <div class="metrics-grid">
+              <div class="metric-box">
+                <span class="metric-label">Teléfono Celular</span>
+                <span class="metric-value">{{ getDato('numero_celular', 'Sin registrar') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Celular</span>
-                <span class="info-value">{{ getDato('numero_celular', 'No registrado') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">Correo Institucional</span>
+                <span class="metric-value text-xs">{{ getDato('email_institucional', usuario()?.email || 'Sin registrar') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Correo Personal</span>
-                <span class="info-value">{{ getDato('email_personal', 'No registrado') }}</span>
-              </div>
-              @if (usuario()?.rol === 'ESTUDIANTE') {
-                <div class="info-item">
-                  <span class="info-label">Carrera activa</span>
-                  <span class="info-value">{{ nombreCarrera() }}</span>
+              @if (usuario()?.rol === 'ESTUDIANTE' || usuario()?.rol === 'INVITADO') {
+                <div class="metric-box featured-box full-col">
+                  <span class="metric-label">Carrera Activa</span>
+                  <span class="metric-value">{{ nombreCarrera() }}</span>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Ciclo actual</span>
-                  <span class="info-value">{{ nombreCiclo() }}</span>
+                <div class="metric-box featured-box full-col">
+                  <span class="metric-label">Ciclo Académico Actual</span>
+                  <span class="metric-value">{{ nombreCiclo() }}</span>
                 </div>
               }
             </div>
           }
-        </article>
+        </section>
 
-        <!-- DATOS DEMOGRÁFICOS -->
-        <article class="perfil-card">
-          <header class="card-header">
-            <div class="header-title">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- DATOS PERSONALES -->
+        <section class="card-widget">
+          <div class="card-head">
+            <div class="icon-badge badge-personal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2m-2 4h2m-8 4h8"/>
               </svg>
-              <h2>Datos Personales</h2>
             </div>
-          </header>
-          
+            <h3>Ficha de Datos Personales</h3>
+          </div>
+
           @if (cargandoPerfilEstudiante()) {
-            <div class="loading-state" aria-busy="true">
-              <div class="spinner-small" aria-hidden="true"></div>
+            <div class="loading-state">
+              <div class="spinner-small"></div>
               <span>Cargando datos personales...</span>
             </div>
           } @else {
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Fecha de Nacimiento</span>
-                <span class="info-value">{{ getDato('fecha_nacimiento') }}</span>
+            <div class="metrics-grid">
+              <div class="metric-box">
+                <span class="metric-label">Fecha Nacimiento</span>
+                <span class="metric-value">{{ getDato('fecha_nacimiento') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Lugar de Nacimiento</span>
-                <span class="info-value">{{ getDato('lugar_nacimiento') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">Nacionalidad</span>
+                <span class="metric-value">{{ nacionalidadNombre() }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Rango de Edad</span>
-                <span class="info-value">{{ getDato('rango_edad') }}</span>
+              <div class="metric-box full-col">
+                <span class="metric-label">Lugar de Nacimiento</span>
+                <span class="metric-value">{{ lugarNacimientoCompleto() }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Nacionalidad</span>
-                <span class="info-value">{{ getDato('nacionalidad') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">Estado Civil</span>
+                <span class="metric-value">{{ getDato('estado_civil') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Zona de Residencia</span>
-                <span class="info-value">{{ getDato('zona_residencia') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">Sexo / Género</span>
+                <span class="metric-value">{{ getDato('sexo') }} / {{ getDato('genero') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Estado Civil</span>
-                <span class="info-value">{{ getDato('estado_civil') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">¿Tiene Hijos?</span>
+                <span class="metric-value">{{ getBooleanDato('tiene_hijos') }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Sexo</span>
-                <span class="info-value">{{ getDato('sexo') }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">¿Tiene Hijos?</span>
-                <span class="info-value">{{ getBooleanDato('tiene_hijos') }}</span>
-              </div>
+              @if (getBooleanDato('tiene_hijos') === 'Sí') {
+                <div class="metric-box">
+                  <span class="metric-label">Menores de 5 Años</span>
+                  <span class="metric-value">{{ getDato('hijos_menores_5_anios', '0') }}</span>
+                </div>
+              }
             </div>
           }
-        </article>
+        </section>
 
-        <!-- DIVERSIDAD Y SALUD -->
-        <article class="perfil-card">
-          <header class="card-header">
-            <div class="header-title">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- BIENESTAR Y SALUD -->
+        <section class="card-widget">
+          <div class="card-head">
+            <div class="icon-badge badge-health">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/><path d="M12 8v8M8 12h8"/>
               </svg>
-              <h2>Diversidad y Salud</h2>
             </div>
-          </header>
-          
+            <h3>Bienestar, Salud e Inclusión</h3>
+          </div>
+
           @if (cargandoPerfilEstudiante()) {
-            <div class="loading-state" aria-busy="true">
-              <div class="spinner-small" aria-hidden="true"></div>
-              <span>Cargando datos de salud...</span>
+            <div class="loading-state">
+              <div class="spinner-small"></div>
+              <span>Cargando información socioeconómica...</span>
             </div>
           } @else {
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Etnia / Raza</span>
-                <span class="info-value">{{ getDato('etnia') }}</span>
+            <div class="metrics-grid">
+              <div class="metric-box full-col">
+                <span class="metric-label">Etnia / Pueblo o Nacionalidad</span>
+                <span class="metric-value">{{ getEtniaDetalle() }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">Idioma Principal</span>
-                <span class="info-value">{{ getDato('idioma') }}</span>
+              <div class="metric-box">
+                <span class="metric-label">Idioma Dominante</span>
+                <span class="metric-value">{{ getDato('idioma') }}</span>
               </div>
-              
-              <div class="info-item">
-                <span class="info-label">¿Tiene Discapacidad?</span>
-                <span class="info-value">{{ getBooleanDato('tiene_discapacidad') }}</span>
-              </div>
-              
-              @if (getBooleanDato('tiene_discapacidad') === 'Sí') {
-                <div class="info-item">
-                  <span class="info-label">Tipo de Discapacidad</span>
-                  <span class="info-value">{{ getDato('tipo_discapacidad') }}</span>
-                </div>
-              }
-
-              @if (getDato('sexo') === 'Mujer') {
-                <div class="info-item">
-                  <span class="info-label">Embarazo</span>
-                  <span class="info-value">{{ getBooleanDato('esta_embarazada') === 'Sí' ? 'En curso' : 'No' }}</span>
+              @if (getDato('sexo') === 'Mujer' || getDato('sexo') === 'MUJER') {
+                <div class="metric-box">
+                  <span class="metric-label">Estado Gestación</span>
+                  <span class="metric-value">{{ getEstadoEmbarazo() }}</span>
                 </div>
               }
             </div>
           }
 
-          <footer class="card-help">
-            <svg class="help-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 16v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <div class="info-footer">
+            <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>
             </svg>
-            <span>¿Inconsistencias en los datos? Solicita una rectificación en Coordinación de Bienestar Estudiantil.</span>
-          </footer>
-        </article>
+            <span>Para rectificar datos personales de tu ficha, acércate a la Coordinación de Bienestar Estudiantil.</span>
+          </div>
+        </section>
       }
 
       @if (esCoordinador()) {
-        <article class="perfil-card">
-          <header class="card-header header-with-action">
-            <div class="header-title">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              <h2>Información de Coordinación</h2>
+        <!-- PERFIL COORDINADOR -->
+        <section class="card-widget full-col">
+          <div class="card-head header-flex">
+            <div class="title-group">
+              <div class="icon-badge badge-coordinator">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+              </div>
+              <div>
+                <h3>Perfil Público de Atención</h3>
+                <p class="subtitle">Datos visibles para estudiantes en trámites e impresos</p>
+              </div>
             </div>
-            
+
             @if (!cargandoPerfilCoordinador()) {
               <button 
                 type="button" 
-                class="btn btn-outline-small" 
+                class="btn-action-ghost" 
                 (click)="toggleEdicionCoordinador()"
                 [attr.aria-expanded]="modoEdicionCoordinador()"
               >
                 @if (modoEdicionCoordinador()) {
-                  <span>Cancelar edición</span>
+                  <span>Cancelar</span>
                 } @else {
-                  <svg viewBox="0 0 24 24" fill="none" class="btn-icon-svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span>Editar perfil</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <span>Editar Perfil</span>
                 }
               </button>
             }
-          </header>
+          </div>
 
           @if (cargandoPerfilCoordinador()) {
-            <div class="loading-state" aria-busy="true">
-              <div class="spinner-small" aria-hidden="true"></div>
-              <span>Cargando perfil de atención...</span>
+            <div class="loading-state">
+              <div class="spinner-small"></div>
+              <span>Cargando perfil institucional...</span>
             </div>
           } @else {
-            
             @if (!modoEdicionCoordinador()) {
-              <div class="coordinator-view-grid">
-                <div class="data-block">
-                  <span class="info-label">Título profesional</span>
-                  <span class="info-value">{{ coordinadorForm.get('titulo_profesional')?.value || 'No especificado' }}</span>
+              <div class="metrics-grid">
+                <div class="metric-box">
+                  <span class="metric-label">Título Profesional</span>
+                  <span class="metric-value">{{ coordinadorForm.get('titulo_profesional')?.value || 'No especificado' }}</span>
                 </div>
-                <div class="data-block">
-                  <span class="info-label">Teléfono de contacto</span>
-                  <span class="info-value">{{ coordinadorForm.get('telefono_contacto')?.value || 'No especificado' }}</span>
+                <div class="metric-box">
+                  <span class="metric-label">Teléfono Contacto</span>
+                  <span class="metric-value">{{ coordinadorForm.get('telefono_contacto')?.value || 'No especificado' }}</span>
                 </div>
-                <div class="data-block">
-                  <span class="info-label">Correo de contacto</span>
-                  <span class="info-value">{{ coordinadorForm.get('correo_contacto')?.value || 'No especificado' }}</span>
+                <div class="metric-box">
+                  <span class="metric-label">Correo Institucional</span>
+                  <span class="metric-value">{{ coordinadorForm.get('correo_contacto')?.value || 'No especificado' }}</span>
                 </div>
-                <div class="data-block">
-                  <span class="info-label">Ubicación de oficina</span>
-                  <span class="info-value">{{ coordinadorForm.get('ubicacion_oficina')?.value || 'No especificado' }}</span>
+                <div class="metric-box">
+                  <span class="metric-label">Ubicación Oficina</span>
+                  <span class="metric-value">{{ coordinadorForm.get('ubicacion_oficina')?.value || 'No especificado' }}</span>
                 </div>
-                <div class="data-block">
-                  <span class="info-label">Horario de atención</span>
-                  <span class="info-value">{{ coordinadorForm.get('horario_atencion')?.value || 'No especificado' }}</span>
+                <div class="metric-box full-col">
+                  <span class="metric-label">Horario Atención Estudiantil</span>
+                  <span class="metric-value">{{ coordinadorForm.get('horario_atencion')?.value || 'No especificado' }}</span>
                 </div>
                 
-                <div class="data-block full-width message-box">
-                  <span class="info-label">Mensaje institucional para estudiantes</span>
-                  <p class="info-value-text">{{ coordinadorForm.get('mensaje_ayuda_estudiantes')?.value || 'Sin mensaje configurado.' }}</p>
+                <div class="metric-box full-col banner-message">
+                  <span class="metric-label">Mensaje Institucional</span>
+                  <p class="message-content">{{ coordinadorForm.get('mensaje_ayuda_estudiantes')?.value || 'Sin mensaje configurado.' }}</p>
                 </div>
               </div>
-              
+
               @if (mensajeExitoCoordinador()) {
-                <output class="alert alert-success mt-15">
+                <div class="toast-notification toast-success">
                   <span>{{ mensajeExitoCoordinador() }}</span>
-                </output>
+                </div>
               }
-
             } @else {
-              <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador($event)" class="coordinator-form" novalidate>
-                <div class="form-grid">
-                  <div class="form-field">
-                    <label for="titulo">Título profesional</label>
-                    <input 
-                      id="titulo" 
-                      type="text" 
-                      formControlName="titulo_profesional" 
-                      class="form-control" 
-                      [class.is-error]="coordinadorForm.get('titulo_profesional')?.invalid && coordinadorForm.get('titulo_profesional')?.touched"
-                      [class.is-success]="coordinadorForm.get('titulo_profesional')?.valid && coordinadorForm.get('titulo_profesional')?.touched"
-                      placeholder="Ej. Mg. Psicología Educativa" 
-                    />
-                    @if (coordinadorForm.get('titulo_profesional')?.invalid && coordinadorForm.get('titulo_profesional')?.touched) {
-                      <span class="form-error-text">Este campo es requerido.</span>
-                    }
+              <form [formGroup]="coordinadorForm" (ngSubmit)="guardarPerfilCoordinador($event)" class="form-layout" novalidate>
+                <div class="inputs-grid">
+                  <div class="input-group">
+                    <label for="titulo">Título Profesional</label>
+                    <input id="titulo" type="text" formControlName="titulo_profesional" class="field-control" placeholder="Ej. Mg. Psicología Educativa" />
                   </div>
 
-                  <div class="form-field">
-                    <label for="telefono">Teléfono de contacto</label>
-                    <input 
-                      id="telefono" 
-                      type="tel" 
-                      formControlName="telefono_contacto" 
-                      class="form-control" 
-                      [class.is-error]="coordinadorForm.get('telefono_contacto')?.invalid && coordinadorForm.get('telefono_contacto')?.touched"
-                      [class.is-success]="coordinadorForm.get('telefono_contacto')?.valid && coordinadorForm.get('telefono_contacto')?.touched"
-                      placeholder="Ej. 0987654321" 
-                    />
-                    @if (coordinadorForm.get('telefono_contacto')?.hasError('required') && coordinadorForm.get('telefono_contacto')?.touched) {
-                      <span class="form-error-text">Este campo es requerido.</span>
-                    }
-                    @if (coordinadorForm.get('telefono_contacto')?.hasError('pattern') && coordinadorForm.get('telefono_contacto')?.touched) {
-                      <span class="form-error-text">Ingrese un número telefónico válido.</span>
-                    }
+                  <div class="input-group">
+                    <label for="telefono">Teléfono Contacto</label>
+                    <input id="telefono" type="tel" formControlName="telefono_contacto" class="field-control" placeholder="Ej. 0987654321" />
                   </div>
 
-                  <div class="form-field">
-                    <label for="correo">Correo de contacto</label>
-                    <input 
-                      id="correo" 
-                      type="email" 
-                      formControlName="correo_contacto" 
-                      class="form-control" 
-                      [class.is-error]="coordinadorForm.get('correo_contacto')?.invalid && coordinadorForm.get('correo_contacto')?.touched"
-                      [class.is-success]="coordinadorForm.get('correo_contacto')?.valid && coordinadorForm.get('correo_contacto')?.touched"
-                      placeholder="Ej. bienestar@tecazuay.edu.ec" 
-                    />
-                    @if (coordinadorForm.get('correo_contacto')?.hasError('required') && coordinadorForm.get('correo_contacto')?.touched) {
-                      <span class="form-error-text">Este campo es requerido.</span>
-                    }
-                    @if (coordinadorForm.get('correo_contacto')?.hasError('email') && coordinadorForm.get('correo_contacto')?.touched) {
-                      <span class="form-error-text">Ingresa un correo válido.</span>
-                    }
+                  <div class="input-group">
+                    <label for="correo">Correo Contacto</label>
+                    <input id="correo" type="email" formControlName="correo_contacto" class="field-control" placeholder="Ej. bienestar@tecazuay.edu.ec" />
                   </div>
 
-                  <div class="form-field full-row">
-                    <label for="ubicacion">Ubicación de oficina</label>
-                    <input 
-                      id="ubicacion" 
-                      type="text" 
-                      formControlName="ubicacion_oficina" 
-                      class="form-control" 
-                      [class.is-error]="coordinadorForm.get('ubicacion_oficina')?.invalid && coordinadorForm.get('ubicacion_oficina')?.touched"
-                      [class.is-success]="coordinadorForm.get('ubicacion_oficina')?.valid && coordinadorForm.get('ubicacion_oficina')?.touched"
-                      placeholder="Ej. Bloque A - Oficina 102" 
-                    />
-                    @if (coordinadorForm.get('ubicacion_oficina')?.invalid && coordinadorForm.get('ubicacion_oficina')?.touched) {
-                      <span class="form-error-text">Este campo es requerido.</span>
-                    }
+                  <div class="input-group full-col">
+                    <label for="ubicacion">Ubicación Oficina</label>
+                    <input id="ubicacion" type="text" formControlName="ubicacion_oficina" class="field-control" placeholder="Ej. Bloque A - Oficina 102" />
                   </div>
 
-                  <div class="form-field full-row">
-                    <label for="horario">Horario de atención al estudiante</label>
-                    <input 
-                      id="horario" 
-                      type="text" 
-                      formControlName="horario_atencion" 
-                      class="form-control" 
-                      [class.is-error]="coordinadorForm.get('horario_atencion')?.invalid && coordinadorForm.get('horario_atencion')?.touched"
-                      [class.is-success]="coordinadorForm.get('horario_atencion')?.valid && coordinadorForm.get('horario_atencion')?.touched"
-                      placeholder="Ej. Lunes a Viernes, 08h00 - 16h00" 
-                    />
-                    @if (coordinadorForm.get('horario_atencion')?.invalid && coordinadorForm.get('horario_atencion')?.touched) {
-                      <span class="form-error-text">Este campo es requerido.</span>
-                    }
+                  <div class="input-group full-col">
+                    <label for="horario">Horario de Atención</label>
+                    <input id="horario" type="text" formControlName="horario_atencion" class="field-control" placeholder="Ej. Lunes a Viernes, 08h00 - 16h00" />
                   </div>
 
-                  <div class="form-field full-row">
-                    <label for="mensaje">Mensaje institucional para estudiantes</label>
-                    <textarea 
-                      id="mensaje" 
-                      rows="4" 
-                      formControlName="mensaje_ayuda_estudiantes" 
-                      class="form-control textarea-control" 
-                      placeholder="Escribe un mensaje de orientación o bienvenida para los estudiantes..."
-                    ></textarea>
+                  <div class="input-group full-col">
+                    <label for="mensaje">Mensaje Institucional</label>
+                    <textarea id="mensaje" rows="4" formControlName="mensaje_ayuda_estudiantes" class="field-control textarea-field" placeholder="Escribe un mensaje de orientación..."></textarea>
                   </div>
                 </div>
 
                 @if (errorCoordinador()) {
-                  <div class="alert alert-error" role="alert">
+                  <div class="toast-notification toast-error">
                     <span>{{ errorCoordinador() }}</span>
                   </div>
                 }
 
-                <div class="form-actions">
-                  <button type="button" class="btn btn-secondary" (click)="toggleEdicionCoordinador()">Cancelar</button>
-                  <button 
-                    type="submit" 
-                    class="btn btn-primary" 
-                    [disabled]="guardandoCoordinador()"
-                    [class.is-loading]="guardandoCoordinador()"
-                  >
+                <div class="form-footer">
+                  <button type="button" class="btn-cancel" (click)="toggleEdicionCoordinador()">Cancelar</button>
+                  <button type="submit" class="btn-submit" [disabled]="guardandoCoordinador()">
                     @if (guardandoCoordinador()) {
-                      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                      <i class="fas fa-spinner fa-spin"></i>
                       <span>Guardando...</span>
                     } @else {
-                      <span>Guardar perfil</span>
+                      <span>Guardar Cambios</span>
                     }
                   </button>
                 </div>
               </form>
             }
           }
-        </article>
+        </section>
       }
-    </section>
+    </div>
   </div>
 </main>

@@ -12,12 +12,15 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioService } from '../../core/services/usuario.service';
 import { PerfilCoordinadorService } from '../../core/services/perfil-coordinador.service';
 import { CarreraService } from '../../core/services/carrera.service';
 import { CiclosService } from '../../core/services/ciclos.service';
+import { UbicacionesService } from '../../core/services/ubicaciones.service';
 import { Carrera } from '../../core/models/carrera.model';
 import { Ciclo } from '../../core/models/ciclo.model';
 import { Usuario } from '../../core/models/usuario.model';
@@ -49,19 +52,23 @@ export class PerfilComponent implements OnInit {
   private readonly perfilCoordinadorService = inject(PerfilCoordinadorService);
   private readonly carreraService = inject(CarreraService);
   private readonly ciclosService = inject(CiclosService);
+  private readonly ubicacionesService = inject(UbicacionesService);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('fotoInput') fotoInput!: ElementRef<HTMLInputElement>;
 
   usuario = computed(() => this.authService.user());
+  readonly fotoVersion = signal<number>(Date.now());
 
-  // === ESTADOS PARA EL ESTUDIANTE ===
+  // === ESTADOS PARA EL ESTUDIANTE / USUARIO ===
   readonly cargandoPerfilEstudiante = signal(false);
-  readonly datosCompletosEstudiante = signal<Usuario | null>(null);
+  readonly datosCompletosEstudiante = signal<any | null>(null);
 
   readonly fotoUrl = computed(() => {
-    const user = this.usuario();
-    return user?.foto_url || null;
+    const foto = this.datosCompletosEstudiante()?.foto_url || this.usuario()?.foto_url;
+    if (!foto) return null;
+    const separator = foto.includes('?') ? '&' : '?';
+    return `${foto}${separator}v=${this.fotoVersion()}`;
   });
 
   readonly esCoordinador = computed(() => {
@@ -97,8 +104,12 @@ export class PerfilComponent implements OnInit {
 
   readonly carreras = signal<Carrera[]>([]);
   readonly ciclos = signal<Ciclo[]>([]);
+  readonly paises = signal<any[]>([]);
+  readonly provincias = signal<any[]>([]);
+  readonly cantones = signal<any[]>([]);
   readonly cargandoAcademico = signal(false);
 
+  // === COMPUTED DATO ACADÉMICO Y UBICACIÓN ===
   readonly nombreCarrera = computed(() => {
     const data: any = this.datosCompletosEstudiante() || this.usuario();
     if (!data) return 'No asignada';
@@ -115,6 +126,35 @@ export class PerfilComponent implements OnInit {
     return this.ciclos().find(c => c.id === id)?.nombre ?? 'No asignado';
   });
 
+  readonly nacionalidadNombre = computed(() => {
+    const d = this.datosCompletosEstudiante();
+    if (!d) return 'No especificado';
+    if (d.nacionalidad?.nacionalidad) return d.nacionalidad.nacionalidad;
+    if (d.nacionalidad?.nombre) return d.nacionalidad.nombre;
+    if (d.nacionalidad_id) {
+      const p = this.paises().find(x => x.id === d.nacionalidad_id);
+      if (p) return p.nacionalidad || p.nombre;
+    }
+    return 'No especificado';
+  });
+
+  readonly lugarNacimientoCompleto = computed(() => {
+    const d = this.datosCompletosEstudiante();
+    if (!d) return 'No especificado';
+
+    const partes: string[] = [];
+    const canton = d.canton_nacimiento?.nombre || this.cantones().find(c => c.id === d.canton_nacimiento_id)?.nombre;
+    const provincia = d.provincia_nacimiento?.nombre || this.provincias().find(p => p.id === d.provincia_nacimiento_id)?.nombre;
+    const pais = d.pais_nacimiento?.nombre || this.paises().find(p => p.id === d.pais_nacimiento_id)?.nombre;
+
+    if (canton) partes.push(canton);
+    if (provincia) partes.push(provincia);
+    if (pais) partes.push(pais);
+
+    return partes.length > 0 ? partes.join(', ') : 'No especificado';
+  });
+
+  // === ESTADOS MODO COORDINADOR ===
   readonly modoEdicionCoordinador = signal(false);
   readonly cargandoPerfilCoordinador = signal(false);
   readonly guardandoCoordinador = signal(false);
@@ -130,7 +170,100 @@ export class PerfilComponent implements OnInit {
     mensaje_ayuda_estudiantes: [''],
   });
 
-  // Corrección: Cambiado a `string` simple para evitar conflicto de tipo con SonarLint
+  ngOnInit(): void {
+    this.sincronizarUsuarioServidor();
+
+    if (this.esEstudianteOInvitado()) {
+      this.cargarCatalogosAcademicos();
+      this.cargarDatosCompletosEstudiante();
+    }
+    if (this.esCoordinador()) {
+      this.cargarPerfilCoordinador();
+    }
+  }
+
+  private sincronizarUsuarioServidor(): void {
+    const id = this.usuario()?.id;
+    if (!id) return;
+
+    this.usuarioService.getUsuarioById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (usuarioServidor: Usuario) => {
+          if (usuarioServidor?.foto_url) {
+            this.authService.actualizarFotoPerfil(usuarioServidor.foto_url);
+            this.fotoVersion.set(Date.now());
+          }
+        },
+        error: (err: unknown) => {
+          console.error('Error al refrescar estado:', err);
+        }
+      });
+  }
+
+  private cargarDatosCompletosEstudiante(): void {
+    const id = this.usuario()?.id;
+    if (!id) return;
+
+    this.cargandoPerfilEstudiante.set(true);
+
+    this.usuarioService.getUsuarioById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data: any) => {
+          this.datosCompletosEstudiante.set(data);
+          if (data?.foto_url) {
+            this.authService.actualizarFotoPerfil(data.foto_url);
+          }
+          this.cargandoPerfilEstudiante.set(false);
+          this.cargarUbicacionesRelacionadas(data);
+        },
+        error: (err: unknown) => {
+          console.error('Error al cargar datos del estudiante:', err);
+          this.cargandoPerfilEstudiante.set(false);
+        }
+      });
+  }
+
+  private cargarUbicacionesRelacionadas(data: any): void {
+    const obsPaises = this.ubicacionesService.getPaises().pipe(catchError(() => of([])));
+
+    obsPaises.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(resPaises => {
+      this.paises.set(resPaises || []);
+
+      if (data?.pais_nacimiento_id) {
+        this.ubicacionesService.getProvincias(data.pais_nacimiento_id)
+          .pipe(
+            catchError(() => of([])),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe(resProvincias => {
+            this.provincias.set(resProvincias || []);
+
+            if (data?.provincia_nacimiento_id) {
+              this.ubicacionesService.getCantones(data.provincia_nacimiento_id)
+                .pipe(
+                  catchError(() => of([])),
+                  takeUntilDestroyed(this.destroyRef)
+                )
+                .subscribe(resCantones => {
+                  this.cantones.set(resCantones || []);
+                });
+            }
+          });
+      }
+    });
+  }
+
+  getNombreCompleto(): string {
+    const d = this.datosCompletosEstudiante();
+    if (!d) return this.usuario()?.nombre || 'No especificado';
+    const nombres = [d.primer_nombre, d.segundo_nombre].filter(Boolean).join(' ');
+    const apellidos = [d.primer_apellido, d.segundo_apellido].filter(Boolean).join(' ');
+    const completo = `${nombres} ${apellidos}`.trim();
+    return completo || this.usuario()?.nombre || 'No especificado';
+  }
+
   getDato(prop: string, fallback = 'No especificado'): string {
     const data: any = this.datosCompletosEstudiante() || this.usuario();
     if (!data) return fallback;
@@ -150,48 +283,33 @@ export class PerfilComponent implements OnInit {
     return String(val);
   }
 
-  // Corrección: Cambiado a `string` simple
   getBooleanDato(prop: string): string {
     const data: any = this.datosCompletosEstudiante() || this.usuario();
     if (!data) return 'No especificado';
-    
+
     const val = data[prop];
     if (val === undefined || val === null || val === '') return 'No especificado';
-    
+
     if (val === false || val === 'false' || val === '0' || val === 0) {
       return 'No';
     }
     return 'Sí';
   }
 
-  ngOnInit(): void {
-    if (this.esEstudianteOInvitado()) {
-      this.cargarCatalogosAcademicos();
-      this.cargarDatosCompletosEstudiante();
-    }
-    if (this.esCoordinador()) {
-      this.cargarPerfilCoordinador();
-    }
+  getEtniaDetalle(): string {
+    const d = this.datosCompletosEstudiante();
+    if (!d || !d.etnia) return 'No especificado';
+    let texto = String(d.etnia);
+    if (d.pueblo_nacionalidad) texto += ` (${d.pueblo_nacionalidad})`;
+    if (d.etnia_otra) texto += ` (${d.etnia_otra})`;
+    return texto;
   }
 
-  private cargarDatosCompletosEstudiante(): void {
-    const id = this.usuario()?.id;
-    if (!id) return;
-
-    this.cargandoPerfilEstudiante.set(true);
-
-    this.usuarioService.getUsuarioById(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data: Usuario) => {
-          this.datosCompletosEstudiante.set(data);
-          this.cargandoPerfilEstudiante.set(false);
-        },
-        error: (err: unknown) => {
-          console.error('Error al cargar datos del usuario:', err);
-          this.cargandoPerfilEstudiante.set(false);
-        }
-      });
+  getEstadoEmbarazo(): string {
+    const d = this.datosCompletosEstudiante();
+    if (!d || (d.sexo !== 'Mujer' && d.sexo !== 'MUJER')) return 'N/A';
+    if (d.esta_embarazada === true) return 'En curso (Gestación)';
+    return 'No';
   }
 
   toggleEdicionCoordinador(): void {
@@ -201,25 +319,19 @@ export class PerfilComponent implements OnInit {
   private cargarCatalogosAcademicos(): void {
     this.cargandoAcademico.set(true);
 
-    this.carreraService.getCarreras()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (c: Carrera[]) => this.carreras.set(c),
-        error: (err: unknown) => console.error(err)
-      });
-
-    this.ciclosService.getCiclos()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (c: Ciclo[]) => {
-          this.ciclos.set(c);
-          this.cargandoAcademico.set(false);
-        },
-        error: (err: unknown) => {
-          console.error(err);
-          this.cargandoAcademico.set(false);
-        }
-      });
+    forkJoin({
+      carreras: this.carreraService.getCarreras().pipe(catchError(() => of([]))),
+      ciclos: this.ciclosService.getCiclos().pipe(catchError(() => of([])))
+    })
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (res) => {
+        this.carreras.set(res.carreras || []);
+        this.ciclos.set(res.ciclos || []);
+        this.cargandoAcademico.set(false);
+      },
+      error: () => this.cargandoAcademico.set(false)
+    });
   }
 
   private cargarPerfilCoordinador(): void {
@@ -254,14 +366,13 @@ export class PerfilComponent implements OnInit {
 
   guardarPerfilCoordinador(event?: Event): void {
     event?.preventDefault();
-    
     const usuarioId = this.usuario()?.id;
-    
+
     if (this.coordinadorForm.invalid) {
       this.coordinadorForm.markAllAsTouched();
       return;
     }
-    
+
     if (!usuarioId || this.guardandoCoordinador()) return;
 
     this.guardandoCoordinador.set(true);
@@ -316,6 +427,8 @@ export class PerfilComponent implements OnInit {
             const nuevaFoto = usuarioActualizado?.foto_url;
             if (nuevaFoto) {
               this.authService.actualizarFotoPerfil(nuevaFoto);
+              this.datosCompletosEstudiante.update(curr => curr ? { ...curr, foto_url: nuevaFoto } : null);
+              this.fotoVersion.set(Date.now());
             }
             this.subiendoFoto.set(false);
           },

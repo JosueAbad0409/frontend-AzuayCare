@@ -1,4 +1,17 @@
-import { Component, Input, Output, EventEmitter, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import { 
+  Component, 
+  Input, 
+  Output, 
+  EventEmitter, 
+  OnInit, 
+  OnChanges, 
+  SimpleChanges, 
+  signal, 
+  ChangeDetectionStrategy, 
+  HostListener,
+  ChangeDetectorRef,
+  ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FilaMatriz, ColumnaMatriz } from '../../../../../../core/models/formulario.model';
@@ -11,28 +24,31 @@ import { FilaMatriz, ColumnaMatriz } from '../../../../../../core/models/formula
   styleUrls: ['./matriz-builder.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MatrizBuilderComponent implements OnInit {
+export class MatrizBuilderComponent implements OnInit, OnChanges {
   @Input() preguntaId?: string;
   @Input() filasExistentes: FilaMatriz[] = [];
   @Input() columnasExistentes: ColumnaMatriz[] = [];
-  
-  // Para binding en tiempo real con el FormParent (si se usa inline)
   @Input() parentForm?: FormGroup;
+  @Input() readonly: boolean = false;
 
-  @Output() agregarFila = new EventEmitter<{ preguntaId: string; texto: string }>();
+  @Output() agregarFila = new EventEmitter<{ preguntaId: string; texto: string; es_multiple: boolean }>();
   @Output() eliminarFila = new EventEmitter<string>();
   @Output() agregarColumna = new EventEmitter<{ preguntaId: string; texto: string }>();
   @Output() eliminarColumna = new EventEmitter<string>();
+  @Output() actualizarFila = new EventEmitter<{ filaId: string; es_multiple: boolean }>();
+  @Output() guardarFilas = new EventEmitter<{ id?: string; texto_fila: string; es_multiple: boolean; orden?: number }[]>();
+  @Output() guardarColumnas = new EventEmitter<{ id?: string; texto_columna: string; orden?: number }[]>();
 
-  // Formulario reactivo interno para creación interactiva
   matrizForm: FormGroup;
-  
-  // Vista previa seleccionada por el usuario en tiempo real
-  previewSimulada = signal<{ [key: string]: string }>({});
+  previewSimulada = signal<{ [key: number]: string | string[] }>({});
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private cdr: ChangeDetectorRef
+  ) {
     this.matrizForm = this.fb.group({
       nuevaFilaTexto: [''],
+      nuevaFilaEsMultiple: [false],
       nuevaColumnaTexto: [''],
       filasTemp: this.fb.array([]),
       columnasTemp: this.fb.array([])
@@ -40,11 +56,12 @@ export class MatrizBuilderComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Cargar datos si vienen de un formulario existente
-    if (this.parentForm) {
-      this.sincronizarConParentForm();
-    } else {
-      this.cargarPredeterminados();
+    this.cargarEstructuraInicial();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['filasExistentes'] || changes['columnasExistentes'] || changes['readonly']) {
+      this.cargarEstructuraInicial();
     }
   }
 
@@ -56,110 +73,236 @@ export class MatrizBuilderComponent implements OnInit {
     return (this.parentForm?.get('columnasTemp') as FormArray) || (this.matrizForm.get('columnasTemp') as FormArray);
   }
 
-  private sincronizarConParentForm(): void {
-    if (this.filasTempArray.length === 0 && this.columnasTempArray.length === 0) {
-      this.cargarPredeterminados();
+  private cargarEstructuraInicial(): void {
+    if (this.filasExistentes && this.filasExistentes.length > 0) {
+      this.filasTempArray.clear();
+      this.filasExistentes.forEach(f => {
+        if (f && f.texto_fila) {
+          const esMult = f.es_multiple ?? f.permitir_multiple ?? false;
+          this.filasTempArray.push(
+            this.fb.group({
+              id: [f.id || null],
+              texto_fila: [f.texto_fila, [Validators.required, Validators.maxLength(255)]],
+              es_multiple: [Boolean(esMult)]
+            })
+          );
+        }
+      });
     }
+
+    if (this.columnasExistentes && this.columnasExistentes.length > 0) {
+      this.columnasTempArray.clear();
+      this.columnasExistentes.forEach(c => {
+        if (c && c.texto_columna) {
+          this.columnasTempArray.push(
+            this.fb.group({
+              id: [c.id || null],
+              texto_columna: [c.texto_columna, [Validators.required, Validators.maxLength(255)]]
+            })
+          );
+        }
+      });
+    }
+    this.cdr.markForCheck();
   }
 
-  private cargarPredeterminados(): void {
-    if (this.filasExistentes.length > 0) {
-      this.filasExistentes.forEach(f => this.agregarFilaDirecto(f.texto_fila));
-    }
-    if (this.columnasExistentes.length > 0) {
-      this.columnasExistentes.forEach(c => this.agregarColumnaDirecto(c.texto_columna));
-    }
+  // ✅ NUEVO: Obtener datos finales para guardar
+  obtenerDatosMatriz() {
+    const filas = this.filasTempArray.value.map((f: any, idx: number) => ({
+      id: f.id || undefined,
+      texto_fila: f.texto_fila,
+      es_multiple: f.es_multiple === true || f.es_multiple === 'true',
+      orden: f.orden || (idx + 1)
+    }));
+
+    const columnas = this.columnasTempArray.value.map((c: any, idx: number) => ({
+      id: c.id || undefined,
+      texto_columna: c.texto_columna,
+      orden: c.orden || (idx + 1)
+    }));
+
+    return { filas, columnas };
   }
 
-  // --- MÉTODOS RÁPIDOS DE FILAS ---
-  agregarFilaDirecto(texto: string = ''): void {
-    const val = texto.trim() || this.matrizForm.get('nuevaFilaTexto')?.value?.trim();
-    if (!val && !texto) return;
+  // ✅ NUEVO: Emitir datos antes de guardar pregunta
+  guardarMatriz(): void {
+    const { filas, columnas } = this.obtenerDatosMatriz();
+    this.guardarFilas.emit(filas);
+    this.guardarColumnas.emit(columnas);
+  }
+
+  agregarFilaDirecto(texto: string = '', esMultiple: boolean = false): void {
+    if (this.readonly) return;
+    const rawVal = texto || this.matrizForm.get('nuevaFilaTexto')?.value || '';
+    const val = String(rawVal).trim();
+    if (!val) return;
+
+    const multVal = texto ? esMultiple : !!this.matrizForm.get('nuevaFilaEsMultiple')?.value;
 
     if (this.preguntaId) {
-      this.agregarFila.emit({ preguntaId: this.preguntaId, texto: val });
-    } else {
-      this.filasTempArray.push(
-        this.fb.group({
-          texto_fila: [val, Validators.required]
-        })
-      );
+      this.agregarFila.emit({ preguntaId: this.preguntaId, texto: val, es_multiple: multVal });
     }
+
+    this.filasTempArray.push(
+      this.fb.group({
+        id: [null],
+        texto_fila: [val, [Validators.required, Validators.maxLength(255)]],
+        es_multiple: [multVal]
+      })
+    );
+
     this.matrizForm.get('nuevaFilaTexto')?.reset('');
+    this.matrizForm.get('nuevaFilaEsMultiple')?.setValue(false);
+    this.cdr.markForCheck();
   }
 
   eliminarFilaTemp(index: number, filaId?: string): void {
+    if (this.readonly || index < 0) return;
     if (filaId && this.preguntaId) {
       this.eliminarFila.emit(filaId);
-    } else {
+    }
+    if (index < this.filasTempArray.length) {
       this.filasTempArray.removeAt(index);
     }
+    this.cdr.markForCheck();
   }
 
-  // --- MÉTODOS RÁPIDOS DE COLUMNAS ---
+  toggleFilaMultiple(index: number): void {
+    if (this.readonly) return;
+
+    const filaGroup = this.filasTempArray.at(index) as FormGroup;
+    if (filaGroup) {
+      const valorActual = !!filaGroup.get('es_multiple')?.value;
+      const nuevoValor = !valorActual;
+      
+      filaGroup.get('es_multiple')?.setValue(nuevoValor);
+      filaGroup.get('es_multiple')?.markAsDirty();
+      filaGroup.get('es_multiple')?.updateValueAndValidity();
+
+      const filaId = filaGroup.get('id')?.value;
+      if (this.preguntaId && filaId) {
+        this.actualizarFila.emit({ filaId, es_multiple: nuevoValor });
+      }
+    }
+
+    this.previewSimulada.update(actualState => {
+      const copia = { ...actualState };
+      delete copia[index];
+      return copia;
+    });
+
+    this.cdr.markForCheck();
+  }
+
+  esFilaMultiple(index: number): boolean {
+    const filaGroup = this.filasTempArray.at(index) as FormGroup;
+    return !!filaGroup?.get('es_multiple')?.value;
+  }
+
   agregarColumnaDirecto(texto: string = ''): void {
-    const val = texto.trim() || this.matrizForm.get('nuevaColumnaTexto')?.value?.trim();
-    if (!val && !texto) return;
+    if (this.readonly) return;
+    const rawVal = texto || this.matrizForm.get('nuevaColumnaTexto')?.value || '';
+    const val = String(rawVal).trim();
+    if (!val) return;
 
     if (this.preguntaId) {
       this.agregarColumna.emit({ preguntaId: this.preguntaId, texto: val });
-    } else {
-      this.columnasTempArray.push(
-        this.fb.group({
-          texto_columna: [val, Validators.required]
-        })
-      );
     }
+
+    this.columnasTempArray.push(
+      this.fb.group({
+        id: [null],
+        texto_columna: [val, [Validators.required, Validators.maxLength(255)]]
+      })
+    );
+
     this.matrizForm.get('nuevaColumnaTexto')?.reset('');
+    this.cdr.markForCheck();
   }
 
   eliminarColumnaTemp(index: number, columnaId?: string): void {
+    if (this.readonly || index < 0) return;
     if (columnaId && this.preguntaId) {
       this.eliminarColumna.emit(columnaId);
-    } else {
+    }
+    if (index < this.columnasTempArray.length) {
       this.columnasTempArray.removeAt(index);
     }
+    this.cdr.markForCheck();
   }
 
-  // --- PLANTILLAS PREDEFINIDAS RÁPIDAS ---
   aplicarPlantillaLikert5(): void {
+    if (this.readonly) return;
     this.limpiarTodo();
     const columnas = ['Totalmente en desacuerdo', 'En desacuerdo', 'Neutral', 'De acuerdo', 'Totalmente de acuerdo'];
     columnas.forEach(c => this.agregarColumnaDirecto(c));
-    this.agregarFilaDirecto('Aspecto o Criterio 1');
-    this.agregarFilaDirecto('Aspecto o Criterio 2');
+    this.agregarFilaDirecto('Aspecto 1', false);
+    this.agregarFilaDirecto('Aspecto 2', true);
   }
 
   aplicarPlantillaFrecuencia(): void {
+    if (this.readonly) return;
     this.limpiarTodo();
     const columnas = ['Nunca', 'Rara vez', 'A veces', 'Frecuentemente', 'Siempre'];
     columnas.forEach(c => this.agregarColumnaDirecto(c));
-    this.agregarFilaDirecto('Frecuencia del servicio');
-    this.agregarFilaDirecto('Atención brindada');
+    this.agregarFilaDirecto('Frecuencia del servicio', false);
+    this.agregarFilaDirecto('Atención brindada', false);
   }
 
   aplicarPlantillaCalificacion(): void {
+    if (this.readonly) return;
     this.limpiarTodo();
     const columnas = ['Malo', 'Regular', 'Bueno', 'Excelente'];
     columnas.forEach(c => this.agregarColumnaDirecto(c));
-    this.agregarFilaDirecto('Infraestructura');
-    this.agregarFilaDirecto('Equipamiento');
+    this.agregarFilaDirecto('Infraestructura', false);
+    this.agregarFilaDirecto('Equipamiento', false);
   }
 
   limpiarTodo(): void {
-    while (this.filasTempArray.length !== 0) {
-      this.filasTempArray.removeAt(0);
-    }
-    while (this.columnasTempArray.length !== 0) {
-      this.columnasTempArray.removeAt(0);
-    }
+    if (this.readonly) return;
+    this.filasTempArray.clear();
+    this.columnasTempArray.clear();
+    this.previewSimulada.set({});
+    this.cdr.markForCheck();
   }
 
-  // Interacción simulada en la vista previa en vivo
   seleccionarOpcionPrevio(filaIndex: number, colIndex: number): void {
-    this.previewSimulada.update(actual => ({
-      ...actual,
-      [filaIndex]: colIndex.toString()
-    }));
+    const colStr = colIndex.toString();
+    const esMult = this.esFilaMultiple(filaIndex);
+
+    this.previewSimulada.update(actual => {
+      const actualVal = actual[filaIndex];
+
+      if (!esMult) {
+        return { ...actual, [filaIndex]: colStr };
+      } else {
+        const currentArr = Array.isArray(actualVal) ? [...actualVal] : [];
+        const idx = currentArr.indexOf(colStr);
+        if (idx >= 0) {
+          currentArr.splice(idx, 1);
+        } else {
+          currentArr.push(colStr);
+        }
+        return { ...actual, [filaIndex]: currentArr };
+      }
+    });
+    this.cdr.markForCheck();
+  }
+
+  isColSelected(filaIndex: number, colIndex: number): boolean {
+    const val = this.previewSimulada()[filaIndex];
+    const colStr = colIndex.toString();
+    return Array.isArray(val) ? val.includes(colStr) : val === colStr;
+  }
+
+  @HostListener('keydown.enter', ['$event'])
+  preventEnterSubmit(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (target && target.tagName === 'INPUT') {
+      const type = (target as HTMLInputElement).type;
+      if (type === 'text' || type === 'number') {
+        event.preventDefault();
+      }
+    }
   }
 }

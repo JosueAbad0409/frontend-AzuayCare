@@ -260,7 +260,7 @@
       <!-- CONTENIDO DE PREGUNTAS (COLAPSABLE) -->
       @if (!isSeccionColapsada(seccion.id)) {
       <div class="questions-container animate-fade-in" (dragover)="onDragOver($event)">
-        
+
         @if (!esSoloLectura() && activeSeccionIdForQuestion() !== seccion.id) {
         <button type="button" class="btn-add-question btn-add-top" (click)="abrirFormPregunta(seccion.id)" [disabled]="isSavingQuestion()">
           <i class="fas fa-plus-circle" aria-hidden="true"></i> Añadir Pregunta aquí arriba
@@ -273,7 +273,7 @@
           [class.cursor-move]="!esSoloLectura() && editingPreguntaId() !== pregunta.id"
           [draggable]="!esSoloLectura() && editingPreguntaId() !== pregunta.id" (dragstart)="onDragStart(i, j)"
           (drop)="onDrop(i, j)">
-          
+
           @if (editingPreguntaId() === pregunta.id) {
           <ng-container [ngTemplateOutlet]="preguntaFormTpl"></ng-container>
           } @else {
@@ -408,12 +408,20 @@
           </div>
           }
 
+          <!-- 🔥 PREGUNTA TIPO MATRIZ EN LISTA (BLOQUEADA SI NO ESTÁ EN MODO EDICIÓN) -->
           @if (esTipoMatriz(pregunta.tipo_campo_id) && editingPreguntaId() !== pregunta.id) {
           <div class="w-full overflow-x-auto box-border mt-2">
-            <app-matriz-builder [preguntaId]="pregunta.id" [filasExistentes]="pregunta.filasMatriz || []"
-              [columnasExistentes]="pregunta.columnasMatriz || []" (agregarFila)="agregarFilaMatriz($event)"
-              (eliminarFila)="eliminarFilaExistente($event, pregunta.id)" (agregarColumna)="agregarColumnaMatriz($event)"
-              (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"></app-matriz-builder>
+            <app-matriz-builder
+              [preguntaId]="pregunta.id"
+              [filasExistentes]="pregunta.filasMatriz || []"
+              [columnasExistentes]="pregunta.columnasMatriz || []"
+              [readonly]="true"
+              (agregarFila)="agregarFilaMatriz($event)"
+              (eliminarFila)="eliminarFilaExistente($event, pregunta.id)"
+              (agregarColumna)="agregarColumnaMatriz($event)"
+              (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"
+              (actualizarFila)="actualizarFilaExistente($event, pregunta.id)">
+            </app-matriz-builder>
           </div>
           }
         </div>
@@ -480,10 +488,8 @@
                         <i class="fas fa-magic" aria-hidden="true"></i> Cargar Plantillas / Edades <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                       </button>
 
-                      
                       @if (showMenuPresets()) {
                       <div class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 text-xs animate-fade-in">
-                        <!-- Tus plantillas anteriores -->
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border-none bg-transparent cursor-pointer" (click)="cargarPreset('EDAD')">
                           <span>🕒 Rangos de Edad (&lt;5, 6-12, &gt;65)</span>
                         </button>
@@ -497,7 +503,6 @@
                           <span>🏠 Tipo de Vivienda</span>
                         </button>
 
-                        <!-- ✅ NUEVOS BOTONES DE CATÁLOGOS DE BASE DE DATOS -->
                         <div class="border-t border-slate-200 my-1"></div>
                         <button type="button" class="w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 border-none bg-transparent cursor-pointer font-bold" (click)="cargarCatalogoEnOpciones('PAISES')">
                           <i class="fas fa-globe-americas"></i> Llenar con todos los Países
@@ -670,9 +675,16 @@
               </div>
               }
 
+              <!-- FORMULARIO EDITABLE DE MATRIZ DENTRO DE LA CAJA DE CONFIGURACIÓN DE PREGUNTA -->
               @if (esTipoMatriz(preguntaForm.get('tipo_campo_id')?.value)) {
               <div class="my-4 animate-fade-in w-full overflow-x-auto box-border">
-                <app-matriz-builder [parentForm]="preguntaForm"></app-matriz-builder>
+                <app-matriz-builder
+                  [parentForm]="preguntaForm"
+                  [readonly]="false"
+                  (guardarFilas)="onGuardarFilas($event)"
+                  (guardarColumnas)="onGuardarColumnas($event)"
+                  #matrizBuilder>
+                </app-matriz-builder>
               </div>
               }
 

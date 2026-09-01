@@ -1,8 +1,9 @@
 <div class="carreras-card animate-fade-in">
-  <div class="header-section">
-    <div>
+  <!-- Cabecera Principal -->
+  <header class="header-section">
+    <div class="title-group">
       <h1 class="title">Gestión de Ciclos Académicos</h1>
-      <p class="subtitle">Asigna y administra ciclos (1er Ciclo, 2do Ciclo, 3er Ciclo, etc.) por cada carrera.</p>
+      <p class="subtitle">Asigna y administra la secuencia de ciclos por cada carrera institucional.</p>
     </div>
     <button 
       type="button" 
@@ -14,136 +15,155 @@
       <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-plus'" aria-hidden="true"></i>
       <span>Nuevo Ciclo</span>
     </button>
-  </div>
+  </header>
 
+  <!-- Panel de Control y Filtros -->
   @if (!loading()) {
-    <div class="search-bar-wrapper">
+    <section class="toolbar-section" aria-label="Filtros de búsqueda">
       <div class="search-input-box">
         <i class="fas fa-search search-icon" aria-hidden="true"></i>
         <input 
           type="text" 
-          placeholder="Buscar por ciclo o carrera..." 
+          placeholder="Buscar ciclo por nombre..." 
           [value]="filterSearch()"
           (input)="onSearchChange($event)" 
           class="search-control" 
-          aria-label="Buscar por ciclo o carrera"
+          aria-label="Buscar ciclo por nombre"
         />
-      </div>
-
-      <div class="filter-actions">
-        <span class="count-badge" role="status" aria-live="polite">
-          Total: <strong>{{ totalCasos() }}</strong> Ciclo(s)
-        </span>
-
-        @if (tieneFiltrosActivos()) {
-          <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
-            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
-            <span>Limpiar Filtros</span>
+        @if (filterSearch()) {
+          <button type="button" class="btn-clear-search" (click)="limpiarFiltros()" aria-label="Limpiar búsqueda">
+            <i class="fas fa-times-circle" aria-hidden="true"></i>
           </button>
         }
       </div>
-    </div>
+
+      <div class="filter-controls">
+        <div class="select-wrapper">
+          <i class="fas fa-graduation-cap select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filterCarrera()" 
+            (change)="onCarreraFilterChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por carrera"
+          >
+            <option value="TODOS">Todas las Carreras</option>
+            @for (c of carrerasDisponibles(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="select-wrapper">
+          <i class="fas fa-toggle-on select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filterEstado()" 
+            (change)="onEstadoFilterChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por estado"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+          </select>
+        </div>
+
+        <div class="summary-badge" role="status" aria-live="polite">
+          <span class="summary-label">Registros:</span>
+          <span class="summary-count">{{ totalCasos() }}</span>
+        </div>
+
+        @if (tieneFiltrosActivos()) {
+          <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()" aria-label="Limpiar todos los filtros">
+            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+            <span>Restablecer</span>
+          </button>
+        }
+      </div>
+    </section>
   }
 
+  <!-- Esqueleto de Carga -->
   @if (loading()) {
-    <div class="skeleton-wrapper">
+    <div class="skeleton-wrapper" aria-busy="true" aria-label="Cargando datos">
       <div class="skeleton-row skeleton-header"></div>
       <div class="skeleton-row"></div>
       <div class="skeleton-row"></div>
       <div class="skeleton-row"></div>
     </div>
   } @else {
+    <!-- Tabla / Grilla Adaptativa -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
-          <tr class="header-titles">
+          <tr>
             <th scope="col" class="col-orden text-center">Orden</th>
             <th scope="col" class="col-nombre">Nombre del Ciclo</th>
             <th scope="col" class="col-carrera">Carrera(s) Asignada(s)</th>
             <th scope="col" class="col-estado text-center">Estado</th>
             <th scope="col" class="col-acc text-right">Acciones</th>
           </tr>
-          <tr class="header-filters">
-            <th class="col-orden text-center"></th>
-            <th class="col-nombre">
-              <div class="filter-input-wrap">
-                <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
-                <input 
-                  type="text" 
-                  class="table-column-input" 
-                  placeholder="Filtrar ciclo..." 
-                  [value]="filterSearch()"
-                  (input)="onSearchChange($event)"
-                  aria-label="Filtrar por nombre de ciclo"
-                />
-              </div>
-            </th>
-            <th class="col-carrera">
-              <select 
-                [value]="filterCarrera()" 
-                (change)="onCarreraFilterChange($event)" 
-                class="table-column-select"
-                aria-label="Filtrar por carrera"
-              >
-                <option value="TODOS">Todas las Carreras</option>
-                @for (c of carrerasDisponibles(); track c.id) {
-                  <option [value]="c.id">{{ c.nombre }}</option>
-                }
-              </select>
-            </th>
-            <th class="col-estado text-center">
-              <select 
-                [value]="filterEstado()" 
-                (change)="onEstadoFilterChange($event)" 
-                class="table-column-select table-column-select-centered"
-                aria-label="Filtrar por estado"
-              >
-                <option value="TODOS">Todos los Estados</option>
-                <option value="ACTIVO">Activos</option>
-                <option value="INACTIVO">Inactivos</option>
-              </select>
-            </th>
-            <th class="col-acc text-right"></th>
-          </tr>
         </thead>
         <tbody>
           @for (ciclo of ciclosFiltrados(); track ciclo.id) {
             <tr>
+              <!-- Orden -->
               <td class="col-orden text-center" data-label="Orden">
-                <span class="badge badge-neutral font-mono">
-                  #{{ ciclo.orden ?? '-' }}
+                <span class="order-chip">
+                  <span class="order-hash">#</span>{{ ciclo.orden ?? '-' }}
                 </span>
               </td>
+
+              <!-- Nombre -->
               <td class="col-nombre" data-label="Nombre del Ciclo">
-                <strong class="ciclo-title-text">{{ ciclo.nombre }}</strong>
+                <div class="ciclo-info">
+                  <span class="ciclo-title-text">{{ ciclo.nombre }}</span>
+                </div>
               </td>
-              <td class="col-carrera text-muted" data-label="Carrera(s) Asignada(s)">
-  {{ getCarrerasTexto(ciclo) }}
-</td>
+
+              <!-- Carreras con Mini-Scroll Limpio -->
+              <td class="col-carrera" data-label="Carrera(s) Asignada(s)">
+                <div class="carreras-scroll-box">
+                  <div class="carreras-tags-wrapper">
+                    @for (carrera of getCarrerasLista(ciclo); track carrera.id) {
+                      <span class="carrera-chip" [title]="carrera.nombre">
+                        {{ carrera.nombre }}
+                      </span>
+                    } @empty {
+                      <span class="no-carrera-text">Sin carreras asignadas</span>
+                    }
+                  </div>
+                </div>
+              </td>
+
+              <!-- Estado -->
               <td class="col-estado text-center" data-label="Estado">
                 <span class="badge" [ngClass]="!ciclo.fecha_desactivacion ? 'badge-success' : 'badge-danger'">
-                  <i class="fas" [ngClass]="!ciclo.fecha_desactivacion ? 'fa-check-circle' : 'fa-times-circle'" aria-hidden="true"></i>
+                  <span class="status-dot"></span>
                   <span>{{ !ciclo.fecha_desactivacion ? 'Activo' : 'Inactivo' }}</span>
                 </span>
               </td>
+
+              <!-- Acciones -->
               <td class="col-acc text-right" data-label="Acciones">
                 <div class="actions-wrapper">
                   <button 
                     type="button" 
                     (click)="openModal(ciclo)" 
-                    class="btn-icon text-blue" 
+                    class="btn-icon btn-edit" 
                     [disabled]="isSaving()"
                     [attr.aria-label]="'Editar ciclo ' + ciclo.nombre"
+                    title="Editar ciclo"
                   >
-                    <i class="fas fa-edit" aria-hidden="true"></i>
+                    <i class="fas fa-pen" aria-hidden="true"></i>
                   </button>
                   @if (!ciclo.fecha_desactivacion) {
                     <button 
                       type="button" 
                       (click)="darDeBaja(ciclo.id!)" 
-                      class="btn-icon text-red" 
+                      class="btn-icon btn-delete" 
                       [disabled]="isSaving()"
-                      [attr.aria-label]="'Dar de baja ciclo ' + ciclo.nombre"
+                      [attr.aria-label]="'Desactivar ciclo ' + ciclo.nombre"
+                      title="Desactivar ciclo"
                     >
                       <i class="fas fa-trash-alt" aria-hidden="true"></i>
                     </button>
@@ -153,14 +173,16 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="5">
+              <td colspan="5" class="empty-cell">
                 <div class="state-card empty-state">
-                  <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
-                  <p class="state-title">No se encontraron ciclos académicos</p>
-                  <p class="state-desc">No existen registros configurados que coincidan con los criterios de búsqueda.</p>
+                  <div class="empty-icon-wrapper">
+                    <i class="fas fa-search-minus empty-icon" aria-hidden="true"></i>
+                  </div>
+                  <h3 class="state-title">No se encontraron ciclos académicos</h3>
+                  <p class="state-desc">No existen registros que coincidan con los filtros aplicados.</p>
                   @if (tieneFiltrosActivos()) {
-                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
-                      <i class="fas fa-undo" aria-hidden="true"></i>
+                    <button type="button" class="btn btn-outline btn-sm mt-3" (click)="limpiarFiltros()">
+                      <i class="fas fa-arrow-rotate-left" aria-hidden="true"></i>
                       <span>Restablecer Filtros</span>
                     </button>
                   }

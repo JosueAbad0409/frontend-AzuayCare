@@ -3,7 +3,7 @@
     <div class="docs-header-content">
       <h1 class="docs-title">
         <i class="fas fa-folder-open docs-title-icon" aria-hidden="true"></i>
-        Repositorio de Documentos
+        <span class="title-text">Repositorio</span>
       </h1>
       <p class="docs-subtitle">
         Sube, visualiza y gestiona las planillas, cédulas o comprobantes requeridos.
@@ -11,8 +11,8 @@
     </div>
 
     <button type="button" class="btn btn--secondary btn-refresh" (click)="refrescarDocumentos()"
-      title="Sincronizar documentos">
-      <i class="fas fa-sync-alt" aria-hidden="true"></i> Actualizar
+      title="Sincronizar documentos" aria-label="Actualizar lista de documentos">
+      <i class="fas fa-sync-alt" aria-hidden="true"></i> <span class="btn-text">Actualizar</span>
     </button>
   </header>
 
@@ -31,9 +31,9 @@
 
     <div class="dropzone-text">
       <h2 class="dropzone-title">
-        {{ isUploading() ? 'Subiendo archivo al servidor...' : 'Haz clic o arrastra un archivo aquí' }}
+        {{ isUploading() ? 'Subiendo archivo...' : 'Haz clic o arrastra un archivo aquí' }}
       </h2>
-      <p class="dropzone-hint">Formatos soportados: PDF, JPG, PNG · Cupo total de 2MB para tus archivos independientes</p>
+      <p class="dropzone-hint">PDF, JPG, PNG · Máx 2MB total por archivos independientes</p>
     </div>
   </section>
 
@@ -54,26 +54,28 @@
     </div>
     } @else {
 
-    <!-- SECCIÓN 1: EVIDENCIAS (SOLO LECTURA. Sin botón de eliminar) -->
     @if (documentosFormulario().length > 0) {
     <div class="gallery-subsection">
-      <h3 class="subsection-title">
-        <i class="fas fa-clipboard-check" aria-hidden="true"></i> Evidencias Institucionales
-        <span class="gallery-count">({{ documentosFormulario().length }})</span>
-      </h3>
-      <p class="subsection-desc">Estos documentos respaldan tus formularios. Se actualizan o eliminan de forma
-        automática directamente desde la ficha correspondiente.</p>
+      <div class="subsection-header">
+        <h3 class="subsection-title">
+          <i class="fas fa-clipboard-check" aria-hidden="true"></i> 
+          <span>Evidencias Institucionales</span>
+          <span class="gallery-count">({{ documentosFormulario().length }})</span>
+        </h3>
+      </div>
+      <p class="subsection-desc">Estos documentos respaldan tus formularios. Se actualizan o eliminan automáticamente desde la ficha.</p>
 
       @for (grupo of documentosPorPeriodo(); track grupo.periodo) {
       <div class="periodo-group">
         <h4 class="periodo-group-title">
-          <i class="fas fa-calendar-alt" aria-hidden="true"></i> {{ grupo.periodo }}
+          <i class="fas fa-calendar-alt" aria-hidden="true"></i> 
+          <span class="periodo-name">{{ grupo.periodo }}</span>
           <span class="gallery-count">({{ grupo.docs.length }})</span>
         </h4>
 
         <div class="doc-grid">
           @for (doc of grupo.docs; track doc.id) {
-          <article class="doc-card doc-card--readonly">
+          <article class="doc-card doc-card--readonly" role="article">
             <div class="doc-card-body">
               <div class="doc-icon" [class.doc-icon--pdf]="doc.mime_type?.includes('pdf')"
                 [class.doc-icon--image]="!doc.mime_type?.includes('pdf')" aria-hidden="true">
@@ -82,22 +84,22 @@
               </div>
 
               <div class="doc-info">
-                <h3 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h3>
+                <h5 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h5>
                 <time class="doc-date" [attr.datetime]="doc.created_at">
                   {{ doc.created_at | date:'dd/MM/yyyy' }}
                 </time>
                 <span class="doc-context-badge">
-                  <i class="fas fa-link" aria-hidden="true"></i> Vinculado
+                  <i class="fas fa-link" aria-hidden="true"></i> <span class="badge-text">Vinculado</span>
                 </span>
               </div>
             </div>
 
             <footer class="doc-actions">
-              <button type="button" class="btn btn--action" (click)="abrirPreview(doc)">
-                <i class="fas fa-eye" aria-hidden="true"></i><span>Ver</span>
+              <button type="button" class="btn btn--action" (click)="abrirPreview(doc)" aria-label="Ver documento">
+                <i class="fas fa-eye" aria-hidden="true"></i><span class="action-text">Ver</span>
               </button>
-              <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)">
-                <i class="fas fa-download" aria-hidden="true"></i><span>Descargar</span>
+              <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)" aria-label="Descargar documento">
+                <i class="fas fa-download" aria-hidden="true"></i><span class="action-text">Descargar</span>
               </button>
             </footer>
           </article>
@@ -108,22 +110,22 @@
     </div>
     }
 
-    <!-- SECCIÓN 2: ARCHIVOS INDEPENDIENTES (CON botón de eliminar) -->
     <div class="gallery-subsection mt-8">
-      <h3 class="subsection-title">
-        <i class="fas fa-folder" aria-hidden="true"></i> Archivos Independientes
-        <span class="gallery-count">({{ documentosSueltos().length }})</span>
-      </h3>
-      <p class="subsection-desc">Documentos que has subido libremente al repositorio. Cuentan con un cupo total de
-        2MB.</p>
+      <div class="subsection-header">
+        <h3 class="subsection-title">
+          <i class="fas fa-folder" aria-hidden="true"></i> 
+          <span>Archivos Independientes</span>
+          <span class="gallery-count">({{ documentosSueltos().length }})</span>
+        </h3>
+      </div>
+      <p class="subsection-desc">Documentos que has subido libremente. Cupo total: 2MB.</p>
 
       <div class="espacio-usado" role="status" aria-live="polite">
         <div class="espacio-usado-texto">
-          <span>{{ (espacioUsadoLibreBytes() / 1024 / 1024).toFixed(2) }}MB usados de 2MB</span>
-          <span class="espacio-usado-disponible">{{ (espacioDisponibleBytes() / 1024 / 1024).toFixed(2) }}MB
-            disponibles</span>
+          <span class="espacio-usado-label">{{ (espacioUsadoLibreBytes() / 1024 / 1024).toFixed(2) }}MB usados</span>
+          <span class="espacio-usado-disponible">{{ (espacioDisponibleBytes() / 1024 / 1024).toFixed(2) }}MB disponibles</span>
         </div>
-        <div class="espacio-usado-barra">
+        <div class="espacio-usado-barra" role="progressbar" [attr.aria-valuenow]="porcentajeEspacioUsado()" aria-valuemin="0" aria-valuemax="100">
           <div class="espacio-usado-barra-fill" [style.width.%]="porcentajeEspacioUsado()"
             [class.espacio-usado-barra-fill--lleno]="porcentajeEspacioUsado() >= 90">
           </div>
@@ -133,7 +135,7 @@
       @if (documentosSueltos().length > 0) {
       <div class="doc-grid">
         @for (doc of documentosSueltos(); track doc.id) {
-        <article class="doc-card">
+        <article class="doc-card" role="article">
           <div class="doc-card-body">
             <div class="doc-icon" [class.doc-icon--pdf]="doc.mime_type?.includes('pdf')"
               [class.doc-icon--image]="!doc.mime_type?.includes('pdf')" aria-hidden="true">
@@ -142,7 +144,7 @@
             </div>
 
             <div class="doc-info">
-              <h3 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h3>
+              <h5 class="doc-name" [title]="doc.nombre_original">{{ doc.nombre_original }}</h5>
               <time class="doc-date" [attr.datetime]="doc.created_at">
                 {{ doc.created_at | date:'dd/MM/yyyy, HH:mm' }}
               </time>
@@ -150,14 +152,14 @@
           </div>
 
           <footer class="doc-actions">
-            <button type="button" class="btn btn--action" (click)="abrirPreview(doc)">
-              <i class="fas fa-eye" aria-hidden="true"></i><span>Ver</span>
+            <button type="button" class="btn btn--action" (click)="abrirPreview(doc)" aria-label="Ver documento">
+              <i class="fas fa-eye" aria-hidden="true"></i><span class="action-text">Ver</span>
             </button>
-            <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)">
-              <i class="fas fa-download" aria-hidden="true"></i><span>Descargar</span>
+            <button type="button" class="btn btn--action" (click)="descargarDocumento(doc)" aria-label="Descargar documento">
+              <i class="fas fa-download" aria-hidden="true"></i><span class="action-text">Descargar</span>
             </button>
             <button type="button" class="btn btn--icon btn--danger" (click)="intentarEliminar(doc.id)"
-              title="Eliminar">
+              title="Eliminar documento" aria-label="Eliminar documento">
               <i class="fas fa-trash-alt" aria-hidden="true"></i>
             </button>
           </footer>
@@ -170,9 +172,8 @@
   </section>
 </main>
 
-<!-- MODAL DE VISTA PREVIA (Este sí se queda porque es para visualizar PDFs/Imágenes) -->
 @if (docPreview()) {
-<div class="modal-backdrop modal-backdrop--preview" role="presentation">
+<div class="modal-backdrop modal-backdrop--preview" role="presentation" (keydown.escape)="cerrarPreview()">
   <div class="modal-overlay" (click)="cerrarPreview()" aria-hidden="true"></div>
 
   <dialog open class="preview-modal animate-pop" role="dialog" aria-modal="true" aria-labelledby="preview-title">

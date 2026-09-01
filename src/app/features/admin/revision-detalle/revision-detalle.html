@@ -49,17 +49,54 @@
     @if (tabActiva() === 'DETALLE') {
     <div class="student-card">
       <div class="student-main">
-        <div class="student-avatar" aria-hidden="true"><i class="fas fa-user-graduate"></i></div>
-        <div>
+        <!-- AVATAR 150PX CON OVERLAY FLOTANTE HD -->
+        <div class="student-avatar-container">
+          <div class="student-avatar">
+            @if (ficha()?.usuario?.foto_url && !imageError()) {
+              <img [src]="ficha()?.usuario?.foto_url" 
+                   [alt]="'Foto de ' + ficha()?.usuario?.primer_nombre" 
+                   class="student-avatar-img"
+                   (error)="onImageError()" />
+            } @else {
+              <div class="student-avatar-fallback">
+                <i class="fas fa-user-graduate"></i>
+              </div>
+            }
+          </div>
+
+          @if (ficha()?.usuario?.foto_url && !imageError()) {
+            <a [href]="ficha()?.usuario?.foto_url" target="_blank" rel="noopener" class="avatar-zoom-link" title="Ver imagen original">
+              <i class="fas fa-search-plus" aria-hidden="true"></i>
+              <span>Ver HD</span>
+            </a>
+          }
+        </div>
+
+        <div class="student-info-text">
           <p class="student-name">
             {{ ficha()?.usuario?.primer_nombre }} {{ ficha()?.usuario?.primer_apellido }}
           </p>
-          <p class="student-meta">
-            Cédula: <strong>{{ ficha()?.usuario?.cedula || 'N/A' }}</strong>
-            @if (ficha()?.periodo) {
-            · Periodo: <strong>{{ ficha()?.periodo?.nombre }}</strong>
+
+          <div class="student-meta">
+            <div class="meta-pill">
+              <i class="fas fa-id-card" aria-hidden="true"></i>
+              <span>Cédula: <strong>{{ ficha()?.usuario?.cedula || 'N/A' }}</strong></span>
+            </div>
+
+            @if (ficha()?.usuario?.carrera?.nombre) {
+              <div class="meta-pill">
+                <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+                <span>Carrera: <strong>{{ ficha()?.usuario?.carrera?.nombre }}</strong></span>
+              </div>
             }
-          </p>
+
+            @if (ficha()?.periodo) {
+              <div class="meta-pill">
+                <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+                <span>Periodo: <strong>{{ ficha()?.periodo?.nombre }}</strong></span>
+              </div>
+            }
+          </div>
         </div>
       </div>
 
@@ -225,7 +262,6 @@
         </div>
       </div>
 
-      <!-- NUEVO: Opciones de Reapertura -->
       @if (puedeReabrir()) {
       <div class="mt-6 border-t border-slate-200 pt-4">
         <label class="form-label text-slate-700" for="txt-reabrir">

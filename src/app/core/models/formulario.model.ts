@@ -8,7 +8,6 @@ import {
 
 export type { FilaMatriz, ColumnaMatriz, CreateFilaDto, CreateColumnaDto };
 
-// --- INTERFAZ RANGOS Y VARIABLES CALCULADAS ---
 export interface RangoCalculado {
   id: string;
   formulario_id: string;
@@ -29,7 +28,6 @@ export interface CreateRangoCalculadoDto {
   orden?: number;
 }
 
-// --- INTERFAZ FORMULARIO ---
 export interface Formulario {
   id: string;
   titulo: string;
@@ -43,7 +41,6 @@ export interface Formulario {
   fecha_bloqueo?: string | null;
   fecha_publicacion?: string | null;
   
-  // 🔥 NUEVOS CAMPOS: Umbrales del Motor de Prioridad
   umbral_balance_critico?: number;
   puntos_balance_critico?: number;
   umbral_prioridad_alta?: number;
@@ -60,21 +57,18 @@ export interface CreateFormularioDto {
   descripcion?: string;
   tipo_formulario_id: string;
   
-  // 🔥 NUEVOS CAMPOS: Umbrales del Motor de Prioridad
   umbral_balance_critico?: number;
   puntos_balance_critico?: number;
   umbral_prioridad_alta?: number;
   umbral_auto_validacion?: number;
 }
 
-// --- INTERFAZ SECCIÓN ---
 export interface Seccion {
   id: string;
   formulario_id: string;
   nombre: string;
   descripcion?: string | null;
   orden: number;
-  // 🔥 SE AGREGA 'NEE_SALUD'
   tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA' | 'NEE_SALUD';
   subcategoria_financiera?: 'INGRESOS' | 'GASTOS' | 'AMBOS' | 'NINGUNO';
   preguntas?: Pregunta[];
@@ -85,19 +79,16 @@ export interface CreateSeccionDto {
   nombre: string;
   descripcion?: string;
   orden?: number;
-  // 🔥 SE AGREGA 'NEE_SALUD'
   tipo_seccion?: 'INFORMACION_GENERAL' | 'FINANCIERA' | 'NEE_SALUD';
   subcategoria_financiera?: 'INGRESOS' | 'GASTOS' | 'AMBOS' | 'NINGUNO';
 }
 
-// --- INTERFAZ TIPO DE CAMPO ---
 export interface TipoCampoForm {
   id: string;
-  nombre: 'TEXTO' | 'NUMERICO' | 'SELECCION_UNICA' | 'SELECCION_MULTIPLE' | 'MATRIZ' | 'FECHA' ;
+  nombre: 'TEXTO' | 'NUMERICO' | 'SELECCION_UNICA' | 'SELECCION_MULTIPLE' | 'MATRIZ' | 'FECHA';
   descripcion?: string;
 }
 
-// --- INTERFAZ OPCIÓN DE PREGUNTA ---
 export interface OpcionPregunta {
   id?: string;
   pregunta_id?: string;
@@ -106,7 +97,7 @@ export interface OpcionPregunta {
   permite_texto_libre?: boolean;
   valor_ponderado?: number;
   es_correcta?: boolean;
-  puntaje_riesgo?: number; // 🔥 NUEVO CAMPO: Triage Automático
+  puntaje_riesgo?: number;
   dispara_dependencia?: boolean;
   pregunta_hija_id?: string;
   subpregunta_enunciado?: string;
@@ -122,7 +113,7 @@ export interface CreateOpcionDto {
   permite_texto_libre?: boolean;
   valor_ponderado?: number;
   es_correcta?: boolean;
-  puntaje_riesgo?: number; // 🔥 NUEVO CAMPO: Triage Automático
+  puntaje_riesgo?: number;
   dispara_dependencia?: boolean;
   pregunta_hija_id?: string;
   subpregunta_enunciado?: string;
@@ -131,7 +122,6 @@ export interface CreateOpcionDto {
   subpregunta_requiere_evidencia?: boolean;
 }
 
-// --- INTERFAZ PREGUNTA ---
 export interface Pregunta {
   id: string;
   seccion_id: string;
@@ -140,8 +130,8 @@ export interface Pregunta {
   tipoCampo?: TipoCampoForm;
   categoria_financiera: 'INGRESO' | 'EGRESO' | 'NINGUNO';
   
-  clave_semantica?: string | null; // 🔥 NUEVO CAMPO
-  revision_manual_obligatoria?: boolean; // 🔥 NUEVO CAMPO
+  clave_semantica?: string | null;
+  revision_manual_obligatoria?: boolean;
   
   es_obligatorio: boolean;
   orden: number;
@@ -158,14 +148,16 @@ export interface CreatePreguntaDto {
   tipo_campo_id: string;
   categoria_financiera?: 'INGRESO' | 'EGRESO' | 'NINGUNO';
   
-  clave_semantica?: string | null; // 🔥 NUEVO CAMPO
-  revision_manual_obligatoria?: boolean; // 🔥 NUEVO CAMPO
+  clave_semantica?: string | null;
+  revision_manual_obligatoria?: boolean;
   
   es_obligatorio?: boolean;
   orden?: number;
   codigo_sistema?: string;
   requiere_evidencia?: boolean;
   opciones?: CreateOpcionDto[];
+  
+  // ✅ NUEVA: Incluir estructura de matriz
   filasMatriz?: CreateFilaDto[];
   columnasMatriz?: CreateColumnaDto[];
 }

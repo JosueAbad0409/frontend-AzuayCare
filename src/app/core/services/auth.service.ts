@@ -3,6 +3,7 @@ import { environment } from '../../../environments/environment';
 import { jwtDecode } from 'jwt-decode';
 
 const STORAGE_KEY = 'azuaycare_access_token';
+const USER_KEY = 'azuaycare_user';
 const PERFIL_COMPLETO_KEY = 'azuaycare_perfil_completo';
 
 export interface UsuarioLogueado {
@@ -16,7 +17,6 @@ export interface UsuarioLogueado {
   foto_url?: string | null;
 }
 
-// Renombramos la interfaz porque ahora sirve tanto para Google como para Login Local
 export interface AuthResponse {
   message?: string;
   accessToken: string;
@@ -49,7 +49,19 @@ export class AuthService {
   private loadFromStorage(): void {
     const cachedToken = localStorage.getItem(STORAGE_KEY);
     if (cachedToken) {
-      this.setToken(cachedToken);
+      this.token.set(cachedToken);
+
+      const cachedUser = localStorage.getItem(USER_KEY);
+      if (cachedUser) {
+        try {
+          this.user.set(JSON.parse(cachedUser));
+        } catch {
+          this.decodeAndSetUser(cachedToken);
+        }
+      } else {
+        this.decodeAndSetUser(cachedToken);
+      }
+
       const cachedPerfilCompleto = localStorage.getItem(PERFIL_COMPLETO_KEY);
       this.perfilCompleto.set(cachedPerfilCompleto !== 'false');
     }
@@ -65,15 +77,16 @@ export class AuthService {
       this.token.set(token);
       this.decodeAndSetUser(token);
     } else {
-      localStorage.removeItem(STORAGE_KEY);
-      this.token.set(null);
-      this.user.set(null);
+      this.logout();
     }
   }
 
   logout(): void {
-    this.setToken(null);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(USER_KEY);
     localStorage.removeItem(PERFIL_COMPLETO_KEY);
+    this.token.set(null);
+    this.user.set(null);
     this.perfilCompleto.set(true);
   }
 
@@ -100,15 +113,27 @@ export class AuthService {
     try {
       const decoded = jwtDecode<JwtPayloadCustom>(token);
 
-      this.user.set({
+      const nuevoUsuario: UsuarioLogueado = {
         id: decoded.sub,
         email: decoded.email,
         nombre: decoded.nombre || 'Usuario',
         rol: decoded.rol,
-        carrera_id: decoded.carrera_id || null
-      });
+        carrera_id: decoded.carrera_id || null,
+        foto_url: this.user()?.foto_url || null
+      };
+
+      this.user.set(nuevoUsuario);
+      this.guardarUsuarioEnStorage(nuevoUsuario);
     } catch {
       this.logout();
+    }
+  }
+
+  private guardarUsuarioEnStorage(usuario: UsuarioLogueado | null): void {
+    if (usuario) {
+      localStorage.setItem(USER_KEY, JSON.stringify(usuario));
+    } else {
+      localStorage.removeItem(USER_KEY);
     }
   }
 
@@ -224,17 +249,21 @@ export class AuthService {
     }
 
     if (data?.usuario) {
-      this.user.update((actual) =>
-        actual
-          ? {
-              ...actual,
-              cedula: data.usuario!.cedula ?? null,
-              ciclo_id: data.usuario!.ciclo_id ?? null,
-              carrera_id: data.usuario!.carrera_id ?? actual.carrera_id ?? null,
-              foto_url: (data.usuario as any).foto_url ?? null,
-            }
-          : actual
-      );
+      this.user.update((actual) => {
+        const actualizado: UsuarioLogueado = {
+          ...(actual || ({} as UsuarioLogueado)),
+          id: data.usuario!.id || actual?.id || '',
+          email: data.usuario!.email || actual?.email || '',
+          nombre: data.usuario!.nombre || actual?.nombre || '',
+          rol: data.usuario!.rol || actual?.rol || 'ESTUDIANTE',
+          cedula: data.usuario!.cedula ?? actual?.cedula ?? null,
+          ciclo_id: data.usuario!.ciclo_id ?? actual?.ciclo_id ?? null,
+          carrera_id: data.usuario!.carrera_id ?? actual?.carrera_id ?? null,
+          foto_url: (data.usuario as any).foto_url ?? actual?.foto_url ?? null,
+        };
+        this.guardarUsuarioEnStorage(actualizado);
+        return actualizado;
+      });
     }
 
     const completo = data?.perfilCompleto ?? true;
@@ -251,10 +280,20 @@ export class AuthService {
   marcarPerfilCompleto(datos: { cedula: string; carrera_id?: string; ciclo_id?: string }): void {
     this.perfilCompleto.set(true);
     localStorage.setItem(PERFIL_COMPLETO_KEY, 'true');
-    this.user.update((actual) => (actual ? { ...actual, ...datos } : actual));
+    this.user.update((actual) => {
+      if (!actual) return null;
+      const actualizado = { ...actual, ...datos };
+      this.guardarUsuarioEnStorage(actualizado);
+      return actualizado;
+    });
   }
 
   actualizarFotoPerfil(fotoUrl: string): void {
-    this.user.update((actual) => (actual ? { ...actual, foto_url: fotoUrl } : actual));
+    this.user.update((actual) => {
+      if (!actual) return null;
+      const actualizado = { ...actual, foto_url: fotoUrl };
+      this.guardarUsuarioEnStorage(actualizado);
+      return actualizado;
+    });
   }
 }

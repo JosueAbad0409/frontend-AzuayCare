@@ -8,6 +8,7 @@ export interface UsuarioRevision {
   segundo_apellido?: string | null;
   email_institucional: string;
   cedula: string | null;
+  foto_url?: string | null;
   carrera?: {
     id?: string;
     nombre: string;
@@ -24,7 +25,7 @@ export interface FichaRevision {
   balance_final: number;
   nivel_economico_id: string | null;
   estado_ficha: EstadoFicha;
-  nivel_prioridad?: string; // 🔥 NUEVO CAMPO: Viene del motor dinámico
+  nivel_prioridad?: string; 
   rango_resultado_id?: string | null;
   created_at: string;
   updated_at: string;

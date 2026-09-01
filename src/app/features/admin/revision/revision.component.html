@@ -1,141 +1,251 @@
-<div class="carreras-card animate-fade-in">
-  <div class="header-section">
-    <div>
+<main class="carreras-card animate-fade-in">
+  <!-- HEADER & TOOLBAR PRINCIPAL -->
+  <header class="header-section">
+    <div class="header-titles">
       <h1 class="title">Revisión y Validación de Fichas</h1>
       <p class="subtitle">Evalúa el balance socioeconómico y valida las fichas presentadas por los estudiantes.</p>
     </div>
-  </div>
 
-  @if (!isLoading()) {
-    <div class="search-bar-wrapper">
-      <div class="search-input-box">
-        <i class="fas fa-search search-icon" aria-hidden="true"></i>
-        <input 
-          type="text" 
-          placeholder="Buscar por cédula, nombre o correo..." 
-          [value]="searchTerm()"
-          (input)="onSearchChange($event)"
-          class="search-control"
-          aria-label="Buscar fichas por cédula, nombre o correo"
-        />
+    <div class="header-actions">
+      <span class="count-badge" role="status" aria-live="polite">
+        Total: <strong>{{ totalRegistros() }}</strong> Ficha(s)
+      </span>
+
+      <button 
+        type="button" 
+        class="btn btn-outline btn-mobile-filter"
+        (click)="toggleMobileFilters()"
+        aria-label="Abrir o cerrar filtros de búsqueda"
+      >
+        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+        <span>Filtros</span>
+        @if (tieneFiltrosActivos()) {
+          <span class="filter-indicator-dot"></span>
+        }
+      </button>
+
+      @if (tieneFiltrosActivos()) {
+        <button type="button" class="btn btn-ghost btn-sm btn-clear-all" (click)="limpiarFiltros()">
+          <i class="fas fa-rotate-left" aria-hidden="true"></i>
+          <span>Limpiar Filtros</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- SECCIÓN DE FILTROS EN GRID AVANZADO -->
+  <section 
+    class="filters-panel" 
+    [class.is-open-mobile]="showMobileFilters()"
+    aria-label="Barra de herramientas de filtrado"
+  >
+    <div class="filters-panel-header">
+      <div class="panel-title">
+        <i class="fas fa-filter-list" aria-hidden="true"></i>
+        <span>Filtros de Búsqueda</span>
+      </div>
+      @if (tieneFiltrosActivos()) {
+        <span class="active-filters-badge">Filtros Activos</span>
+      }
+    </div>
+
+    <div class="filter-grid">
+      <!-- Filtro 1: Buscador Global (Con Sanitización de entrada) -->
+      <div class="filter-item filter-search-main">
+        <label for="filter-estudiante" class="filter-label">Estudiante</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="filter-estudiante"
+            type="search" 
+            class="table-column-input" 
+            placeholder="Nombre, apellido o correo..." 
+            [value]="searchTermInput()"
+            (input)="onSearchChange($event)"
+          />
+        </div>
       </div>
 
-      <div class="filter-actions">
-        <span class="count-badge" role="status" aria-live="polite">
-          Total: <strong>{{ totalRegistros() }}</strong> Ficha(s)
-        </span>
-        @if (searchTerm() || estadoFiltro() !== 'TODOS' || filterPeriodo() !== 'TODOS') {
-          <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
-            <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
-            <span>Limpiar Filtros</span>
-          </button>
+      <!-- Filtro 2: Cédula (Con Validación Ecuatoriana - Máx 10 dígitos) -->
+      <div class="filter-item">
+        <label for="filter-cedula" class="filter-label">Cédula</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-address-card search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="filter-cedula"
+            type="text" 
+            inputmode="numeric"
+            maxlength="10"
+            class="table-column-input font-mono" 
+            placeholder="Nº Identificación..." 
+            [value]="filterCedulaInput()"
+            (input)="onCedulaSearchChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- Filtro 3: Carrera (CON PADDING CORREGIDO SIN SUPERPOSICIÓN DE BOTÓN X) -->
+      <div class="filter-item relative">
+        <label for="buscarCarrera" class="filter-label">Carrera</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="buscarCarrera" 
+            type="text" 
+            [formControl]="filtroCarreraControl" 
+            autocomplete="off" 
+            placeholder="Buscar carrera..." 
+            (focus)="dropdownCarreraAbierto.set(true)" 
+            (blur)="cerrarDropdownCarrera()" 
+            class="table-column-input uppercase has-clear-btn" 
+          />
+          @if (filtroCarreraControl.value) {
+            <button 
+              type="button" 
+              (click)="limpiarFiltroCarrera()" 
+              class="btn-clear-micro"
+              title="Limpiar filtro de carrera"
+              aria-label="Limpiar filtro de carrera"
+            >
+              <i class="fas fa-circle-xmark" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
+
+        @if (dropdownCarreraAbierto()) {
+          <ul class="dropdown-list-menu">
+            @for (c of carrerasFiltradas(); track c.id) {
+              <li 
+                (mousedown)="seleccionarCarrera(c)" 
+                class="dropdown-item"
+                [class.is-selected]="filtroCarreraControl.value === c.nombre"
+              >
+                <i class="fas fa-graduation-cap dropdown-icon" aria-hidden="true"></i>
+                <span class="text-ellipsis">{{ c.nombre }}</span>
+              </li>
+            } @empty {
+              <li class="dropdown-item-empty">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <span>No se encontraron carreras</span>
+              </li>
+            }
+          </ul>
         }
       </div>
-    </div>
-  }
 
+      <!-- Filtro 4: Ciclo (Desplegable Dinámico) -->
+      <div class="filter-item">
+        <label for="filter-ciclo" class="filter-label">Ciclo</label>
+        <div class="filter-input-wrap select-wrap">
+          <i class="fas fa-layer-group search-micro-icon" aria-hidden="true"></i>
+          <select 
+            id="filter-ciclo"
+            [value]="filterCicloSelect()" 
+            (change)="onCicloSelectChange($event)" 
+            class="table-column-select"
+          >
+            <option value="TODOS">Todos los Ciclos</option>
+            @for (c of ciclos(); track c.id) {
+              <option [value]="c.nombre">{{ c.nombre }}</option>
+            }
+          </select>
+          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+
+      <!-- Filtro 5: Periodo -->
+      <div class="filter-item">
+        <label for="filter-periodo" class="filter-label">Periodo Lectivo</label>
+        <div class="filter-input-wrap select-wrap">
+          <i class="fas fa-calendar-alt search-micro-icon" aria-hidden="true"></i>
+          <select 
+            id="filter-periodo"
+            [value]="filterPeriodo()" 
+            (change)="onPeriodoChange($event)" 
+            class="table-column-select"
+          >
+            <option value="TODOS">Todos los Periodos</option>
+            @for (p of periodosDisponibles(); track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+
+      <!-- Filtro 6: Estado -->
+      <div class="filter-item">
+        <label for="filter-estado" class="filter-label">Estado Ficha</label>
+        <div class="filter-input-wrap select-wrap">
+          <i class="fas fa-chart-pie search-micro-icon" aria-hidden="true"></i>
+          <select 
+            id="filter-estado"
+            [value]="estadoFiltro()" 
+            (change)="onEstadoChange($event)" 
+            class="table-column-select"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ENVIADA">POR VALIDAR</option>
+            <option value="VALIDADO">VALIDADAS</option>
+            <option value="RECHAZADO">RECHAZADAS</option>
+          </select>
+          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADOS TABULAR Y TARJETAS -->
   @if (isLoading()) {
-    <div class="skeleton-wrapper">
-      <div class="skeleton-row skeleton-header"></div>
-      <div class="skeleton-row"></div>
-      <div class="skeleton-row"></div>
-      <div class="skeleton-row"></div>
-      <div class="skeleton-row"></div>
+    <div class="skeleton-wrapper" aria-busy="true" aria-label="Cargando fichas...">
+      @for (i of [1, 2, 3, 4, 5]; track $index) {
+        <div class="skeleton-row"></div>
+      }
     </div>
   } @else {
-    <div class="table-container">
-      <table class="admin-table">
-        <thead>
-          <tr class="header-titles">
-            <th scope="col" class="col-estudiante">Estudiante</th>
-            <th scope="col" class="col-cedula">Cédula</th>
-            <th scope="col" class="col-periodo">Periodo Académico</th>
-            <th scope="col" class="col-balance">Balance Final</th>
-            <th scope="col" class="col-estado text-center">Estado de Ficha</th>
-            <th scope="col" class="col-acc text-right">Acciones</th>
-          </tr>
-          <tr class="header-filters">
-            <th class="col-estudiante">
-              <div class="filter-input-wrap">
-                <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
-                <input 
-                  type="text" 
-                  class="table-column-input" 
-                  placeholder="Filtrar estudiante..." 
-                  [value]="searchTerm()"
-                  (input)="onSearchChange($event)"
-                  aria-label="Filtrar estudiante por nombre o correo"
-                />
-              </div>
-            </th>
-            <th class="col-cedula">
-              <div class="filter-input-wrap">
-                <i class="fas fa-id-card search-micro-icon" aria-hidden="true"></i>
-                <input 
-                  type="text" 
-                  class="table-column-input" 
-                  placeholder="Cédula..." 
-                  [value]="searchTerm()"
-                  (input)="onSearchChange($event)"
-                  aria-label="Filtrar por número de cédula"
-                />
-              </div>
-            </th>
-            <th class="col-periodo">
-              <select 
-                [value]="filterPeriodo()" 
-                (change)="onPeriodoChange($event)" 
-                class="table-column-select" 
-                aria-label="Filtrar por periodo académico"
-              >
-                <option value="TODOS">Todos los Periodos</option>
-                @for (p of periodosDisponibles(); track p) {
-                  <option [value]="p">{{ p }}</option>
-                }
-              </select>
-            </th>
-            <th class="col-balance"></th>
-            <th class="col-estado text-center">
-              <select 
-                [value]="estadoFiltro()" 
-                (change)="onEstadoChange($event)" 
-                class="table-column-select table-column-select-centered" 
-                aria-label="Filtrar fichas por estado"
-              >
-                <option value="TODOS">Todos los Estados</option>
-                <option value="ENVIADA">POR VALIDAR</option>
-                <option value="VALIDADO">VALIDADAS</option>
-                <option value="RECHAZADO">RECHAZADAS</option>
-              </select>
-            </th>
-            <th class="col-acc text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (f of fichasPaginadas(); track f.id) {
+    <!-- VISTA DESKTOP -->
+    <div class="desktop-view-container">
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
             <tr>
-              <td class="col-estudiante" data-label="Estudiante">
-                <div class="user-identity">
-                  <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
-                  <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
-                </div>
-              </td>
-              <td class="col-cedula font-mono" data-label="Cédula">{{ f.usuario?.cedula || 'N/A' }}</td>
-              <td class="col-periodo text-muted" data-label="Periodo">{{ f.periodo?.nombre || 'General' }}</td>
-              <td class="col-balance font-mono" data-label="Balance Final">
-                <strong>${{ f.balance_final | number:'1.2-2' }}</strong>
-              </td>
-              <td class="col-estado text-center" data-label="Estado">
-                <span class="badge" [ngClass]="{
-                  'badge-success': f.estado_ficha === 'VALIDADO',
-                  'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
-                  'badge-danger': f.estado_ficha === 'RECHAZADO' || f.estado_ficha === 'RECHAZADA'
-                }">
-                  {{ f.estado_ficha === 'ENVIADA' ? 'Por Validar' : f.estado_ficha }}
-                </span>
-              </td>
-              <td class="col-acc text-right" data-label="Acciones">
-                <div class="actions-wrapper">
+              <th scope="col" class="col-estudiante">Estudiante</th>
+              <th scope="col" class="col-cedula">Cédula</th>
+              <th scope="col" class="col-carrera">Carrera / Ciclo</th>
+              <th scope="col" class="col-periodo">Periodo</th>
+              <th scope="col" class="col-balance">Balance</th>
+              <th scope="col" class="col-estado text-center">Estado</th>
+              <th scope="col" class="col-acc text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of fichasPaginadas(); track f.id) {
+              <tr>
+                <td class="col-estudiante">
+                  <div class="user-identity">
+                    <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
+                    <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
+                  </div>
+                </td>
+                <td class="col-cedula font-mono">{{ f.usuario?.cedula || 'N/A' }}</td>
+                <td class="col-carrera">
+                  <span class="carrera-text">{{ getCarreraNombre(f) }}</span>
+                  <small class="ciclo-text">{{ getCicloNombre(f) }}</small>
+                </td>
+                <td class="col-periodo text-muted">{{ f.periodo?.nombre || 'General' }}</td>
+                <td class="col-balance font-mono">
+                  <strong class="balance-badge">${{ f.balance_final | number:'1.2-2' }}</strong>
+                </td>
+                <td class="col-estado text-center">
+                  <span class="badge" [ngClass]="{
+                    'badge-success': f.estado_ficha === 'VALIDADO',
+                    'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
+                    'badge-danger': f.estado_ficha === 'RECHAZADO' || f.estado_ficha === 'RECHAZADA'
+                  }">
+                    {{ f.estado_ficha === 'ENVIADA' ? 'Por Validar' : f.estado_ficha }}
+                  </span>
+                </td>
+                <td class="col-acc text-right">
                   <button 
                     type="button"
                     class="btn-icon text-blue" 
@@ -146,31 +256,94 @@
                   >
                     <i class="fas fa-eye" aria-hidden="true"></i>
                   </button>
-                </div>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="6">
-                <div class="state-card empty-state">
-                  <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
-                  <p class="state-title">No hay fichas encontradas</p>
-                  <p class="state-desc">No se encontraron fichas presentadas o coincidentes con los criterios de búsqueda.</p>
-                  @if (searchTerm() || estadoFiltro() !== 'TODOS' || filterPeriodo() !== 'TODOS') {
-                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
-                      <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <div class="state-card empty-state">
+                    <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+                    <p class="state-title">No hay fichas encontradas</p>
+                    <p class="state-desc">No coinciden los criterios de búsqueda o no existen registros en el sistema.</p>
+                    @if (tieneFiltrosActivos()) {
+                      <button type="button" class="btn btn-outline btn-sm mt-3" (click)="limpiarFiltros()">
+                        <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
 
+    <!-- VISTA MÓVIL (CARDS) -->
+    <div class="mobile-view-container" aria-label="Listado de fichas para dispositivos móviles">
+      @for (f of fichasPaginadas(); track f.id) {
+        <article class="ficha-card-mobile">
+          <header class="card-mobile-header">
+            <div class="user-identity">
+              <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
+              <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
+            </div>
+            <span class="badge" [ngClass]="{
+              'badge-success': f.estado_ficha === 'VALIDADO',
+              'badge-blue': f.estado_ficha === 'ENVIADA' || f.estado_ficha === 'ENVIADO',
+              'badge-danger': f.estado_ficha === 'RECHAZADO' || f.estado_ficha === 'RECHAZADA'
+            }">
+              {{ f.estado_ficha === 'ENVIADA' ? 'Por Validar' : f.estado_ficha }}
+            </span>
+          </header>
+
+          <div class="card-mobile-body">
+            <div class="info-row">
+              <span class="info-label">Cédula:</span>
+              <span class="info-val font-mono">{{ f.usuario?.cedula || 'N/A' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Carrera / Ciclo:</span>
+              <span class="info-val">{{ getCarreraNombre(f) }} ({{ getCicloNombre(f) }})</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Periodo:</span>
+              <span class="info-val">{{ f.periodo?.nombre || 'General' }}</span>
+            </div>
+            <div class="info-row highlight-row">
+              <span class="info-label">Balance Final:</span>
+              <span class="info-val font-mono strong">${{ f.balance_final | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <footer class="card-mobile-footer">
+            <button 
+              type="button" 
+              class="btn btn-outline btn-full"
+              (click)="verDetalleFicha(f)"
+              [disabled]="guardandoEstado()"
+            >
+              <i class="fas fa-eye" aria-hidden="true"></i> Revisar Detalle
+            </button>
+          </footer>
+        </article>
+      } @empty {
+        <div class="state-card empty-state">
+          <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
+          <p class="state-title">No hay fichas encontradas</p>
+          <p class="state-desc">Intenta cambiando los criterios de filtrado.</p>
+          @if (tieneFiltrosActivos()) {
+            <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+              Restablecer Filtros
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- PAGINACIÓN -->
     @if (totalRegistros() > 0) {
-      <div class="pagination-wrapper">
+      <nav class="pagination-wrapper" aria-label="Navegación por páginas de resultados">
         <span class="pagination-info">
           Página <strong>{{ paginaActual() }}</strong> de <strong>{{ totalPaginas() }}</strong>
         </span>
@@ -180,6 +353,7 @@
             class="btn btn-outline btn-sm" 
             (click)="cambiarPagina(paginaActual() - 1)" 
             [disabled]="paginaActual() === 1 || guardandoEstado()"
+            aria-label="Ir a la página anterior"
           >
             <i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior
           </button>
@@ -188,18 +362,26 @@
             class="btn btn-outline btn-sm" 
             (click)="cambiarPagina(paginaActual() + 1)" 
             [disabled]="paginaActual() >= totalPaginas() || guardandoEstado()"
+            aria-label="Ir a la página siguiente"
           >
             Siguiente <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
-      </div>
+      </nav>
     }
   }
 
+  <!-- MODAL DE REVISIÓN -->
   @if (fichaSeleccionada()) {
     <div class="modal-backdrop" (click)="cerrarModal()">
-      <div class="modal-box animate-pop" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title-id">
-        <div class="modal-header">
+      <div 
+        class="modal-box animate-pop" 
+        (click)="$event.stopPropagation()" 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="modal-title-id"
+      >
+        <header class="modal-header">
           <div>
             <h2 id="modal-title-id" class="modal-title">Evaluación y Auditoría de Ficha</h2>
             <p class="modal-subtitle">Revisa respuestas, balances y decide el estado</p>
@@ -207,7 +389,7 @@
           <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Cerrar modal">
             <i class="fas fa-times" aria-hidden="true"></i>
           </button>
-        </div>
+        </header>
 
         <div class="tabs-nav" role="tablist">
           <button 
@@ -234,7 +416,7 @@
 
         <div class="modal-body">
           @if (tabActiva() === 'DETALLE') {
-            <div class="student-card">
+            <section class="student-card">
               <div class="student-main">
                 <div class="student-avatar" aria-hidden="true">
                   <i class="fas fa-user-graduate"></i>
@@ -270,7 +452,7 @@
                   </span>
                 </div>
               </div>
-            </div>
+            </section>
 
             <h3 class="section-title">Respuestas Registradas</h3>
             <div class="respuestas-list">
@@ -301,7 +483,7 @@
               <div class="actions-row">
                 <button 
                   type="button" 
-                  class="btn custom-swal-cancel btn-reject" 
+                  class="btn btn-reject" 
                   (click)="cambiarEstado('RECHAZADO')" 
                   [disabled]="guardandoEstado()"
                 >
@@ -310,7 +492,7 @@
                 </button>
                 <button 
                   type="button" 
-                  class="btn custom-swal-confirm btn-approve" 
+                  class="btn btn-approve" 
                   (click)="cambiarEstado('VALIDADO')" 
                   [disabled]="guardandoEstado()"
                 >
@@ -344,7 +526,7 @@
                   <div class="state-card empty-state">
                     <i class="fas fa-history empty-icon" aria-hidden="true"></i>
                     <p class="state-title">Sin historial registrado</p>
-                    <p class="state-desc">No existen registros históricos de cambios para esta ficha.</p>
+                    <p class="state-desc">No existen registros históricos para esta ficha.</p>
                   </div>
                 }
               </div>
@@ -354,4 +536,4 @@
       </div>
     </div>
   }
-</div>
+</main>

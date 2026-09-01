@@ -4,12 +4,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { 
-  FilaMatriz, 
-  ColumnaMatriz, 
-  CreateFilaDto, 
-  CreateColumnaDto, 
-  RespuestaMatrizDto 
+import {
+  FilaMatriz,
+  ColumnaMatriz,
+  CreateFilaDto,
+  CreateColumnaDto,
+  RespuestaMatrizDto
 } from '../models/matriz.model';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +24,12 @@ export class MatricesService {
 
   createFila(dto: CreateFilaDto): Observable<FilaMatriz> {
     return this.http.post<FilaMatriz>(`${this.apiUrl}/fila`, dto);
+  }
+
+  // 🔧 AGREGADO: faltaba este método, por eso fallaba la compilación
+  // (TS2339: Property 'updateFila' does not exist on type 'MatricesService').
+  updateFila(id: string, dto: { es_multiple: boolean }): Observable<FilaMatriz> {
+    return this.http.patch<FilaMatriz>(`${this.apiUrl}/fila/${id}`, dto);
   }
 
   deleteFila(id: string): Observable<void> {

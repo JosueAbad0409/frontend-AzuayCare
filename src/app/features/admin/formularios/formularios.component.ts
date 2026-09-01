@@ -86,7 +86,7 @@ export class FormulariosComponent implements OnInit {
 
   ngOnInit(): void {
     this.searchSubject.pipe(
-      debounceTime(350),
+      debounceTime(300),
       distinctUntilChanged(),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(term => {
@@ -112,15 +112,18 @@ export class FormulariosComponent implements OnInit {
     this.filtroEstado.set((event.target as HTMLSelectElement).value);
   }
 
-  limpiarFiltros(): void {
+  limpiarSearch(): void {
     this.searchTerm.set('');
+    this.searchSubject.next('');
+    const input = document.getElementById('search-title-input') as HTMLInputElement;
+    if (input) input.value = '';
+  }
+
+  limpiarFiltros(): void {
+    this.limpiarSearch();
     this.filtroTipo.set('TODOS');
     this.filtroVersion.set('TODOS');
     this.filtroEstado.set('TODOS');
-    this.searchSubject.next('');
-    
-    const searchInput = document.getElementById('search-title-input') as HTMLInputElement;
-    if (searchInput) searchInput.value = '';
   }
 
   cargarDatos(): void {
@@ -163,68 +166,88 @@ export class FormulariosComponent implements OnInit {
     const opcionesPeriodo = this.periodos()
       .map(p => `<option value="${p.id}" ${
         (esEdicion && form?.periodo_id === p.id) || (!esEdicion && periodoActivo?.id === p.id) ? 'selected' : ''
-      }>${p.nombre}${p.activo ? ' (ACTIVO)' : ''}</option>`)
+      }>${this.escapeHtml(p.nombre)}${p.activo ? ' (ACTIVO)' : ''}</option>`)
       .join('');
 
     const opcionesTipo = this.tiposFormulario()
-      .map(t => `<option value="${t.id}" ${esEdicion && form?.tipo_formulario_id === t.id ? 'selected' : ''}>${t.nombre}</option>`)
+      .map(t => `<option value="${t.id}" ${esEdicion && form?.tipo_formulario_id === t.id ? 'selected' : ''}>${this.escapeHtml(t.nombre)}</option>`)
       .join('');
 
     Swal.fire({
-      title: esEdicion ? 'Editar Ficha' : 'Nueva Ficha Socioeconómica',
+      title: esEdicion ? 'Editar Propiedades de Ficha' : 'Nueva Ficha Socioeconómica',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
       html: `
         <div class="swal-form-card">
-          <div style="text-align:left; display:flex; flex-direction:column; gap:1.25rem; padding-top:0.5rem;">
+          <div class="swal-header-banner">
+            <i class="fas fa-file-signature swal-banner-icon" aria-hidden="true"></i>
             <div>
-              <label class="swal-form-label">Título de la Ficha *</label>
-              <input id="swal-titulo" class="swal2-input custom-input" placeholder="Ej. Ficha Socioeconómica ISTA 2026"
-                value="${esEdicion && form ? this.escapeHtml(form.titulo) : ''}"
-                style="margin:0;width:100%;box-sizing:border-box">
+              <p class="swal-banner-title">${esEdicion ? 'Actualizar metadatos del formulario' : 'Configurar nuevo borrador de ficha'}</p>
+              <p class="swal-banner-sub">Complete los campos requeridos para la ficha académica.</p>
             </div>
-            <div>
-              <label class="swal-form-label">Periodo Académico *</label>
-              <select id="swal-periodo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
-                <option value="">-- Selecciona un Periodo --</option>
-                ${opcionesPeriodo}
-              </select>
-            </div>
-            <div>
-              <label class="swal-form-label">Tipo de Formulario *</label>
-              <select id="swal-tipo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box"
-                ${esEdicion ? 'disabled' : ''}>
-                <option value="">-- Selecciona un Tipo de Formulario --</option>
-                ${opcionesTipo}
-              </select>
-            </div>
-            <div>
-              <label class="swal-form-label">Descripción / Objetivo</label>
-              <textarea id="swal-desc" class="swal2-textarea custom-textarea" rows="2" placeholder="Instrucciones generales..."
-                style="margin:0;width:100%;box-sizing:border-box">${esEdicion && form ? this.escapeHtml(form.descripcion || '') : ''}</textarea>
-            </div>
+          </div>
+
+          <div class="swal-form-group">
+            <label for="swal-titulo" class="swal-form-label">Título de la Ficha <span class="required-star">*</span></label>
+            <input id="swal-titulo" class="swal-input-styled" placeholder="Ej. Ficha Socioeconómica ISTA 2026"
+              value="${esEdicion && form ? this.escapeHtml(form.titulo) : ''}">
+          </div>
+
+          <div class="swal-form-group">
+            <label for="swal-periodo" class="swal-form-label">Periodo Académico <span class="required-star">*</span></label>
+            <select id="swal-periodo" class="swal-select-styled">
+              <option value="">-- Selecciona un Periodo --</option>
+              ${opcionesPeriodo}
+            </select>
+          </div>
+
+          <div class="swal-form-group">
+            <label for="swal-tipo" class="swal-form-label">Categoría de Formulario <span class="required-star">*</span></label>
+            <select id="swal-tipo" class="swal-select-styled" ${esEdicion ? 'disabled' : ''}>
+              <option value="">-- Selecciona un Tipo --</option>
+              ${opcionesTipo}
+            </select>
+          </div>
+
+          <div class="swal-form-group">
+            <label for="swal-desc" class="swal-form-label">Descripción u Objetivos</label>
+            <textarea id="swal-desc" class="swal-textarea-styled" rows="3" placeholder="Instrucciones generales para los estudiantes...">${esEdicion && form ? this.escapeHtml(form.descripcion || '') : ''}</textarea>
           </div>
         </div>
       `,
       showCancelButton: true,
       focusConfirm: false,
-      confirmButtonText: esEdicion ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-magic"></i> Crear y Diseñar',
-      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
-      width: '560px',
-      customClass: { 
-        popup: 'custom-swal-popup', 
-        confirmButton: 'custom-swal-confirm', 
-        cancelButton: 'custom-swal-cancel',
-        title: 'custom-swal-title'
+      buttonsStyling: false,
+      confirmButtonText: esEdicion 
+        ? '<i class="fas fa-save" aria-hidden="true"></i> <span>Actualizar</span>' 
+        : '<i class="fas fa-arrow-right" aria-hidden="true"></i> <span>Crear y Diseñar</span>',
+      cancelButtonText: '<span>Cancelar</span>',
+      didOpen: () => { 
+        (document.getElementById('swal-titulo') as HTMLInputElement | null)?.focus(); 
       },
-      didOpen: () => { (document.getElementById('swal-titulo') as HTMLInputElement | null)?.focus(); },
       preConfirm: () => {
         const titulo = (document.getElementById('swal-titulo') as HTMLInputElement)?.value?.trim() || '';
         const periodo_id = (document.getElementById('swal-periodo') as HTMLSelectElement)?.value || '';
         const tipo_formulario_id = (document.getElementById('swal-tipo') as HTMLSelectElement)?.value || '';
         const descripcion = (document.getElementById('swal-desc') as HTMLTextAreaElement)?.value?.trim() || '';
 
-        if (!titulo) { Swal.showValidationMessage('El título es obligatorio'); return false; }
-        if (!periodo_id) { Swal.showValidationMessage('Selecciona un periodo académico'); return false; }
-        if (!tipo_formulario_id) { Swal.showValidationMessage('Selecciona un tipo de formulario'); return false; }
+        if (!titulo || titulo.length < 3) { 
+          Swal.showValidationMessage('El título es obligatorio (mínimo 3 caracteres)'); 
+          return false; 
+        }
+        if (!periodo_id) { 
+          Swal.showValidationMessage('Debe seleccionar un periodo académico'); 
+          return false; 
+        }
+        if (!tipo_formulario_id) { 
+          Swal.showValidationMessage('Debe seleccionar la categoría del formulario'); 
+          return false; 
+        }
+
         return { titulo, periodo_id, tipo_formulario_id, descripcion };
       }
     }).then((result) => {
@@ -235,34 +258,34 @@ export class FormulariosComponent implements OnInit {
   }
 
   private guardarFichaDesdeSwal(data: { titulo: string; periodo_id: string; tipo_formulario_id: string; descripcion: string; }): void {
-    if(this.isSaving()) return;
+    if (this.isSaving()) return;
     this.isSaving.set(true);
     const id = this.selectedFormularioId();
 
     if (this.isEditMode() && id) {
       this.formularioService.updateFormulario(id, data)
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.toastService.show('Formulario actualizado con éxito.', 'success');
-          this.cargarDatos();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el formulario.'), 'error');
-        }
-      });
+        .pipe(finalize(() => this.isSaving.set(false)))
+        .subscribe({
+          next: () => {
+            this.toastService.show('Formulario actualizado con éxito.', 'success');
+            this.cargarDatos();
+          },
+          error: (err: HttpErrorResponse) => {
+            this.toastService.show(this.extraerMensajeError(err, 'Error al actualizar el formulario.'), 'error');
+          }
+        });
     } else {
       this.formularioService.createFormulario(data)
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: (nuevoForm: Formulario) => {
-          this.toastService.show('Formulario borrador creado con éxito.', 'success');
-          this.router.navigate(['/admin/formularios/builder', nuevoForm.id]);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.toastService.show(this.extraerMensajeError(err, 'Error al crear el formulario.'), 'error');
-        }
-      });
+        .pipe(finalize(() => this.isSaving.set(false)))
+        .subscribe({
+          next: (nuevoForm: Formulario) => {
+            this.toastService.show('Borrador de formulario creado.', 'success');
+            this.router.navigate(['/admin/formularios/builder', nuevoForm.id]);
+          },
+          error: (err: HttpErrorResponse) => {
+            this.toastService.show(this.extraerMensajeError(err, 'Error al crear el formulario.'), 'error');
+          }
+        });
     }
   }
 
@@ -270,39 +293,45 @@ export class FormulariosComponent implements OnInit {
     e.stopPropagation();
     const periodoActivo = this.periodos().find(p => p.activo);
     const opcionesPeriodo = this.periodos()
-      .map(p => `<option value="${p.id}" ${periodoActivo?.id === p.id ? 'selected' : ''}>${p.nombre}${p.activo ? ' (ACTIVO)' : ''}</option>`)
+      .map(p => `<option value="${p.id}" ${periodoActivo?.id === p.id ? 'selected' : ''}>${this.escapeHtml(p.nombre)}${p.activo ? ' (ACTIVO)' : ''}</option>`)
       .join('');
 
     Swal.fire({
-      title: 'Clonar Formulario',
+      title: 'Clonar Ficha Socioeconómica',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
       html: `
         <div class="swal-form-card">
-          <div style="text-align:left; display:flex; flex-direction:column; gap:1rem; padding-top:0.5rem;">
-            <p style="margin:0; font-size:0.85rem; color:#64748b;">Selecciona el periodo destino para la nueva versión de esta ficha.</p>
+          <div class="swal-header-banner">
+            <i class="fas fa-copy swal-banner-icon" aria-hidden="true"></i>
             <div>
-              <label class="swal-form-label">Periodo Destino *</label>
-              <select id="swal-clone-periodo" class="swal2-select custom-select" style="margin:0;width:100%;box-sizing:border-box">
-                <option value="">-- Selecciona un Periodo --</option>
-                ${opcionesPeriodo}
-              </select>
+              <p class="swal-banner-title">Generar nueva versión de la ficha</p>
+              <p class="swal-banner-sub">Se duplicará toda la estructura de preguntas para el periodo seleccionado.</p>
             </div>
+          </div>
+
+          <div class="swal-form-group">
+            <label for="swal-clone-periodo" class="swal-form-label">Periodo Académico Destino <span class="required-star">*</span></label>
+            <select id="swal-clone-periodo" class="swal-select-styled">
+              <option value="">-- Selecciona el Periodo --</option>
+              ${opcionesPeriodo}
+            </select>
           </div>
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-copy"></i> Clonar Ficha',
-      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
-      width: '500px',
-      customClass: { 
-        popup: 'custom-swal-popup', 
-        confirmButton: 'custom-swal-confirm', 
-        cancelButton: 'custom-swal-cancel',
-        title: 'custom-swal-title'
-      },
+      focusConfirm: false,
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-clone" aria-hidden="true"></i> <span>Ejecutar Clonación</span>',
+      cancelButtonText: '<span>Cancelar</span>',
       preConfirm: () => {
         const periodo_destino_id = (document.getElementById('swal-clone-periodo') as HTMLSelectElement)?.value || '';
         if (!periodo_destino_id) {
-          Swal.showValidationMessage('Selecciona un periodo destino');
+          Swal.showValidationMessage('Debe seleccionar un periodo destino');
           return false;
         }
         return { periodo_destino_id };
@@ -315,7 +344,7 @@ export class FormulariosComponent implements OnInit {
   }
 
   private ejecutarClonacion(id: string, periodoDestinoId: string): void {
-    if(this.isCloning()) return;
+    if (this.isCloning()) return;
     this.isCloning.set(true);
     this.formularioService.clonarFormulario(id, periodoDestinoId)
       .pipe(finalize(() => this.isCloning.set(false)))
@@ -337,17 +366,20 @@ export class FormulariosComponent implements OnInit {
     const esPublicar = !form.publicado;
 
     Swal.fire({
-      title: esPublicar ? '¿Publicar ficha?' : '¿Despublicar ficha?',
+      title: esPublicar ? '¿Publicar Ficha Socioeconómica?' : '¿Despublicar Ficha?',
       text: esPublicar
-        ? 'Los estudiantes podrán empezar a completarla.'
-        : 'Volverá a estado borrador y los estudiantes no podrán verla.',
+        ? 'La ficha estará visible para el diligenciamiento por parte de los estudiantes.'
+        : 'La ficha volverá a estado borrador y los estudiantes no podrán acceder a ella.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: esPublicar ? '<i class="fas fa-check"></i> Sí, publicar' : '<i class="fas fa-eye-slash"></i> Sí, despublicar',
-      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      buttonsStyling: false,
+      confirmButtonText: esPublicar 
+        ? '<i class="fas fa-check" aria-hidden="true"></i> <span>Sí, publicar</span>' 
+        : '<i class="fas fa-eye-slash" aria-hidden="true"></i> <span>Sí, despublicar</span>',
+      cancelButtonText: '<span>Cancelar</span>',
       customClass: { 
         popup: 'custom-swal-popup', 
-        confirmButton: esPublicar ? 'custom-swal-confirm-success' : 'custom-swal-confirm-warning', 
+        confirmButton: esPublicar ? 'custom-swal-confirm' : 'custom-swal-confirm custom-swal-danger', 
         cancelButton: 'custom-swal-cancel',
         title: 'custom-swal-title'
       }
@@ -378,15 +410,16 @@ export class FormulariosComponent implements OnInit {
     if (this.isTogglingState()) return;
 
     Swal.fire({
-      title: '¿Eliminar borrador?',
-      text: 'Esta acción no se puede deshacer.',
+      title: '¿Eliminar Borrador?',
+      text: 'Esta acción eliminará permanentemente la ficha y su configuración.',
       icon: 'error',
       showCancelButton: true,
-      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
-      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, eliminar</span>',
+      cancelButtonText: '<span>Cancelar</span>',
       customClass: { 
         popup: 'custom-swal-popup', 
-        confirmButton: 'custom-swal-confirm-danger', 
+        confirmButton: 'custom-swal-confirm custom-swal-danger', 
         cancelButton: 'custom-swal-cancel',
         title: 'custom-swal-title'
       }
@@ -394,19 +427,19 @@ export class FormulariosComponent implements OnInit {
       if (result.isConfirmed) {
         this.isTogglingState.set(true);
         this.formularioService.deleteFormulario(id)
-        .pipe(finalize(() => this.isTogglingState.set(false)))
-        .subscribe({
-          next: () => {
-            this.toastService.show('Formulario eliminado correctamente.', 'info');
-            this.cargarDatos();
-          },
-          error: (err: HttpErrorResponse) => {
-            this.toastService.show(
-              this.extraerMensajeError(err, 'No se puede eliminar un formulario que ya fue publicado.'),
-              'error'
-            );
-          }
-        });
+          .pipe(finalize(() => this.isTogglingState.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Formulario borrador eliminado.', 'info');
+              this.cargarDatos();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(
+                this.extraerMensajeError(err, 'No se puede eliminar un formulario que ya fue publicado.'),
+                'error'
+              );
+            }
+          });
       }
     });
   }
@@ -414,7 +447,7 @@ export class FormulariosComponent implements OnInit {
   getNombreTipoFormulario(form: Formulario): string {
     return form.tipoFormulario?.nombre
       || this.tiposFormulario().find(t => t.id === form.tipo_formulario_id)?.nombre
-      || 'Sin tipo';
+      || 'Sin categoría';
   }
 
   private escapeHtml(text: string): string {

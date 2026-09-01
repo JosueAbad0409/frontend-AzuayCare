@@ -1,207 +1,204 @@
-<div class="matriz-builder-container bg-purple-50/60 p-4 rounded-2xl border border-purple-200">
+<section class="matriz-builder-wrapper" aria-label="Creador de Pregunta Matriz">
   
-  <!-- BARRA DE PLANTILLAS RÁPIDAS -->
-  <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-purple-200">
-    <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
-      <i class="fas fa-bolt text-amber-500"></i> Plantillas Rápidas:
-    </span>
-    <div class="flex flex-wrap gap-1.5">
-      <button type="button" class="btn btn-xs btn-outline bg-white hover:bg-purple-100 text-purple-900 border-purple-300 text-[11px]" (click)="aplicarPlantillaLikert5()">
-        📊 Likert (1 - 5)
+  <!-- BARRA DE PLANTILLAS -->
+  <header class="preset-bar" *ngIf="!readonly">
+    <div class="preset-title">
+      <i class="fas fa-bolt-lightning text-amber-500" aria-hidden="true"></i>
+      <span>Plantillas Rápidas:</span>
+    </div>
+    <div class="preset-actions">
+      <button type="button" class="btn-preset" (click)="aplicarPlantillaLikert5()">
+        <span class="preset-icon">📊</span> Likert (1 - 5)
       </button>
-      <button type="button" class="btn btn-xs btn-outline bg-white hover:bg-purple-100 text-purple-900 border-purple-300 text-[11px]" (click)="aplicarPlantillaFrecuencia()">
-        ⏱️ Frecuencia (Nunca - Siempre)
+      <button type="button" class="btn-preset" (click)="aplicarPlantillaFrecuencia()">
+        <span class="preset-icon">⏱️</span> Frecuencia
       </button>
-      <button type="button" class="btn btn-xs btn-outline bg-white hover:bg-purple-100 text-purple-900 border-purple-300 text-[11px]" (click)="aplicarPlantillaCalificacion()">
-        ⭐ Calificación (Malo - Excelente)
+      <button type="button" class="btn-preset" (click)="aplicarPlantillaCalificacion()">
+        <span class="preset-icon">⭐</span> Calificación
       </button>
-      <button type="button" class="btn btn-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-[11px]" (click)="limpiarTodo()">
-        🗑️ Limpiar
+      <button type="button" class="btn-preset btn-preset-clear" (click)="limpiarTodo()">
+        <span class="preset-icon">🗑️</span> Limpiar Todo
       </button>
     </div>
-  </div>
+  </header>
 
-  <!-- PANEL SPLIT: EDITOR (IZQ) Y PREVISUALIZACIÓN VIVO (DER) -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+  <!-- PANEL DE CONFIGURACIÓN SUPERIOR -->
+  <div class="config-grid" [formGroup]="matrizForm" *ngIf="!readonly">
     
-    <!-- LADO IZQUIERDO: CONTROLES DE FILAS Y COLUMNAS (5 Columnas) -->
-    <div class="lg:col-span-5 space-y-4" [formGroup]="matrizForm">
-      
-      <!-- CONFIGURACIÓN COLUMNAS -->
-      <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-sm">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
-            <i class="fas fa-columns text-purple-600"></i> Columnas (Opciones)
-          </span>
-          <span class="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-            {{ columnasTempArray.length || columnasExistentes.length }}
-          </span>
+    <!-- COLUMNAS -->
+    <article class="control-card">
+      <header class="card-header">
+        <div class="card-title">
+          <i class="fas fa-columns text-purple-600" aria-hidden="true"></i>
+          <h3>1. Columnas (Opciones)</h3>
         </div>
+        <span class="count-badge">
+          {{ columnasTempArray.length }}
+        </span>
+      </header>
 
-        <div class="flex gap-2 mb-2">
-          <input 
-            type="text" 
-            class="form-control text-xs" 
-            placeholder="Ej: De acuerdo..." 
-            formControlName="nuevaColumnaTexto"
-            (keydown.enter)="$event.preventDefault(); agregarColumnaDirecto()"
-          />
-          <button type="button" class="btn btn-purple btn-xs px-3" (click)="agregarColumnaDirecto()">
-            <i class="fas fa-plus"></i>
-          </button>
-        </div>
-
-        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-          <ng-container *ngIf="preguntaId">
-            <div *ngFor="let col of columnasExistentes; let i = index" class="flex justify-between items-center bg-slate-50 p-1.5 rounded border text-xs">
-              <span class="truncate font-medium text-slate-700">{{ col.texto_columna }}</span>
-              <button type="button" class="text-red-500 hover:text-red-700 px-1" (click)="eliminarColumnaTemp(i, col.id)">✕</button>
-            </div>
-          </ng-container>
-
-          <ng-container *ngIf="!preguntaId" [formGroup]="$any(parentForm || matrizForm)">
-            <div formArrayName="columnasTemp" class="space-y-1.5">
-              <div *ngFor="let colCtrl of columnasTempArray.controls; let i = index" [formGroupName]="i" class="flex items-center gap-1.5 bg-slate-50 p-1 rounded border">
-                <input type="text" formControlName="texto_columna" class="form-control text-xs border-none p-1 bg-transparent" />
-                <button type="button" class="text-red-500 hover:text-red-700 px-1.5 text-xs" (click)="eliminarColumnaTemp(i)">✕</button>
-              </div>
-            </div>
-          </ng-container>
-        </div>
+      <div class="input-add-group">
+        <input 
+          type="text" 
+          class="form-input-sm" 
+          placeholder="Ej: De acuerdo, Mamá, Excelente..." 
+          formControlName="nuevaColumnaTexto"
+          (keydown.enter)="$event.preventDefault(); agregarColumnaDirecto()"
+        />
+        <button type="button" class="btn-primary-sm" (click)="agregarColumnaDirecto()">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+        </button>
       </div>
 
-      <!-- CONFIGURACIÓN FILAS -->
-      <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-sm">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
-            <i class="fas fa-list text-purple-600"></i> Filas (Preguntas/Items)
-          </span>
-          <span class="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-            {{ filasTempArray.length || filasExistentes.length }}
-          </span>
+      <div class="items-scroll-list custom-scrollbar">
+        <div [formGroup]="$any(parentForm || matrizForm)">
+          <div formArrayName="columnasTemp" class="items-list-container">
+            <div *ngFor="let colCtrl of columnasTempArray.controls; let i = index" [formGroupName]="i" class="item-chip">
+              <input type="text" formControlName="texto_columna" class="item-input" [readonly]="readonly" />
+              <button type="button" class="btn-delete-chip" (click)="eliminarColumnaTemp(i, colCtrl.value?.id)" *ngIf="!readonly">✕</button>
+            </div>
+          </div>
         </div>
+      </div>
+    </article>
 
-        <div class="flex gap-2 mb-2">
+    <!-- FILAS -->
+    <article class="control-card">
+      <header class="card-header">
+        <div class="card-title">
+          <i class="fas fa-list-check text-purple-600" aria-hidden="true"></i>
+          <h3>2. Filas (Preguntas / Criterios)</h3>
+        </div>
+        <span class="count-badge">
+          {{ filasTempArray.length }}
+        </span>
+      </header>
+
+      <div class="new-row-box">
+        <div class="input-add-group">
           <input 
             type="text" 
-            class="form-control text-xs" 
-            placeholder="Ej: Infraestructura..." 
+            class="form-input-sm" 
+            placeholder="Ej: Cabeza de familia, Infraestructura..." 
             formControlName="nuevaFilaTexto"
             (keydown.enter)="$event.preventDefault(); agregarFilaDirecto()"
           />
-          <button type="button" class="btn btn-purple btn-xs px-3" (click)="agregarFilaDirecto()">
-            <i class="fas fa-plus"></i>
+          <button type="button" class="btn-primary-sm" (click)="agregarFilaDirecto()">
+            <i class="fas fa-plus" aria-hidden="true"></i>
           </button>
         </div>
-
-        <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-          <ng-container *ngIf="preguntaId">
-            <div *ngFor="let fila of filasExistentes; let i = index" class="flex justify-between items-center bg-slate-50 p-1.5 rounded border text-xs">
-              <span class="truncate font-medium text-slate-700">{{ i + 1 }}. {{ fila.texto_fila }}</span>
-              <button type="button" class="text-red-500 hover:text-red-700 px-1" (click)="eliminarFilaTemp(i, fila.id)">✕</button>
-            </div>
-          </ng-container>
-
-          <ng-container *ngIf="!preguntaId" [formGroup]="$any(parentForm || matrizForm)">
-            <div formArrayName="filasTemp" class="space-y-1.5">
-              <div *ngFor="let filaCtrl of filasTempArray.controls; let i = index" [formGroupName]="i" class="flex items-center gap-1.5 bg-slate-50 p-1 rounded border">
-                <span class="text-[10px] font-bold text-purple-700 pl-1">{{ i + 1 }}.</span>
-                <input type="text" formControlName="texto_fila" class="form-control text-xs border-none p-1 bg-transparent" />
-                <button type="button" class="text-red-500 hover:text-red-700 px-1.5 text-xs" (click)="eliminarFilaTemp(i)">✕</button>
-              </div>
-            </div>
-          </ng-container>
+        
+        <div class="row-type-selector">
+          <span class="type-selector-label">Tipo por defecto:</span>
+          <div class="type-radio-options">
+            <label class="radio-chip">
+              <input type="radio" formControlName="nuevaFilaEsMultiple" [value]="false" />
+              <span>Única (Radio)</span>
+            </label>
+            <label class="radio-chip">
+              <input type="radio" formControlName="nuevaFilaEsMultiple" [value]="true" />
+              <span>Múltiple (Check)</span>
+            </label>
+          </div>
         </div>
       </div>
 
-    </div>
+      <div class="items-scroll-list custom-scrollbar">
+        <div [formGroup]="$any(parentForm || matrizForm)">
+          <div formArrayName="filasTemp" class="items-list-container">
+            <div *ngFor="let filaCtrl of filasTempArray.controls; let i = index" [formGroupName]="i" class="item-row-card">
+              <span class="row-index">{{ i + 1 }}.</span>
+              <input type="text" formControlName="texto_fila" class="item-input flex-1" [readonly]="readonly" />
+              
+              <button 
+                type="button" 
+                class="mode-toggle-btn"
+                [class.mode-multiple]="esFilaMultiple(i)"
+                (click)="toggleFilaMultiple(i)"
+              >
+                {{ esFilaMultiple(i) ? '☑️ Múltiple' : '🔘 Única' }}
+              </button>
 
-    <!-- LADO DERECHO: PREVISUALIZACIÓN WYSIWYG INTERACTIVA (7 Columnas) -->
-    <div class="lg:col-span-7 bg-white p-4 rounded-xl border border-purple-200 shadow-sm flex flex-col justify-between">
-      <div>
-        <div class="flex justify-between items-center mb-3 pb-2 border-b">
-          <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <i class="fas fa-eye text-emerald-600"></i> Tabla Renderizada (Vista del Estudiante)
-          </span>
-          <span class="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
-            En vivo
-          </span>
-        </div>
-
-        <!-- AQUÍ ESTÁ LA MAGIA DEL SCROLL RESPONSIVO -->
-        <div class="w-full overflow-x-auto pb-4 custom-scrollbar">
-          <table 
-            class="w-full text-xs text-left border-collapse"
-            *ngIf="(columnasTempArray.length > 0 || columnasExistentes.length > 0) && (filasTempArray.length > 0 || filasExistentes.length > 0); else emptyTable"
-          >
-            <thead>
-              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                <th class="p-2 border-r border-slate-200 min-w-[150px]">Criterio / Evaluación</th>
-                
-                <ng-container *ngIf="!preguntaId">
-                  <th *ngFor="let colCtrl of columnasTempArray.controls" class="p-2 text-center border-r border-slate-200 min-w-[80px]">
-                    {{ colCtrl.value?.texto_columna || 'Columna' }}
-                  </th>
-                </ng-container>
-
-                <ng-container *ngIf="preguntaId">
-                  <th *ngFor="let col of columnasExistentes" class="p-2 text-center border-r border-slate-200 min-w-[80px]">
-                    {{ col.texto_columna }}
-                  </th>
-                </ng-container>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <ng-container *ngIf="!preguntaId">
-                <tr *ngFor="let filaCtrl of filasTempArray.controls; let fIndex = index" class="hover:bg-purple-50/50">
-                  <td class="p-2 font-medium text-slate-800 border-r border-slate-200">
-                    {{ filaCtrl.value?.texto_fila || 'Fila sin título' }}
-                  </td>
-                  <td *ngFor="let colCtrl of columnasTempArray.controls; let cIndex = index" class="p-2 text-center border-r border-slate-200">
-                    <input 
-                      type="radio" 
-                      [name]="'preview_row_' + fIndex" 
-                      class="accent-purple-600 cursor-pointer"
-                      [checked]="previewSimulada()[fIndex] === cIndex.toString()"
-                      (change)="seleccionarOpcionPrevio(fIndex, cIndex)"
-                    />
-                  </td>
-                </tr>
-              </ng-container>
-
-              <ng-container *ngIf="preguntaId">
-                <tr *ngFor="let fila of filasExistentes; let fIndex = index" class="hover:bg-purple-50/50">
-                  <td class="p-2 font-medium text-slate-800 border-r border-slate-200">
-                    {{ fila.texto_fila }}
-                  </td>
-                  <td *ngFor="let col of columnasExistentes; let cIndex = index" class="p-2 text-center border-r border-slate-200">
-                    <input 
-                      type="radio" 
-                      [name]="'preview_row_ext_' + fIndex" 
-                      class="accent-purple-600 cursor-pointer"
-                      [checked]="previewSimulada()[fIndex] === cIndex.toString()"
-                      (change)="seleccionarOpcionPrevio(fIndex, cIndex)"
-                    />
-                  </td>
-                </tr>
-              </ng-container>
-            </tbody>
-          </table>
-
-          <ng-template #emptyTable>
-            <div class="text-center py-10 px-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl my-2">
-              <i class="fas fa-table text-3xl text-purple-300 mb-2"></i>
-              <p class="text-xs font-bold text-slate-600">Aún no hay matriz dibujada</p>
-              <p class="text-[11px] text-slate-400 mt-1">Añade al menos 1 fila y 1 columna a la izquierda o pulsa una plantilla rápida.</p>
+              <button type="button" class="btn-delete-chip" (click)="eliminarFilaTemp(i, filaCtrl.value?.id)" *ngIf="!readonly">✕</button>
             </div>
-          </ng-template>
+          </div>
         </div>
       </div>
-      
-      <p class="text-[10px] text-slate-400 text-right mt-2 italic">
-        * Puedes marcar los radio buttons para probar la interacción.
-      </p>
-    </div>
+    </article>
 
   </div>
-</div>
+
+  <!-- PREVISUALIZACIÓN DE LA TABLA ABAJO -->
+  <div class="preview-panel-full">
+    
+    <header class="preview-header">
+      <div class="preview-title">
+        <i class="fas fa-eye text-emerald-600" aria-hidden="true"></i>
+        <h2>Vista Previa de la Tabla (Así la responderá el estudiante)</h2>
+      </div>
+      <span class="live-pill" *ngIf="!readonly">
+        <span class="live-dot"></span> En vivo
+      </span>
+    </header>
+
+    <div class="preview-body">
+      <div class="table-scroll-wrapper custom-scrollbar">
+        <table 
+          class="rendered-matrix-table"
+          *ngIf="columnasTempArray.length > 0 && filasTempArray.length > 0; else emptyTableState"
+        >
+          <thead>
+            <tr>
+              <th scope="col" class="th-criteria">
+                CRITERIO / EVALUACIÓN
+              </th>
+              <th scope="col" *ngFor="let colCtrl of columnasTempArray.controls" class="th-option">
+                {{ colCtrl.value?.texto_columna || 'Opción' }}
+              </th>
+            </tr>
+          </thead>
+          
+          <tbody>
+            <tr *ngFor="let filaCtrl of filasTempArray.controls; let fIndex = index">
+              <td class="td-criteria">
+                <div class="criteria-content">
+                  <span class="criteria-text">{{ filaCtrl.value?.texto_fila || 'Criterio sin título' }}</span>
+                  <span class="type-tag" [class.tag-multiple]="esFilaMultiple(fIndex)">
+                    {{ esFilaMultiple(fIndex) ? 'MÚLTIPLE' : 'ÚNICA' }}
+                  </span>
+                </div>
+              </td>
+
+              <td *ngFor="let colCtrl of columnasTempArray.controls; let cIndex = index" class="td-option">
+                <label class="control-wrapper">
+                  <input 
+                    [type]="esFilaMultiple(fIndex) ? 'checkbox' : 'radio'" 
+                    [name]="esFilaMultiple(fIndex) ? ('chk_' + fIndex + '_' + cIndex) : ('rad_row_' + fIndex)"
+                    class="custom-input-control"
+                    [checked]="isColSelected(fIndex, cIndex)"
+                    (change)="seleccionarOpcionPrevio(fIndex, cIndex)"
+                  />
+                </label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #emptyTableState>
+          <div class="empty-state-box">
+            <div class="empty-icon-circle">
+              <i class="fas fa-table-cells text-purple-400" aria-hidden="true"></i>
+            </div>
+            <h4>Aún no hay matriz dibujada</h4>
+            <p>Añade al menos 1 columna y 1 fila en la parte superior para previsualizar la tabla.</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
+    <footer class="preview-footer">
+      <p>* Haz clic en el botón [🔘 Única] o [☑️ Múltiple] de cada fila arriba para alternar su tipo.</p>
+    </footer>
+
+  </div>
+</section>

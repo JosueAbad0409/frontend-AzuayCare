@@ -1,157 +1,255 @@
 <div class="carreras-card animate-fade-in">
-  <div class="header-section">
+  <!-- HEADER & TOOLBAR PRINCIPAL -->
+  <header class="header-section">
     <div>
       <h1 class="title">Reporte Especializado de Necesidades Educativas</h1>
       <p class="subtitle">Muestra todos los estudiantes declarantes con vulnerabilidades, necesidades especiales o prioridades de salud.</p>
     </div>
     <div class="header-actions">
+      <span class="count-badge" role="status" aria-live="polite">
+        Total: <strong>{{ totalCasos() }}</strong> Caso(s)
+      </span>
+
+      <button 
+        type="button" 
+        class="btn btn-outline btn-mobile-filter"
+        (click)="toggleMobileFilters()"
+        aria-label="Abrir o cerrar filtros de búsqueda"
+      >
+        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+        <span>Filtros</span>
+        @if (tieneFiltrosActivos()) {
+          <span class="filter-indicator-dot"></span>
+        }
+      </button>
+
+      @if (tieneFiltrosActivos()) {
+        <button type="button" class="btn btn-ghost btn-sm btn-clear-all" (click)="limpiarFiltros()">
+          <i class="fas fa-rotate-left" aria-hidden="true"></i>
+          <span>Limpiar Filtros</span>
+        </button>
+      }
+
       <button type="button" class="custom-swal-confirm" (click)="exportarReporte()" [disabled]="isLoading() || totalCasos() === 0">
         <i class="fas fa-file-export" aria-hidden="true"></i>
         <span>Exportar Reporte</span>
       </button>
     </div>
-  </div>
+  </header>
 
-  @if (!isLoading()) {
-  <div class="search-bar-wrapper">
-    <div class="search-input-box">
-      <i class="fas fa-search search-icon" aria-hidden="true"></i>
-      <input type="text" placeholder="Buscar por estudiante o cédula..." [value]="filterEstudiante()"
-        (input)="onSearchChange($event)" class="search-control" aria-label="Buscar estudiante por nombre o cédula" />
-    </div>
-
-    <div class="filter-actions">
-      <span class="count-badge" role="status" aria-live="polite">
-        Total: <strong>{{ totalCasos() }}</strong> Caso(s)
-      </span>
-      <!-- NUEVO: Agregado filterEstado a la validación de limpiar filtros -->
-      @if (filterEstudiante() || filterCarrera() !== 'TODOS' || filterRiesgo() !== 'TODOS' || filterEstado() !== 'TODOS') {
-      <button type="button" class="btn btn-outline btn-sm" (click)="limpiarFiltros()">
-        <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
-        <span>Limpiar Filtros</span>
-      </button>
+  <!-- SECCIÓN DE FILTROS EN GRID AVANZADO -->
+  <section 
+    class="filters-panel" 
+    [class.is-open-mobile]="showMobileFilters()"
+    aria-label="Barra de herramientas de filtrado"
+  >
+    <div class="filters-panel-header">
+      <div class="panel-title">
+        <i class="fas fa-filter" aria-hidden="true"></i>
+        <span>Filtros de Búsqueda</span>
+      </div>
+      @if (tieneFiltrosActivos()) {
+        <span class="active-filters-badge">Filtros Activos</span>
       }
     </div>
-  </div>
-  }
 
-  @if (isLoading()) {
-  <div class="skeleton-wrapper">
-    <div class="skeleton-row skeleton-header"></div>
-    <div class="skeleton-row"></div>
-    <div class="skeleton-row"></div>
-    <div class="skeleton-row"></div>
-    <div class="skeleton-row"></div>
-  </div>
-  } @else {
-  <div class="table-container">
-    <table class="admin-table">
-      <thead>
-        <tr class="header-titles">
-          <th scope="col" class="col-estudiante">Estudiante</th>
-          <th scope="col" class="col-carrera">Carrera / Ciclo</th>
-          <th scope="col" class="col-vulnerabilidades">Condiciones Detectadas</th>
-          <th scope="col" class="col-estado text-center">Estado</th> <!-- NUEVO -->
-          <th scope="col" class="col-acc text-center">Acción</th>
-        </tr>
-        <tr class="header-filters">
-          <th class="col-estudiante">
-            <div class="filter-input-wrap">
-              <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
-              <input type="text" class="table-column-input" placeholder="Estudiante o Cédula..."
-                [value]="filterEstudiante()" (input)="onSearchChange($event)"
-                aria-label="Filtrar por estudiante o cédula" />
-            </div>
-          </th>
-          <th class="col-carrera">
-            <select [value]="filterCarrera()" (change)="onCarreraChange($event)" class="table-column-select" aria-label="Filtrar por carrera">
-              <option value="TODOS">Todas las Carreras</option>
-              @for (c of carrerasDisponibles(); track c) {
-              <option [value]="c">{{ c }}</option>
-              }
-            </select>
-          </th>
-          <th class="col-vulnerabilidades"></th>
-          
-          <!-- NUEVO: Selector de Estado -->
-          <th class="col-estado">
-            <select [value]="filterEstado()" (change)="onEstadoChange($event)" class="table-column-select" aria-label="Filtrar por estado">
-              <option value="TODOS">Todos los Estados</option>
-              @for (e of estadosDisponibles(); track e) {
-              <option [value]="e">{{ e === 'ENVIADA' ? 'Por Validar' : e }}</option>
-              }
-            </select>
-          </th>
+    <div class="filter-grid">
+      <!-- Filtro 1: Buscador Global de Estudiante -->
+      <div class="filter-item filter-search-main">
+        <label for="filter-estudiante" class="filter-label">Estudiante</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-search search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="filter-estudiante"
+            type="search" 
+            class="table-column-input" 
+            placeholder="Nombre o apellido del estudiante..." 
+            [value]="filterEstudianteInput()"
+            (input)="onSearchChange($event)"
+          />
+        </div>
+      </div>
 
-          <th class="col-acc text-center"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of reporteFiltrado(); track item.ficha_id) {
-        <tr>
-          <td class="col-estudiante" data-label="Estudiante">
-            <div class="user-identity">
-              <strong class="user-fullname">{{ item.estudiante }}</strong>
-              <span class="text-muted font-mono text-ellipsis">Cédula: {{ item.cedula }}</span>
-            </div>
-          </td>
-          <td class="col-carrera" data-label="Carrera / Ciclo">
-            <div class="user-identity">
-              <span class="user-fullname">{{ item.carrera || 'Sin carrera' }}</span>
-              <span class="text-muted text-ellipsis">{{ item.ciclo || 'Sin ciclo' }}</span>
-            </div>
-          </td>
-          <td class="col-vulnerabilidades" data-label="Condiciones Detectadas">
-            <div class="vulnerabilidades-grid">
-              @for (llave of obtenerLlavesVulnerabilidad(item.detalles_vulnerabilidad); track llave) {
-              <div class="vulnerabilidad-card">
-                <span class="vulnerabilidad-key">{{ llave }}</span>
-                <span class="vulnerabilidad-val">
-                  {{ item.detalles_vulnerabilidad[llave].respuesta }}
-                </span>
-                @if (item.detalles_vulnerabilidad[llave].evidencia) {
-                <div class="evidencia-chip">
-                  <i class="fas fa-paperclip" aria-hidden="true"></i> Evidencia Adjunta
-                </div>
-                }
-              </div>
-              }
-            </div>
-          </td>
+      <!-- Filtro 2: Cédula con Validación (Máx 10 dígitos) -->
+      <div class="filter-item">
+        <label for="filter-cedula" class="filter-label">Cédula</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-address-card search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="filter-cedula"
+            type="text" 
+            inputmode="numeric"
+            maxlength="10"
+            class="table-column-input font-mono" 
+            placeholder="Nº Identificación..." 
+            [value]="filterCedulaInput()"
+            (input)="onCedulaSearchChange($event)"
+          />
+        </div>
+      </div>
 
-          <!-- NUEVO: Columna Estado (Puedes estilizar el span con clases de badges en tu CSS) -->
-          <td class="col-estado text-center" data-label="Estado">
-            <span class="badge state-badge">
-              {{ item.estado_ficha === 'ENVIADA' ? 'Por Validar' : (item.estado_ficha || 'No definido') }}
-            </span>
-          </td>
-
-          <td class="col-acc text-center" data-label="Acción">
-            <button type="button" class="btn-evaluar" (click)="verFicha(item.ficha_id)"
-              [attr.aria-label]="'Evaluar ficha de ' + item.estudiante">
-              <span>Evaluar Ficha</span>
-              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      <!-- Filtro 3: Carrera con Autocompletado y Botón X corregido -->
+      <div class="filter-item relative">
+        <label for="buscarCarrera" class="filter-label">Carrera</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="buscarCarrera" 
+            type="text" 
+            [formControl]="filtroCarreraControl" 
+            autocomplete="off" 
+            placeholder="Buscar carrera..." 
+            (focus)="dropdownCarreraAbierto.set(true)" 
+            (blur)="cerrarDropdownCarrera()" 
+            class="table-column-input uppercase has-clear-btn" 
+          />
+          @if (filtroCarreraControl.value) {
+            <button 
+              type="button" 
+              (click)="limpiarFiltroCarrera()" 
+              class="btn-clear-micro"
+              title="Limpiar filtro de carrera"
+              aria-label="Limpiar filtro de carrera"
+            >
+              <i class="fas fa-circle-xmark" aria-hidden="true"></i>
             </button>
-          </td>
-        </tr>
-        } @empty {
-        <tr>
-          <td colspan="5"> <!-- Cambiado colspan de 4 a 5 -->
-            <div class="state-card empty-state">
-              <i class="fas fa-check-circle empty-icon text-success" aria-hidden="true"></i>
-              <p class="state-title">No se encontraron casos</p>
-              <p class="state-desc">No hay estudiantes que requieran atención prioritaria con los criterios seleccionados.</p>
-              @if (filterEstudiante() || filterCarrera() !== 'TODOS' || filterRiesgo() !== 'TODOS' || filterEstado() !== 'TODOS') {
-              <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
-                <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
-              </button>
-              }
-            </div>
-          </td>
-        </tr>
+          }
+        </div>
+
+        @if (dropdownCarreraAbierto()) {
+          <ul class="dropdown-list-menu">
+            @for (c of carrerasFiltradas(); track c.id) {
+              <li 
+                (mousedown)="seleccionarCarrera(c)" 
+                class="dropdown-item"
+                [class.is-selected]="filtroCarreraControl.value === c.nombre"
+              >
+                <i class="fas fa-graduation-cap dropdown-icon" aria-hidden="true"></i>
+                <span class="text-ellipsis">{{ c.nombre }}</span>
+              </li>
+            } @empty {
+              <li class="dropdown-item-empty">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <span>No se encontraron carreras</span>
+              </li>
+            }
+          </ul>
         }
-      </tbody>
-    </table>
-  </div>
+      </div>
+
+      <!-- Filtro 4: Selector de Estado en Mayúsculas con POR VALIDAR -->
+      <div class="filter-item">
+        <label for="filter-estado" class="filter-label">Estado Ficha</label>
+        <div class="filter-input-wrap select-wrap">
+          <i class="fas fa-chart-pie search-micro-icon" aria-hidden="true"></i>
+          <select 
+            id="filter-estado"
+            [value]="filterEstado()" 
+            (change)="onEstadoChange($event)" 
+            class="table-column-select"
+          >
+            <option value="TODOS">TODOS LOS ESTADOS</option>
+            @for (e of estadosDisponibles(); track e) {
+              <option [value]="e">{{ e === 'ENVIADA' ? 'POR VALIDAR' : (e | uppercase) }}</option>
+            }
+          </select>
+          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADOS EN TABLA -->
+  @if (isLoading()) {
+    <div class="skeleton-wrapper" aria-busy="true">
+      <div class="skeleton-row skeleton-header"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr class="header-titles">
+            <th scope="col" class="col-estudiante">Estudiante</th>
+            <th scope="col" class="col-carrera">Carrera / Ciclo</th>
+            <th scope="col" class="col-vulnerabilidades">Condiciones Detectadas</th>
+            <th scope="col" class="col-estado text-center">Estado</th>
+            <th scope="col" class="col-acc text-center">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of reporteFiltrado(); track item.ficha_id) {
+            <tr>
+              <td class="col-estudiante" data-label="Estudiante">
+                <div class="user-identity">
+                  <strong class="user-fullname">{{ item.estudiante }}</strong>
+                  <span class="text-muted font-mono text-ellipsis">Cédula: {{ item.cedula }}</span>
+                </div>
+              </td>
+              <td class="col-carrera" data-label="Carrera / Ciclo">
+                <div class="user-identity">
+                  <span class="user-fullname">{{ item.carrera || 'Sin carrera' }}</span>
+                  <span class="text-muted text-ellipsis">{{ item.ciclo || 'Sin ciclo' }}</span>
+                </div>
+              </td>
+              <td class="col-vulnerabilidades" data-label="Condiciones Detectadas">
+                <div class="vulnerabilidades-grid">
+                  @for (llave of obtenerLlavesVulnerabilidad(item.detalles_vulnerabilidad); track llave) {
+                    <div class="vulnerabilidad-card">
+                      <span class="vulnerabilidad-key">{{ llave }}</span>
+                      <span class="vulnerabilidad-val">
+                        {{ item.detalles_vulnerabilidad[llave].respuesta }}
+                      </span>
+                      @if (item.detalles_vulnerabilidad[llave].evidencia) {
+                        <div class="evidencia-chip">
+                          <i class="fas fa-paperclip" aria-hidden="true"></i> Evidencia Adjunta
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </td>
+
+              <!-- Estado Ficha con Badges y Formato POR VALIDAR -->
+              <td class="col-estado text-center" data-label="Estado">
+                <span class="badge" [ngClass]="{
+                  'badge-success': item.estado_ficha === 'VALIDADO',
+                  'badge-blue': item.estado_ficha === 'ENVIADA' || item.estado_ficha === 'ENVIADO',
+                  'badge-danger': item.estado_ficha === 'RECHAZADO' || item.estado_ficha === 'RECHAZADA'
+                }">
+                  {{ item.estado_ficha === 'ENVIADA' ? 'POR VALIDAR' : (item.estado_ficha | uppercase) }}
+                </span>
+              </td>
+
+              <td class="col-acc text-center" data-label="Acción">
+                <button type="button" class="btn-evaluar" (click)="verFicha(item.ficha_id)"
+                  [attr.aria-label]="'Evaluar ficha de ' + item.estudiante">
+                  <span>Evaluar Ficha</span>
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="state-card empty-state">
+                  <i class="fas fa-check-circle empty-icon text-success" aria-hidden="true"></i>
+                  <p class="state-title">No se encontraron casos</p>
+                  <p class="state-desc">No hay estudiantes que requieran atención prioritaria con los criterios seleccionados.</p>
+                  @if (tieneFiltrosActivos()) {
+                    <button type="button" class="btn btn-outline btn-sm mt-2" (click)="limpiarFiltros()">
+                      <i class="fas fa-undo" aria-hidden="true"></i> Restablecer Filtros
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
 </div>
