@@ -26,7 +26,7 @@
     </div>
   </header>
 
-  <!-- ========== KPIs ========== -->
+<!-- ========== KPIs ========== -->
   <section class="rep-kpis">
     @if (isLoadingStats()) {
     <div class="skeleton-wrapper">
@@ -41,6 +41,14 @@
       <span class="rep-kpi-value">{{ estadisticas()?.total_fichas || 0 }}</span>
       <span class="rep-kpi-hint">En el periodo</span>
     </div>
+    
+    <!-- 🔥 NUEVA TARJETA DE BORRADORES -->
+    <div class="rep-kpi" style="border-left: 4px solid #f59e0b;">
+      <span class="rep-kpi-label" style="color: #f59e0b;">Borradores</span>
+      <span class="rep-kpi-value">{{ estadisticas()?.fichas_borrador || 0 }}</span>
+      <span class="rep-kpi-hint">Por completar</span>
+    </div>
+
     <div class="rep-kpi accent-blue">
       <span class="rep-kpi-label">Por Validar</span>
       <span class="rep-kpi-value">{{ estadisticas()?.fichas_enviadas || 0 }}</span>
@@ -57,6 +65,32 @@
       <span class="rep-kpi-hint">Por corregir</span>
     </div>
     }
+  </section>
+
+  <!-- ========== COLUMNAS BASE A EXPORTAR ========== -->
+  <section class="rep-card">
+    <div class="rep-card-head" style="margin-bottom: 1rem;">
+      <div>
+        <h2>Datos a exportar (Columnas)</h2>
+        <p>Selecciona los datos del estudiante que deseas incluir en la tabla, el Excel y el PDF.</p>
+      </div>
+      @if (columnasBaseSeleccionadas().length > 0) {
+        <button type="button" class="btn-ghost btn-sm" (click)="limpiarSeleccionColumnas()">
+          <i class="fas fa-eraser" aria-hidden="true"></i> Limpiar selección
+        </button>
+      }
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem;">
+      @for (col of COLUMNAS_BASE_DISPONIBLES; track col.clave) {
+        <label class="rep-pregunta-check" style="background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" 
+                 [checked]="esColumnaBaseSeleccionada(col.clave)"
+                 (change)="toggleColumnaBase(col.clave)" />
+          <span style="font-size: 0.85rem; font-weight: 500; color: #334155;">{{ col.etiqueta }}</span>
+        </label>
+      }
+    </div>
   </section>
 
   <!-- ========== FILTROS GENERALES ========== -->
@@ -110,20 +144,35 @@
 
       <div class="rep-field">
         <label for="estado_ficha_select">Estado</label>
-        <select id="estado_ficha_select" formControlName="estado_ficha">
+<select id="estado_ficha_select" formControlName="estado_ficha">
           <option value="TODOS">Todos</option>
-          <option value="ENVIADA">Enviada</option>
+          <option value="ENVIADA">Por Validar</option>
           <option value="VALIDADO">Validado</option>
-          <option value="RECHAZADO">Rechazado</option>
-          <option value="BORRADOR">Borrador</option>
+          <option value="RECHAZADO">Rechazado / Observado</option>
+          <option value="BORRADOR">Por Completar</option>
         </select>
       </div>
+
+      <!-- 🔥 AQUÍ ESTÁ EL QUINTIL (DINÁMICO) 🔥 -->
+      <!-- Solo se dibuja en la pantalla si el backend confirma que hay rangos en este periodo -->
+      @if (estadisticas()?.distribucion_rangos?.length) {
+        <div class="rep-field">
+          <label for="nivel_eco_select">Quintil / Nivel</label>
+          <select id="nivel_eco_select" formControlName="nivel_economico">
+            <option value="TODOS">Todos</option>
+            @for (r of estadisticas()?.distribucion_rangos || []; track r.rango_nombre) {
+              <option [value]="r.rango_nombre">{{ r.rango_nombre }}</option>
+            }
+          </select>
+        </div>
+      }
 
       <div class="rep-field rep-field-wide">
         <label for="formulario_id_select">Formulario (opcional, habilita filtros por pregunta)</label>
         <select id="formulario_id_select" formControlName="formulario_id">
           <option value="">Sin formulario específico</option>
-          @for (f of formularios(); track f.id) {
+          <!-- 🔥 Cambiado a formulariosDelPeriodo() -->
+          @for (f of formulariosDelPeriodo(); track f.id) {
           <option [value]="f.id">{{ f.titulo }}</option>
           }
         </select>
@@ -265,10 +314,10 @@
               <select [value]="tableEstadoFiltro()" (change)="onTableEstadoChange($event)"
                 class="table-column-select table-column-select-centered" aria-label="Filtrar por estado">
                 <option value="TODOS">TODOS</option>
-                <option value="ENVIADA">ENVIADA</option>
+                <option value="ENVIADA">POR VALIDAR</option>
                 <option value="VALIDADO">VALIDADO</option>
                 <option value="RECHAZADO">RECHAZADO</option>
-                <option value="BORRADOR">BORRADOR</option>
+                <option value="BORRADOR">POR COMPLETAR</option>
               </select>
               } @else {
               <div class="filter-input-wrap">
@@ -291,9 +340,11 @@
               <span class="badge" [ngClass]="{
                 'badge-success': row[col] === 'VALIDADO',
                 'badge-blue': row[col] === 'ENVIADA' || row[col] === 'ENVIADO',
-                'badge-danger': row[col] === 'RECHAZADO' || row[col] === 'RECHAZADA'
+                'badge-danger': row[col] === 'RECHAZADO' || row[col] === 'RECHAZADA' || row[col] === 'OBSERVADO',
+                'badge-warning': row[col] === 'BORRADOR'
               }">
-                {{ row[col] ?? '—' }}
+                <!-- AQUÍ LLAMAMOS A LA FUNCIÓN -->
+                {{ obtenerEtiquetaEstado(row[col]) }}
               </span>
               } @else {
               <span class="text-ellipsis">{{ row[col] ?? '—' }}</span>

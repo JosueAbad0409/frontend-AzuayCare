@@ -74,37 +74,41 @@ export class MatrizBuilderComponent implements OnInit, OnChanges {
   }
 
   private cargarEstructuraInicial(): void {
-    if (this.filasExistentes && this.filasExistentes.length > 0) {
-      this.filasTempArray.clear();
-      this.filasExistentes.forEach(f => {
-        if (f && f.texto_fila) {
-          const esMult = f.es_multiple ?? f.permitir_multiple ?? false;
-          this.filasTempArray.push(
-            this.fb.group({
-              id: [f.id || null],
-              texto_fila: [f.texto_fila, [Validators.required, Validators.maxLength(255)]],
-              es_multiple: [Boolean(esMult)]
-            })
-          );
-        }
-      });
-    }
-
-    if (this.columnasExistentes && this.columnasExistentes.length > 0) {
-      this.columnasTempArray.clear();
-      this.columnasExistentes.forEach(c => {
-        if (c && c.texto_columna) {
-          this.columnasTempArray.push(
-            this.fb.group({
-              id: [c.id || null],
-              texto_columna: [c.texto_columna, [Validators.required, Validators.maxLength(255)]]
-            })
-          );
-        }
-      });
-    }
-    this.cdr.markForCheck();
+  // ✅ SIEMPRE limpiar, sin condición
+  this.filasTempArray.clear();
+  
+  if (this.filasExistentes && this.filasExistentes.length > 0) {
+    this.filasExistentes.forEach(f => {
+      if (f && f.texto_fila) {
+        const esMult = f.es_multiple ?? f.permitir_multiple ?? false;
+        this.filasTempArray.push(
+          this.fb.group({
+            id: [f.id || null],
+            texto_fila: [f.texto_fila, [Validators.required, Validators.maxLength(255)]],
+            es_multiple: [Boolean(esMult)]
+          })
+        );
+      }
+    });
   }
+
+  // ✅ MISMA LÓGICA para columnas
+  this.columnasTempArray.clear();
+  
+  if (this.columnasExistentes && this.columnasExistentes.length > 0) {
+    this.columnasExistentes.forEach(c => {
+      if (c && c.texto_columna) {
+        this.columnasTempArray.push(
+          this.fb.group({
+            id: [c.id || null],
+            texto_columna: [c.texto_columna, [Validators.required, Validators.maxLength(255)]]
+          })
+        );
+      }
+    });
+  }
+  this.cdr.markForCheck();
+}
 
   // ✅ NUEVO: Obtener datos finales para guardar
   obtenerDatosMatriz() {
@@ -138,10 +142,6 @@ export class MatrizBuilderComponent implements OnInit, OnChanges {
     if (!val) return;
 
     const multVal = texto ? esMultiple : !!this.matrizForm.get('nuevaFilaEsMultiple')?.value;
-
-    if (this.preguntaId) {
-      this.agregarFila.emit({ preguntaId: this.preguntaId, texto: val, es_multiple: multVal });
-    }
 
     this.filasTempArray.push(
       this.fb.group({
@@ -204,10 +204,6 @@ export class MatrizBuilderComponent implements OnInit, OnChanges {
     const rawVal = texto || this.matrizForm.get('nuevaColumnaTexto')?.value || '';
     const val = String(rawVal).trim();
     if (!val) return;
-
-    if (this.preguntaId) {
-      this.agregarColumna.emit({ preguntaId: this.preguntaId, texto: val });
-    }
 
     this.columnasTempArray.push(
       this.fb.group({

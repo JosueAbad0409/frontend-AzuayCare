@@ -61,215 +61,6 @@
     </nav>
   </header>
 
-  <section class="filters-panel slide-up" aria-label="Explorador de población">
-    <div class="poblacion-header">
-  <div class="poblacion-header-text">
-    <h3>
-      <i class="fas fa-users"></i>
-      Explorador de población
-    </h3>
-    <p>Combina los filtros como quieras (sexo, zona, carrera, periodo...). Los resultados se actualizan abajo y son los que se exportan.</p>
-  </div>
-
-  <div class="poblacion-actions">
-    <button
-      type="button"
-      class="btn-export btn-export-excel"
-      (click)="exportarExcelPoblacion()"
-      [disabled]="isExporting() || cargandoPoblacion()"
-    >
-      <i class="fas" [ngClass]="isExporting() ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
-      <span>Excel</span>
-    </button>
-
-    <button
-      type="button"
-      class="btn-export btn-export-pdf"
-      (click)="exportarPdfPoblacion()"
-      [disabled]="isExporting() || cargandoPoblacion()"
-    >
-      <i class="fas" [ngClass]="isExporting() ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
-      <span>PDF</span>
-    </button>
-
-    <button
-      type="button"
-      class="btn-clear-explorer"
-      (click)="limpiarFiltrosPoblacion()"
-      [disabled]="isExporting()"
-    >
-      <i class="fas fa-eraser"></i>
-      <span>Limpiar</span>
-    </button>
-  </div>
-</div>
-
-    <div class="filters-grid">
-      <div class="filter-field">
-        <label>Periodo</label>
-        <select [ngModel]="filtrosPoblacion().periodoId" (ngModelChange)="setFiltroPoblacion('periodoId', $event)">
-          <option value="">Todos</option>
-          @for (p of periodosList(); track p.id) {
-          <option [value]="p.id">{{ p.nombre }}{{ p.activo ? ' (Activo)' : '' }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Carrera</label>
-        <select [ngModel]="filtrosPoblacion().carreraId" (ngModelChange)="setFiltroPoblacion('carreraId', $event)">
-          <option value="">Todas</option>
-          @for (c of carrerasList(); track c.id) {
-          <option [value]="c.id">{{ c.nombre }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Ciclo</label>
-        <select [ngModel]="filtrosPoblacion().cicloId" (ngModelChange)="setFiltroPoblacion('cicloId', $event)">
-          <option value="">Todos</option>
-          @for (c of ciclosPoblacion(); track c.id) {
-          <option [value]="c.id">{{ c.nombre }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Sexo</label>
-        <select [ngModel]="filtrosPoblacion().sexo" (ngModelChange)="setFiltroPoblacion('sexo', $event)">
-          <option value="">Todos</option>
-          <option value="Hombre">Hombre</option>
-          <option value="Mujer">Mujer</option>
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Etnia</label>
-        <select [ngModel]="filtrosPoblacion().etnia" (ngModelChange)="setFiltroPoblacion('etnia', $event)">
-          <option value="">Todas</option>
-          @for (e of etnias; track e) {
-          <option [value]="e">{{ e }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Zona</label>
-        <select [ngModel]="filtrosPoblacion().zona" (ngModelChange)="setFiltroPoblacion('zona', $event)">
-          <option value="">Todas</option>
-          <option value="Urbano">Urbano</option>
-          <option value="Rural">Rural</option>
-        </select>
-      </div>
-
-      <div class="filter-field">
-        <label>Discapacidad</label>
-        <select [ngModel]="filtrosPoblacion().tieneDiscapacidad"
-          (ngModelChange)="setFiltroPoblacion('tieneDiscapacidad', $event)">
-          <option value="">Todas</option>
-          <option value="true">Sí</option>
-          <option value="false">No</option>
-        </select>
-      </div>
-
-      <div class="filter-field filter-search">
-        <label>Buscar</label>
-        <input type="search" placeholder="Nombre o cédula..." [ngModel]="filtrosPoblacion().busqueda"
-          (ngModelChange)="setFiltroPoblacion('busqueda', $event)" />
-      </div>
-    </div>
-
-    <!-- Resultados en vivo -->
-    <div class="filtered-students-panel" style="margin-top: 1rem;">
-      <div class="filtered-students-header">
-        <span class="filtered-students-title">
-          <i class="fas fa-list"></i>
-          Resultados del filtro
-        </span>
-        <span class="condition-count-badge">
-          {{ resultadosPoblacion().length }} persona(s)
-        </span>
-      </div>
-
-      @if (errorPoblacion()) {
-      <div class="alert error-alert">{{ errorPoblacion() }}</div>
-      }
-
-      @if (cargandoPoblacion()) {
-      <p>Cargando resultados...</p>
-      } @else if (resultadosPoblacion().length === 0) {
-      <div class="filtered-students-empty">
-        <i class="fas fa-user-slash"></i>
-        <p>Nadie coincide con esos criterios. Prueba quitar algún filtro.</p>
-      </div>
-      } @else {
-      <div class="table-wrapper">
-        <table class="students-table">
-          <thead>
-            <tr>
-              <th>Estudiante</th>
-              <th>Cédula</th>
-              <th>Carrera / Ciclo</th>
-              <th>Sexo</th>
-              <th>Zona</th>
-              <th>Etnia</th>
-              <th>Fecha nacimiento</th>
-              <th>Rango edad</th>
-              <th>Estado civil</th>
-              <th>Celular</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            @for (r of resultadosPoblacion(); track r.cedula || $index) {
-            <tr>
-              <td>{{ r.nombres }} {{ r.apellidos }}</td>
-
-              <td>
-                {{ r.cedula || '—' }}
-              </td>
-
-              <td>
-                {{ r.carrera || '—' }} / {{ r.ciclo || '—' }}
-              </td>
-
-              <td>
-                {{ r.sexo || '—' }}
-              </td>
-
-              <td>
-                {{ r.zona_residencia || '—' }}
-              </td>
-
-              <td>
-                {{ r.etnia || '—' }}
-              </td>
-
-              <td>
-                {{ r.fecha_nacimiento | date:'dd/MM/yyyy' }}
-              </td>
-
-              <td>
-                {{ r.rango_edad || '—' }}
-              </td>
-
-              <td>
-                {{ r.estado_civil || '—' }}
-              </td>
-
-              <td>
-                {{ r.numero_celular || '—' }}
-              </td>
-            </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      }
-    </div>
-  </section>
-
   <!-- ========== KPIs PRINCIPALES ========== -->
   <section class="kpi-section slide-up delay-2" aria-label="Métricas principales">
     <div class="kpi-grid">
@@ -308,7 +99,7 @@
           <i class="fas fa-paper-plane" aria-hidden="true"></i>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Enviadas</span>
+          <span class="kpi-label">Por Validar</span>
           @if (isLoading()) {
           <div class="skeleton-loader kpi-skeleton"></div>
           } @else {
@@ -358,7 +149,7 @@
           <i class="fas fa-edit" aria-hidden="true"></i>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Borradores</span>
+          <span class="kpi-label">Por Completar</span>
           @if (isLoading()) {
           <div class="skeleton-loader kpi-skeleton"></div>
           } @else {
@@ -372,12 +163,14 @@
           <i class="fas fa-graduation-cap" aria-hidden="true"></i>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Carreras</span>
+          <span class="kpi-label">Carreras Activas</span>
           @if (isLoading()) {
           <div class="skeleton-loader kpi-skeleton"></div>
           } @else {
           <h2 class="kpi-value">{{ totalCarreras() }}</h2>
           }
+          <!-- 🔥 Este subtítulo ayuda a entender de dónde sale el número -->
+          <span class="kpi-caption" style="font-size: 11px; color: #64748b;">Con fichas registradas</span>
         </div>
       </article>
 
@@ -411,115 +204,6 @@
     </div>
   </section>
 
-  <!-- ========== FLUJO ECONÓMICO (ingresos / egresos) ========== -->
-  <section class="interactive-kpi-section slide-up delay-3" aria-label="Filtro económico">
-    <div class="interactive-kpi-card">
-      <div class="interactive-kpi-info">
-        <h3>Explorador de Flujo Económico</h3>
-        <p>Busca estudiantes estableciendo rangos de dinero exactos (sobre el conjunto ya filtrado arriba).</p>
-        <div class="kpi-big-number">
-          <i class="fas fa-search-dollar" aria-hidden="true"></i>
-          <span>{{ estudiantesFiltrados() }}</span>
-        </div>
-        <span class="kpi-subtitle">Estudiantes coinciden con el filtro económico</span>
-      </div>
-
-      <div class="interactive-kpi-controls">
-        <div class="filter-group">
-          <label for="ingreso-min">
-            <i class="fas fa-arrow-up text-emerald" aria-hidden="true"></i> Ingresos ($)
-          </label>
-          <div class="input-row">
-            <input id="ingreso-min" type="number" placeholder="Mínimo" [ngModel]="ingresoMin()"
-              (ngModelChange)="ingresoMin.set($event)" aria-label="Ingresos mínimos" />
-            <span class="divider" aria-hidden="true">-</span>
-            <input id="ingreso-max" type="number" placeholder="Máximo" [ngModel]="ingresoMax()"
-              (ngModelChange)="ingresoMax.set($event)" aria-label="Ingresos máximos" />
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label for="egreso-min">
-            <i class="fas fa-arrow-down text-rose" aria-hidden="true"></i> Egresos ($)
-          </label>
-          <div class="input-row">
-            <input id="egreso-min" type="number" placeholder="Mínimo" [ngModel]="egresoMin()"
-              (ngModelChange)="egresoMin.set($event)" aria-label="Egresos mínimos" />
-            <span class="divider" aria-hidden="true">-</span>
-            <input id="egreso-max" type="number" placeholder="Máximo" [ngModel]="egresoMax()"
-              (ngModelChange)="egresoMax.set($event)" aria-label="Egresos máximos" />
-          </div>
-        </div>
-
-        <button type="button" class="btn btn-clear-filters" (click)="limpiarFiltrosEconomicos()">
-          <i class="fas fa-eraser" aria-hidden="true"></i>
-          <span>Limpiar rangos</span>
-        </button>
-      </div>
-
-      @if (hayFiltrosActivos()) {
-      <div class="filtered-students-panel">
-        <div class="filtered-students-header">
-          <span class="filtered-students-title">
-            <i class="fas fa-list" aria-hidden="true"></i>
-            Estudiantes que cumplen el filtro económico
-          </span>
-          <span class="condition-count-badge">{{ estudiantesFiltrados() }} resultado(s)</span>
-        </div>
-
-        @if (estudiantesFiltradosList().length === 0) {
-        <div class="filtered-students-empty">
-          <i class="fas fa-user-slash" aria-hidden="true"></i>
-          <p>Ningún estudiante cumple con los rangos seleccionados.</p>
-        </div>
-        } @else {
-        <div class="table-wrapper">
-          <table class="students-table">
-            <thead>
-              <tr>
-                <th>Estudiante</th>
-                <th>Carrera / Ciclo</th>
-                <th class="text-right">Ingresos</th>
-                <th class="text-right">Egresos</th>
-                <th class="text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (f of estudiantesFiltradosList(); track f.id) {
-              <tr>
-                <td>
-                  <div class="student-cell">
-                    <div class="student-name">{{ nombreEstudiante(f) }}</div>
-                    <div class="student-cedula">{{ cedulaEstudiante(f) }}</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="academic-cell">
-                    <div class="carrera">{{ carreraEstudiante(f) }}</div>
-                    <div class="ciclo">{{ cicloEstudiante(f) }}</div>
-                  </div>
-                </td>
-                <td class="text-right money income">
-                  {{ f.total_ingresos | currency:'USD':'symbol':'1.0-0' }}
-                </td>
-                <td class="text-right money expense">
-                  {{ f.total_egresos | currency:'USD':'symbol':'1.0-0' }}
-                </td>
-                <td class="text-right money" [class.positive]="(f.balance_final || 0) >= 0"
-                  [class.negative]="(f.balance_final || 0) < 0">
-                  {{ f.balance_final | currency:'USD':'symbol':'1.0-0' }}
-                </td>
-              </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        }
-      </div>
-      }
-    </div>
-  </section>
-
   <!-- ========== GRÁFICOS ========== -->
   <section class="analytics-section slide-up delay-4" aria-label="Gráficos">
     <div class="analytics-grid">
@@ -549,23 +233,6 @@
         </div>
       </article>
 
-      <article class="chart-card card-full">
-        <header class="chart-card-header">
-          <div class="chart-header-title">
-            <div class="icon-chart icon-purple">
-              <i class="fas fa-university" aria-hidden="true"></i>
-            </div>
-            <div>
-              <h3>Distribución Económica por Carrera</h3>
-              <p>Nivel adquisitivo (Alto, Medio, Bajo)</p>
-            </div>
-          </div>
-        </header>
-        <div class="chart-canvas-container">
-          <div class="skeleton-loader chart-skeleton" [class.hidden]="!isLoading()"></div>
-          <canvas #carreraEconomiaChartCanvas [class.hidden]="isLoading()"></canvas>
-        </div>
-      </article>
 
       <article class="chart-card">
         <header class="chart-card-header">
@@ -585,68 +252,60 @@
         </div>
       </article>
 
-      <article class="chart-card">
-        <header class="chart-card-header">
-          <div class="chart-header-title">
-            <div class="icon-chart icon-emerald">
-              <i class="fas fa-coins" aria-hidden="true"></i>
-            </div>
-            <div>
-              <h3>Nivel Socioeconómico</h3>
-              <p>Relación ingreso/egreso</p>
-            </div>
-          </div>
-        </header>
-        <div class="chart-canvas-container">
-          <div class="skeleton-loader chart-skeleton" [class.hidden]="!isLoading()"></div>
-          <canvas #economiaChartCanvas [class.hidden]="isLoading()"></canvas>
-        </div>
-      </article>
-
+      <!-- TARJETA PROFESIONAL DE VULNERABILIDAD -->
       <article class="chart-card card-full">
         <header class="chart-card-header">
           <div class="chart-header-title">
             <div class="icon-chart icon-rose">
-              <i class="fas fa-heartbeat" aria-hidden="true"></i>
+              <i class="fas fa-shield-alt" aria-hidden="true"></i>
             </div>
             <div>
-              <h3>Condiciones Vulnerables Detectadas</h3>
-              <p>Métricas acumuladas (NEE)</p>
+              <h3>Mapa de Vulnerabilidad Estudiantil</h3>
+              <p>Clasificación de atenciones prioritarias y factores de riesgo</p>
             </div>
           </div>
         </header>
 
-        <div class="conditions-scroll-container">
+        <div class="conditions-scroll-container" style="padding: 1rem 1.5rem;">
           @if (isLoading()) {
-          <div class="skeleton-loader chart-skeleton"></div>
+            <div class="skeleton-loader chart-skeleton"></div>
           } @else if (condiciones().length === 0) {
-          <div class="empty-state-box">
-            <div class="empty-icon-circle">
-              <i class="fas fa-check" aria-hidden="true"></i>
+            <div class="empty-state-box">
+              <div class="empty-icon-circle">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+              </div>
+              <p class="empty-state-title">Población Estable</p>
+              <p class="empty-state-text">
+                No existen registros de vulnerabilidad o atenciones prioritarias con los filtros actuales.
+              </p>
             </div>
-            <p class="empty-state-title">Sin casos pendientes</p>
-            <p class="empty-state-text">
-              No existen condiciones de vulnerabilidad registradas con los filtros actuales.
-            </p>
-          </div>
           } @else {
-          <div class="conditions-list">
-            @for (c of condiciones(); track c.nombre) {
-            <div class="condition-item">
-              <div class="condition-meta">
-                <span class="condition-name">{{ c.nombre }}</span>
-                <div class="condition-badge-group">
-                  <span class="condition-count-badge">{{ c.total }} caso(s)</span>
-                  <span class="condition-pct-badge">{{ pctCondicion(c.total) }}%</span>
+            <div class="prof-conditions-list">
+              @for (c of condiciones(); track c.nombre) {
+                <div class="prof-condition-row">
+                  <!-- Icono dinámico -->
+                  <div class="prof-icon-box" [style.color]="c.colorClass" [style.backgroundColor]="c.colorClass + '15'">
+                    <i class="fas {{ c.icon }}"></i>
+                  </div>
+                  
+                  <div class="prof-content-box">
+                    <div class="prof-header-text">
+                      <span class="prof-name">{{ c.nombre }}</span>
+                      <div class="prof-stats-group">
+                        <span class="prof-count">{{ c.total }} estudiantes</span>
+                        <span class="prof-divider">•</span>
+                        <span class="prof-pct">{{ pctCondicion(c.total) }}% del total</span>
+                      </div>
+                    </div>
+
+                    <!-- Barra de progreso relativa (Ranking) -->
+                    <div class="prof-track">
+                      <div class="prof-fill" [style.width.%]="c.anchoBarra" [style.backgroundColor]="c.colorClass"></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="progress-bar-track" role="progressbar" [attr.aria-valuenow]="pctCondicion(c.total)"
-                aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar-fill" [style.width.%]="pctCondicion(c.total)"></div>
-              </div>
+              }
             </div>
-            }
-          </div>
           }
         </div>
       </article>

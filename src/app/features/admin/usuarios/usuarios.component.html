@@ -455,7 +455,7 @@
           <span *ngIf="campoInvalidoEdicion('canton_nacimiento_id')" class="edit-error">{{ mensajeCampoEdicion('canton_nacimiento_id') }}</span>
         </div>
 
-        <div class="edit-section-title"><i class="fas fa-users"></i> Género, Familia y Etnia</div>
+        <div class="edit-section-title"><i class="fas fa-users"></i> Género y Etnia</div>
 
         <div class="edit-grid-2">
           <div class="edit-field">
@@ -476,15 +476,6 @@
           </div>
         </div>
 
-        @if (edicionForm.get('sexo')?.value === 'Mujer') {
-        <div class="edit-field edit-highlight-pink">
-          <label class="edit-label edit-label-pink"><i class="fas fa-baby"></i> Estado de Gestación (Embarazo)</label>
-          <select formControlName="mes_embarazo" (blur)="edicionForm.controls['mes_embarazo'].markAsTouched()" class="edit-control">
-            <option *ngFor="let o of opcionesEmbarazo" [value]="o.value">{{ o.label }}</option>
-          </select>
-        </div>
-        }
-
         <div class="edit-grid-2">
           <div class="edit-field">
             <label class="edit-label">Estado Civil <span class="req">*</span></label>
@@ -495,26 +486,6 @@
             <span *ngIf="campoInvalidoEdicion('estado_civil')" class="edit-error">{{ mensajeCampoEdicion('estado_civil') }}</span>
           </div>
           <div class="edit-field">
-            <label class="edit-label">¿Tiene Hijos? <span class="req">*</span></label>
-            <select formControlName="tiene_hijos" (blur)="edicionForm.controls['tiene_hijos'].markAsTouched()" class="edit-control" [class.is-invalid]="campoInvalidoEdicion('tiene_hijos')">
-              <option [ngValue]="null" disabled>Selecciona...</option>
-              <option [ngValue]="false">No</option>
-              <option [ngValue]="true">Sí</option>
-            </select>
-            <span *ngIf="campoInvalidoEdicion('tiene_hijos')" class="edit-error">{{ mensajeCampoEdicion('tiene_hijos') }}</span>
-          </div>
-        </div>
-
-        @if (edicionForm.get('tiene_hijos')?.value === true) {
-        <div class="edit-field edit-highlight-blue">
-          <label class="edit-label edit-label-blue">Menores de 5 Años <span class="req">*</span></label>
-          <input type="number" min="0" max="20" formControlName="hijos_menores_5_anios" (blur)="edicionForm.controls['hijos_menores_5_anios'].markAsTouched()" placeholder="Ej. 1" class="edit-control" [class.is-invalid]="campoInvalidoEdicion('hijos_menores_5_anios')" />
-          <span *ngIf="campoInvalidoEdicion('hijos_menores_5_anios')" class="edit-error">{{ mensajeCampoEdicion('hijos_menores_5_anios') }}</span>
-        </div>
-        }
-
-        <div class="edit-grid-2">
-          <div class="edit-field">
             <label class="edit-label">Etnia <span class="req">*</span></label>
             <select formControlName="etnia" (blur)="edicionForm.controls['etnia'].markAsTouched()" class="edit-control" [class.is-invalid]="campoInvalidoEdicion('etnia')">
               <option value="" disabled>Selecciona...</option>
@@ -522,14 +493,15 @@
             </select>
             <span *ngIf="campoInvalidoEdicion('etnia')" class="edit-error">{{ mensajeCampoEdicion('etnia') }}</span>
           </div>
-          <div class="edit-field">
-            <label class="edit-label">Idioma <span class="req">*</span></label>
-            <select formControlName="idioma" (blur)="edicionForm.controls['idioma'].markAsTouched()" class="edit-control" [class.is-invalid]="campoInvalidoEdicion('idioma')">
-              <option value="" disabled>Selecciona...</option>
-              <option *ngFor="let i of idiomas" [value]="i">{{ i }}</option>
-            </select>
-            <span *ngIf="campoInvalidoEdicion('idioma')" class="edit-error">{{ mensajeCampoEdicion('idioma') }}</span>
-          </div>
+        </div>
+
+        <div class="edit-field">
+          <label class="edit-label">Idioma <span class="req">*</span></label>
+          <select formControlName="idioma" (blur)="edicionForm.controls['idioma'].markAsTouched()" class="edit-control" [class.is-invalid]="campoInvalidoEdicion('idioma')">
+            <option value="" disabled>Selecciona...</option>
+            <option *ngFor="let i of idiomas" [value]="i">{{ i }}</option>
+          </select>
+          <span *ngIf="campoInvalidoEdicion('idioma')" class="edit-error">{{ mensajeCampoEdicion('idioma') }}</span>
         </div>
 
         @if (edicionForm.get('etnia')?.value?.includes('Indígena')) {

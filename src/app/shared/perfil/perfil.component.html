@@ -176,16 +176,6 @@
                 <span class="metric-label">Sexo / Género</span>
                 <span class="metric-value">{{ getDato('sexo') }} / {{ getDato('genero') }}</span>
               </div>
-              <div class="metric-box">
-                <span class="metric-label">¿Tiene Hijos?</span>
-                <span class="metric-value">{{ getBooleanDato('tiene_hijos') }}</span>
-              </div>
-              @if (getBooleanDato('tiene_hijos') === 'Sí') {
-                <div class="metric-box">
-                  <span class="metric-label">Menores de 5 Años</span>
-                  <span class="metric-value">{{ getDato('hijos_menores_5_anios', '0') }}</span>
-                </div>
-              }
             </div>
           }
         </section>
@@ -216,12 +206,6 @@
                 <span class="metric-label">Idioma Dominante</span>
                 <span class="metric-value">{{ getDato('idioma') }}</span>
               </div>
-              @if (getDato('sexo') === 'Mujer' || getDato('sexo') === 'MUJER') {
-                <div class="metric-box">
-                  <span class="metric-label">Estado Gestación</span>
-                  <span class="metric-value">{{ getEstadoEmbarazo() }}</span>
-                </div>
-              }
             </div>
           }
 

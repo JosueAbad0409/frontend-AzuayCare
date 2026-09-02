@@ -16,6 +16,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { PrioridadAtencionService } from '../../../core/services/prioridad-atencion.service';
 import { environment } from '../../../../environments/environment';
+import { PeriodoService } from '../../../core/services/periodo.service';
 
 declare var gsap: any;
 
@@ -42,6 +43,7 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
   private readonly router = inject(Router);
   private readonly prioridadService = inject(PrioridadAtencionService);
   private readonly http = inject(HttpClient);
+  private readonly periodoService = inject(PeriodoService);
 
   readonly isSidebarCollapsed = signal<boolean>(false);
   readonly isSidebarOpenMobile = signal<boolean>(false);
@@ -70,9 +72,24 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
   }
 
   private cargarCasosAlto(): void {
-    this.prioridadService.getFichasPorPrioridad(0, 1, 'CON_ALERTAS').subscribe({
-      next: (res) => this.casosAltoCount.set(res?.total || 0),
-      error: () => this.casosAltoCount.set(0),
+    // 3. Primero obtenemos los periodos
+    this.periodoService.getPeriodos().subscribe({
+      next: (periodos) => {
+        // Buscamos cuál está activo
+        const periodoActivo = (periodos || []).find(p => p.activo);
+        
+        if (periodoActivo) {
+          // 4. Le pasamos el ID del periodo activo como 4to parámetro al servicio
+          this.prioridadService.getFichasPorPrioridad(0, 1, 'CON_ALERTAS', periodoActivo.id).subscribe({
+            next: (res) => this.casosAltoCount.set(res?.total || 0),
+            error: () => this.casosAltoCount.set(0),
+          });
+        } else {
+          // Si no hay periodo activo, el contador se queda en 0
+          this.casosAltoCount.set(0);
+        }
+      },
+      error: () => this.casosAltoCount.set(0)
     });
   }
 

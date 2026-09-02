@@ -67,31 +67,23 @@ export class ReportesComponent implements OnInit, OnDestroy {
   readonly isAplicandoFiltros = signal<boolean>(false);
   readonly isDescargandoExcel = this.descargaService.isDescargando;
   readonly mostrarAvanzado = signal<boolean>(false);
+  // 🔥 Mantiene los formularios filtrados según el periodo activo (Señal normal)
+  readonly formulariosDelPeriodo = signal<Formulario[]>([]);
 
   readonly filterForm: FormGroup = this.fb.group({
     periodo_id: [''],
     carrera_id: [''],
     ciclo_id: [''],
     estado_ficha: ['TODOS'],
+    nivel_economico: ['TODOS'], // 🔥 ESTA LÍNEA ES LA QUE FALTA PARA QUE NO DE ERROR
     formulario_id: ['']
   });
   readonly COLUMNAS_BASE_DISPONIBLES: Array<{ clave: string; etiqueta: string }> = [
     { clave: 'periodo', etiqueta: 'Periodo' },
-    { clave: 'cedula', etiqueta: 'Cédula' },
-    { clave: 'apellidos', etiqueta: 'Apellidos' },
-    { clave: 'nombres', etiqueta: 'Nombres' },
-    { clave: 'email', etiqueta: 'Email' },
-    { clave: 'sexo', etiqueta: 'Sexo' },
-    { clave: 'etnia', etiqueta: 'Etnia' },
-    { clave: 'estado_civil', etiqueta: 'Estado civil' },
-    { clave: 'tiene_hijos', etiqueta: 'Tiene hijos' },
     { clave: 'carrera', etiqueta: 'Carrera' },
     { clave: 'ciclo', etiqueta: 'Ciclo' },
-    { clave: 'estado', etiqueta: 'Estado ficha' },
-    { clave: 'ingresos', etiqueta: 'Ingresos' },
-    { clave: 'egresos', etiqueta: 'Egresos' },
-    { clave: 'balance', etiqueta: 'Balance' },
-    { clave: 'nivel_economico', etiqueta: 'Nivel económico' },
+    { clave: 'estado', etiqueta: 'Estado de la Ficha' },
+    { clave: 'nivel_economico', etiqueta: 'Quintil / Nivel Económico' },
   ];
 
   readonly columnasBaseSeleccionadas = signal<string[]>([]);
@@ -103,16 +95,25 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
     const term = this.tableSearchTerm().toLowerCase().trim();
     const estado = this.tableEstadoFiltro().toUpperCase();
+    const nivelFiltroSelect = this.filterForm.get('nivel_economico')?.value;
 
     return dataset.registros.filter((row: any) => {
+      // 1. Filtro de Estado global (de arriba)
       if (estado !== 'TODOS') {
         const rowEstado = String(row.estado_ficha || row.estado || '').toUpperCase();
         if (estado === 'ENVIADA' && rowEstado !== 'ENVIADA' && rowEstado !== 'ENVIADO') return false;
         if (estado === 'VALIDADO' && rowEstado !== 'VALIDADO') return false;
-        if (estado === 'RECHAZADO' && rowEstado !== 'RECHAZADO' && rowEstado !== 'RECHAZADA') return false;
+        if (estado === 'RECHAZADO' && rowEstado !== 'RECHAZADO' && rowEstado !== 'RECHAZADA' && rowEstado !== 'OBSERVADO') return false;
         if (estado === 'BORRADOR' && rowEstado !== 'BORRADOR') return false;
       }
 
+      // 2. Filtro de Quintil/Nivel global (de arriba)
+      if (nivelFiltroSelect && nivelFiltroSelect !== 'TODOS' && nivelFiltroSelect !== 'Sin Rango') {
+        const rowNivel = String(row.nivel_economico || '').trim();
+        if (rowNivel.toUpperCase() !== nivelFiltroSelect.toUpperCase()) return false;
+      }
+
+      // 3. Búsqueda global o de cajita de la tabla
       if (!term) return true;
 
       return Object.values(row).some(val =>
@@ -148,6 +149,11 @@ export class ReportesComponent implements OnInit, OnDestroy {
     this.cargarFiltrosIniciales();
 
     this.filterForm.get('periodo_id')?.valueChanges.subscribe((periodoId: string) => {
+      // 🔥 Si cambiamos de periodo, limpiamos el formulario y las preguntas
+      this.filterForm.patchValue({ formulario_id: '' }, { emitEvent: false });
+      this.filtrosPreguntaValues = {};
+      this.filtrosDisponibles.set([]);
+
       if (periodoId) {
         this.cargarEstadisticas(periodoId);
       } else {
@@ -223,6 +229,10 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
         const periodoActivo = (periodos || []).find((p: PeriodoMatricula) => p.activo) || (periodos || [])[0];
         if (periodoActivo) {
+          // 🔥 NUEVO: Llenamos los formularios de este periodo en la carga inicial de la página
+          const filtrados = (formularios || []).filter((f: Formulario) => f.periodo_id === periodoActivo.id);
+          this.formulariosDelPeriodo.set(filtrados);
+
           this.filterForm.patchValue({ periodo_id: periodoActivo.id }, { emitEvent: true });
         }
 
@@ -240,49 +250,29 @@ export class ReportesComponent implements OnInit, OnDestroy {
   cargarEstadisticas(periodoId: string): void {
     this.isLoadingStats.set(true);
 
-    forkJoin({
-      stats: this.reportesService.getEstadisticasGenerales(periodoId).pipe(catchError(() => of(null))),
-      fichas: this.revisionService.getFichasPaginadas(0, 10000, '', 'TODOS').pipe(catchError(() => of({ data: [] })))
-    }).subscribe({
-      next: ({ stats, fichas }) => {
-        const lista: any[] = (fichas as any)?.data || (fichas as any) || [];
-
-        const delPeriodo = lista.filter((f) => {
-          const pid = f.periodo_id || f.periodo?.id;
-          return !periodoId || pid === periodoId;
+    // 🔥 Simplificamos: Confiamos 100% en el endpoint que construimos en el backend
+    // porque ya nos trae los totales correctos y consolidados.
+    this.reportesService.getEstadisticasGenerales(periodoId).pipe(
+      catchError((error) => {
+        console.error('Error cargando estadísticas:', error);
+        return of(null);
+      })
+    ).subscribe((stats) => {
+      if (stats) {
+        this.estadisticas.set({
+          total_fichas: stats.total_fichas || 0,
+          fichas_borrador: stats.fichas_borrador || 0,
+          fichas_enviadas: stats.fichas_enviadas || 0,
+          fichas_validadas: stats.fichas_validadas || 0,
+          fichas_rechazadas: stats.fichas_rechazadas || 0,
+          distribucion_rangos: stats.distribucion_rangos || []
         });
-
-        const contados = this.contarEstados(delPeriodo);
-
-        const finalStats: EstadisticasPeriodo = {
-          total_fichas: stats?.total_fichas ?? contados.total,
-          fichas_borrador: stats?.fichas_borrador ?? contados.borrador,
-          fichas_enviadas: stats?.fichas_enviadas ?? contados.enviadas,
-          fichas_validadas: stats?.fichas_validadas ?? contados.validadas,
-          fichas_rechazadas: (stats?.fichas_rechazadas && stats.fichas_rechazadas > 0)
-            ? stats.fichas_rechazadas
-            : contados.rechazadas,
-          distribucion_rangos: stats?.distribucion_rangos ?? []
-        };
-
-        if (!finalStats.total_fichas) {
-          finalStats.total_fichas = contados.total;
-          finalStats.fichas_borrador = contados.borrador;
-          finalStats.fichas_enviadas = contados.enviadas;
-          finalStats.fichas_validadas = contados.validadas;
-          finalStats.fichas_rechazadas = contados.rechazadas;
-        }
-
-        this.estadisticas.set(finalStats);
-        this.isLoadingStats.set(false);
-        this.cdRef.markForCheck();
-      },
-      error: () => {
-        this.toastService.show('No se pudieron obtener las estadísticas del periodo.', 'warning');
+      } else {
         this.estadisticas.set(null);
-        this.isLoadingStats.set(false);
-        this.cdRef.markForCheck();
       }
+      
+      this.isLoadingStats.set(false);
+      this.cdRef.markForCheck();
     });
   }
 
@@ -368,11 +358,12 @@ export class ReportesComponent implements OnInit, OnDestroy {
         const listaAgregados = (agregados as any)?.estructura_agregada ?? [];
         this.agregadosPorPregunta.set(listaAgregados);
 
-        // KPIs según el universo filtrado (no según todas las fichas del periodo)
         const totalFiltrado = normalizado?.total_registros ?? normalizado?.registros?.length ?? 0;
         const regs = normalizado?.registros ?? [];
 
-        const contados = this.contarEstadosDesdeRegistros(regs);
+        // 🔥 CORRECCIÓN: Tomar los KPIs que el backend acaba de mandarnos
+        const kpisBack = (dataset as any)?.kpis;
+        const contados = kpisBack ? kpisBack : this.contarEstadosDesdeRegistros(regs);
 
         this.estadisticas.set({
           total_fichas: totalFiltrado,
@@ -405,14 +396,16 @@ export class ReportesComponent implements OnInit, OnDestroy {
   validadas: number;
   rechazadas: number;
 } {
+  // 🔥 Aplica esto tanto en contarEstados como en contarEstadosDesdeRegistros
   let borrador = 0, enviadas = 0, validadas = 0, rechazadas = 0;
 
-  for (const r of regs) {
+  for (const r of regs) { // o `lista.forEach` si es el otro método
     const e = String(r.estado_ficha || r.estado || '').toUpperCase();
     if (e === 'BORRADOR') borrador++;
     else if (e === 'ENVIADA' || e === 'ENVIADO') enviadas++;
     else if (e === 'VALIDADO') validadas++;
-    else if (e === 'RECHAZADO' || e === 'RECHAZADA') rechazadas++;
+    // 🔥 CORRECCIÓN
+    else if (e === 'RECHAZADO' || e === 'RECHAZADA' || e === 'OBSERVADO') rechazadas++;
   }
 
   return {
@@ -444,8 +437,9 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
         if (wanted === 'ENVIADA' || wanted === 'ENVIADO') {
           if (e !== 'ENVIADA' && e !== 'ENVIADO') return false;
-        } else if (wanted === 'RECHAZADO' || wanted === 'RECHAZADA') {
-          if (e !== 'RECHAZADO' && e !== 'RECHAZADA') return false;
+        // 🔥 CORRECCIÓN
+        } else if (wanted === 'RECHAZADO' || wanted === 'RECHAZADA' || wanted === 'OBSERVADO') {
+          if (e !== 'RECHAZADO' && e !== 'RECHAZADA' && e !== 'OBSERVADO') return false;
         } else if (e !== wanted) {
           return false;
         }
@@ -481,6 +475,18 @@ export class ReportesComponent implements OnInit, OnDestroy {
     this.abrirVistaImpresionPdf(data);
   }
 
+  obtenerEtiquetaEstado(estado: any): string {
+    if (!estado) return '—';
+    const e = String(estado).toUpperCase();
+    
+    if (e === 'ENVIADA' || e === 'ENVIADO') return 'POR VALIDAR';
+    if (e === 'BORRADOR') return 'POR COMPLETAR';
+    if (e === 'RECHAZADO' || e === 'RECHAZADA' || e === 'OBSERVADO') return 'RECHAZADO';
+    if (e === 'VALIDADO') return 'VALIDADO';
+    
+    return e;
+  }
+
   private abrirVistaImpresionPdf(data: DatasetFiltradoResponse): void {
   const columnas = data.columnas || [];
   const registros = data.registros || [];
@@ -492,7 +498,14 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
   const thead = columnas.map(c => `<th>${this.esc(c)}</th>`).join('');
   const rows = registros.map((r: any) => {
-    const tds = columnas.map(c => `<td>${this.esc(String(r[c] ?? ''))}</td>`).join('');
+    const tds = columnas.map(c => {
+      let valor = r[c] ?? '';
+      // Si la columna es de estado, la transformamos
+      if (c === 'estado_ficha' || c === 'estado') {
+        valor = this.obtenerEtiquetaEstado(valor);
+      }
+      return `<td>${this.esc(String(valor))}</td>`;
+    }).join('');
     return `<tr>${tds}</tr>`;
   }).join('');
 

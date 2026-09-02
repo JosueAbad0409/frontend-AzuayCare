@@ -43,6 +43,7 @@ export class FormulariosComponent implements OnInit {
   readonly filtroTipo = signal<string>('TODOS');
   readonly filtroVersion = signal<string>('TODOS');
   readonly filtroEstado = signal<string>('TODOS');
+  readonly filtroPeriodo = signal<string>('TODOS'); // <-- Nuevo filtro
 
   readonly isEditMode = signal<boolean>(false);
   readonly selectedFormularioId = signal<string | null>(null);
@@ -59,6 +60,7 @@ export class FormulariosComponent implements OnInit {
     const tipo = this.filtroTipo();
     const version = this.filtroVersion();
     const estado = this.filtroEstado();
+    const periodo = this.filtroPeriodo(); // <-- Obtenemos el valor del filtro
 
     return this.formularios().filter(form => {
       const coincideTexto = !term || 
@@ -67,13 +69,16 @@ export class FormulariosComponent implements OnInit {
 
       const coincideTipo = tipo === 'TODOS' || form.tipo_formulario_id === tipo;
       const coincideVersion = version === 'TODOS' || form.version.toString() === version;
+      
+      // <-- Validación de periodo
+const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (form as any).periodo?.id === periodo;
 
       let coincideEstado = true;
       if (estado === 'BLOQUEADO') coincideEstado = !!form.bloqueado;
       else if (estado === 'PUBLICADO') coincideEstado = !form.bloqueado && !!form.publicado;
       else if (estado === 'BORRADOR') coincideEstado = !form.bloqueado && !form.publicado;
 
-      return coincideTexto && coincideTipo && coincideVersion && coincideEstado;
+      return coincideTexto && coincideTipo && coincideVersion && coincideEstado && coincidePeriodo;
     });
   });
 
@@ -81,7 +86,8 @@ export class FormulariosComponent implements OnInit {
     return this.searchTerm() !== '' || 
            this.filtroTipo() !== 'TODOS' || 
            this.filtroVersion() !== 'TODOS' || 
-           this.filtroEstado() !== 'TODOS';
+           this.filtroEstado() !== 'TODOS' ||
+           this.filtroPeriodo() !== 'TODOS'; // <-- Contempla el nuevo filtro
   });
 
   ngOnInit(): void {
@@ -112,6 +118,10 @@ export class FormulariosComponent implements OnInit {
     this.filtroEstado.set((event.target as HTMLSelectElement).value);
   }
 
+  onPeriodoChange(event: Event): void { // <-- Método para el cambio
+    this.filtroPeriodo.set((event.target as HTMLSelectElement).value);
+  }
+
   limpiarSearch(): void {
     this.searchTerm.set('');
     this.searchSubject.next('');
@@ -124,6 +134,7 @@ export class FormulariosComponent implements OnInit {
     this.filtroTipo.set('TODOS');
     this.filtroVersion.set('TODOS');
     this.filtroEstado.set('TODOS');
+    this.filtroPeriodo.set('TODOS'); // <-- Limpiar el nuevo filtro
   }
 
   cargarDatos(): void {
@@ -139,6 +150,12 @@ export class FormulariosComponent implements OnInit {
         this.periodos.set(periodos || []);
         this.formularios.set(formularios || []);
         this.tiposFormulario.set(tiposFormulario || []);
+
+        // <-- Seleccionar el periodo activo por defecto
+        const periodoActivo = (periodos || []).find(p => p.activo);
+        if (periodoActivo) {
+          this.filtroPeriodo.set(periodoActivo.id);
+        }
       },
       error: (err: HttpErrorResponse) => {
         this.toastService.show(this.extraerMensajeError(err, 'Error al cargar los datos iniciales.'), 'error');

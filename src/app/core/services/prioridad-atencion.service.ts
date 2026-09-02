@@ -28,15 +28,23 @@ export class PrioridadAtencionService {
     private readonly http = inject(HttpClient);
     private readonly apiUrl = `${environment.apiUrl}`;
 
+    // 🔥 Modificamos aquí para aceptar el periodoId
     getFichasPorPrioridad(
         skip: number = 0,
         take: number = 50,
-        nivel: string = 'TODOS'
+        nivel: string = 'TODOS',
+        periodoId?: string // <-- Nuevo parámetro opcional
     ): Observable<FichasPaginadasResponse> {
-        const params = new HttpParams()
+        let params = new HttpParams()
             .set('skip', skip.toString())
             .set('take', take.toString())
             .set('nivel', nivel);
+
+        // Si mandamos el periodo, lo adjuntamos a la petición
+        if (periodoId) {
+            params = params.set('periodo_id', periodoId);
+        }
+
         return this.http.get<FichasPaginadasResponse>(`${this.apiUrl}/fichas-respondidas/prioridad-atencion`, { params });
     }
 

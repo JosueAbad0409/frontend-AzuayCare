@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef, OnDestroy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { debounceTime, catchError, forkJoin, of, firstValueFrom } from 'rxjs';
@@ -25,6 +25,7 @@ import { EstudiantePerfil } from '../../core/models/estudiante-perfil.model';
 import { DocumentoEstudiante } from '../../core/models/documento-estudiante.interface';
 import { PeriodoMatricula } from '../../core/models/periodo.model';
 import { UbicacionesService } from '../../core/services/ubicaciones.service';
+import { cedulaEcuatorianaValidator } from '../../core/validators/cedula.validator';
 
 export type EstadoUI = 'NUEVA' | 'BORRADOR' | 'ENVIADA' | 'VALIDADO' | 'RECHAZADA' | 'CERRADA_POR_PLAZO';
 
@@ -35,7 +36,26 @@ export interface FormularioUI extends Formulario {
 const AUTOSAVE_PREFIX = 'azuaycare_autosave_ficha_';
 const AUTOSAVE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+// --- TUS CONSTANTES EXISTENTES ---
 const NUMERIC_REGEX = /^(0|[1-9]\d*)(\.\d{1,2})?$/;
+const NUMERICO_ENTERO_REGEX = /^[0-9]+$/;
+const TELEFONO_REGEX = /^[0-9]{10}$/;
+
+// 🔥 NUEVAS CONSTANTES PARA BLINDAR
+const SOLO_LETRAS_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+// Alfanumérico básico (letras, números, espacios, puntos, comas, guiones)
+const ALFANUMERICO_REGEX = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,#-]+$/;
+
+// 🔥 VALIDADOR ANTI-TRAMPAS (Bloquea espacios en blanco puros)
+export function noWhitespaceValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (typeof control.value === 'string') {
+      const isWhitespace = control.value.trim().length === 0;
+      return !isWhitespace ? null : { whitespace: true };
+    }
+    return null;
+  };
+}
 
 const VALORES_ROMANOS: ReadonlyArray<{ valor: number; simbolo: string }> = [
   { valor: 1000, simbolo: 'M' }, { valor: 900, simbolo: 'CM' },
@@ -169,7 +189,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     let cedula =
       ficha?.usuario?.cedula ||
       user?.cedula ||
-      user?.identificacion || 
+      user?.identificacion ||
       user?.numero_documento ||
       user?.usuario?.cedula ||
       user?.usuario?.identificacion ||
@@ -181,7 +201,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
         for (const p of sec.preguntas || []) {
           const codigo = (p.codigo_sistema || '').toUpperCase();
           const enunciado = (p.enunciado || '').toLowerCase();
-          
+
           const esCedula =
             codigo === 'CEDULA' ||
             codigo === 'REGISTRO_UNICO' ||
@@ -208,22 +228,22 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   });
 
   resumenRespuestas = computed<Record<string, string>>(() => {
-  const map: Record<string, string> = {};
-  void this.valormap();
-  // 🔥 getRawValue SÍ OBTIENE LOS CAMPOS BLOQUEADOS (Nombres, Cédula)
-  const valores = this.respuestasGroup.getRawValue();
-  const matricesValores = this.matricesGroup.getRawValue();
+    const map: Record<string, string> = {};
+    void this.valormap();
+    // 🔥 getRawValue SÍ OBTIENE LOS CAMPOS BLOQUEADOS (Nombres, Cédula)
+    const valores = this.respuestasGroup.getRawValue();
+    const matricesValores = this.matricesGroup.getRawValue();
 
-  for (const sec of this.secciones()) {
-    for (const p of sec.preguntas || []) {
-      map[p.id] = this.calcularTexto(p, valores, matricesValores);
-      for (const sub of this.getSubpreguntas(p.id)) {
-        map[sub.id] = this.calcularTexto(sub, valores, matricesValores);
+    for (const sec of this.secciones()) {
+      for (const p of sec.preguntas || []) {
+        map[p.id] = this.calcularTexto(p, valores, matricesValores);
+        for (const sub of this.getSubpreguntas(p.id)) {
+          map[sub.id] = this.calcularTexto(sub, valores, matricesValores);
+        }
       }
     }
-  }
-  return map;
-});
+    return map;
+  });
 
   private autosaveData: any = null;
   private respuestasBDCache: any[] = [];
@@ -240,27 +260,27 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
-  this.cargarPerfilUsuario();
-  this.cargarDatosEstudiante();
+    this.cargarPerfilUsuario();
+    this.cargarDatosEstudiante();
 
-  this.respuestasForm.valueChanges
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe(val => {
-      if (!this.esEditable()) return;
-      this.valormap.set(val.respuestas || {});
-      this.limpiarPreguntasOcultas();
-      this.recalcularTotalesFinancieros();
-    });
+    this.respuestasForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(val => {
+        if (!this.esEditable()) return;
+        this.valormap.set(val.respuestas || {});
+        this.limpiarPreguntasOcultas();
+        this.recalcularTotalesFinancieros();
+      });
 
-  this.respuestasForm.valueChanges
-    .pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
-    .subscribe(() => {
-      if (!this.esEditable()) return;
-      this.isSavingLocal.set(true);
-      this.persistirAutosave();
-      setTimeout(() => this.isSavingLocal.set(false), 500);
-    });
-}
+    this.respuestasForm.valueChanges
+      .pipe(debounceTime(400), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.esEditable()) return;
+        this.isSavingLocal.set(true);
+        this.persistirAutosave();
+        setTimeout(() => this.isSavingLocal.set(false), 500);
+      });
+  }
 
   // ---------- AUTOSAVE 24h POR FICHA ----------
 
@@ -348,7 +368,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     const apellidos = [p.primer_apellido, p.segundo_apellido].filter(Boolean).join(' ');
     const celular = p.numero_celular || 'No registrado';
     const correo = p.email_institucional || p.email || '';
-    
+
     let fechaNacimiento = '';
     if (p.fecha_nacimiento) {
       fechaNacimiento = new Date(p.fecha_nacimiento).toISOString().split('T')[0];
@@ -357,10 +377,10 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
     // Datos demográficos
     let sexoGestacion = p.sexo || 'No registrado';
     if (p.sexo === 'Mujer' && p.esta_embarazada) sexoGestacion += ' (En estado de gestación)';
-    
+
     const genero = p.genero || 'No registrado';
     const estadoCivil = p.estado_civil || 'No registrado';
-    
+
     let hijos = 'No';
     if (p.tiene_hijos) hijos = `Sí (Menores de 5 años: ${p.hijos_menores_5_anios || 0})`;
 
@@ -432,7 +452,7 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
 
         if (valorAInyectar !== null && valorAInyectar !== '') {
           ctrl.setValue(valorAInyectar, { emitEvent: false });
-          ctrl.disable({ emitEvent: false }); 
+          ctrl.disable({ emitEvent: false });
         }
       }
     }
@@ -444,21 +464,21 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   // ---------- NAVEGACIÓN DE PASOS ----------
 
   irAPaso(index: number): void {
-  if (!this.esEditable() || index <= this.seccionActualIndex()) {
-    this.seccionActualIndex.set(index);
-    this.guardarPasoEnLocal();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
+    if (!this.esEditable() || index <= this.seccionActualIndex()) {
+      this.seccionActualIndex.set(index);
+      this.guardarPasoEnLocal();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-  if (this.validarHastaSeccion(index)) {
-    this.seccionActualIndex.set(index);
-    this.guardarPasoEnLocal();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else {
-    this.toastService.show('Por favor, completa los campos obligatorios de las secciones anteriores antes de avanzar.', 'warning');
+    if (this.validarHastaSeccion(index)) {
+      this.seccionActualIndex.set(index);
+      this.guardarPasoEnLocal();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      this.toastService.show('Por favor, completa los campos obligatorios de las secciones anteriores antes de avanzar.', 'warning');
+    }
   }
-}
 
   siguiente(): void {
     if (this.validarSeccionActual()) {
@@ -481,97 +501,97 @@ export class EstudianteFichaComponent implements OnInit, OnDestroy {
   }
 
   private validarSeccionPorIndice(index: number): boolean {
-  if (!this.esEditable()) return true;
+    if (!this.esEditable()) return true;
 
-  const seccion = this.secciones()[index];
-  if (!seccion) return true;
+    const seccion = this.secciones()[index];
+    if (!seccion) return true;
 
-  let esValido = true;
+    let esValido = true;
 
-  if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
-    esValido = false;
-  }
+    if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+      esValido = false;
+    }
 
-  for (const preg of seccion.preguntas || []) {
-    if (!this.esPreguntaVisible(preg.id)) continue;
+    for (const preg of seccion.preguntas || []) {
+      if (!this.esPreguntaVisible(preg.id)) continue;
 
-    if (!this.validarPreguntaIndividual(preg)) esValido = false;
+      if (!this.validarPreguntaIndividual(preg)) esValido = false;
 
-    for (const sub of this.getSubpreguntas(preg.id)) {
-      if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
-        esValido = false;
+      for (const sub of this.getSubpreguntas(preg.id)) {
+        if (this.esPreguntaVisible(sub.id) && !this.validarPreguntaIndividual(sub)) {
+          esValido = false;
+        }
       }
     }
+
+    return esValido;
   }
 
-  return esValido;
-}
+  validarSeccionActual(): boolean {
+    if (this.esPasoResumen() || !this.esEditable()) return true;
 
-validarSeccionActual(): boolean {
-  if (this.esPasoResumen() || !this.esEditable()) return true;
+    const esValido = this.validarSeccionPorIndice(this.seccionActualIndex());
 
-  const esValido = this.validarSeccionPorIndice(this.seccionActualIndex());
-
-  if (!esValido) {
-    const seccionActual = this.secciones()[this.seccionActualIndex()];
-    if (seccionActual?.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
-      this.toastService.show(
-        'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
-        'error'
-      );
-    }
-  }
-
-  return esValido;
-}
-
-private validarHastaSeccion(index: number): boolean {
-  for (let i = 0; i < index; i++) {
-    if (!this.validarSeccionPorIndice(i)) return false;
-  }
-  return true;
-}
-seccionEstaCompleta(index: number): boolean {
-  if (!this.esEditable()) return true;
-
-  const seccion = this.secciones()[index];
-  if (!seccion) return true;
-
-  if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
-    return false;
-  }
-
-  for (const preg of seccion.preguntas || []) {
-    if (!this.esPreguntaVisible(preg.id)) continue;
-
-    if (!this.preguntaEstaCompleta(preg)) return false;
-
-    for (const sub of this.getSubpreguntas(preg.id)) {
-      if (this.esPreguntaVisible(sub.id) && !this.preguntaEstaCompleta(sub)) {
-        return false;
+    if (!esValido) {
+      const seccionActual = this.secciones()[this.seccionActualIndex()];
+      if (seccionActual?.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+        this.toastService.show(
+          'Los egresos no pueden ser mayores que los ingresos. Corrige los montos antes de continuar.',
+          'error'
+        );
       }
     }
+
+    return esValido;
   }
 
-  return true;
-}
+  private validarHastaSeccion(index: number): boolean {
+    for (let i = 0; i < index; i++) {
+      if (!this.validarSeccionPorIndice(i)) return false;
+    }
+    return true;
+  }
+  seccionEstaCompleta(index: number): boolean {
+    if (!this.esEditable()) return true;
 
-private preguntaEstaCompleta(preg: Pregunta): boolean {
-  const ctrl = this.respuestasGroup.get(preg.id);
-  if (ctrl && ctrl.invalid) return false;
+    const seccion = this.secciones()[index];
+    if (!seccion) return true;
 
-  if (preg.tipoCampo?.nombre === 'MATRIZ') {
-    const matGroup = this.matricesGroup.get(preg.id) as FormGroup;
-    if (matGroup && matGroup.invalid) return false;
+    if (seccion.tipo_seccion === 'FINANCIERA' && this.egresosExcedenIngresos()) {
+      return false;
+    }
+
+    for (const preg of seccion.preguntas || []) {
+      if (!this.esPreguntaVisible(preg.id)) continue;
+
+      if (!this.preguntaEstaCompleta(preg)) return false;
+
+      for (const sub of this.getSubpreguntas(preg.id)) {
+        if (this.esPreguntaVisible(sub.id) && !this.preguntaEstaCompleta(sub)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
-  if (preg.requiere_evidencia) {
-    const evidenciaCtrl = this.evidenciasGroup.get(preg.id);
-    if (evidenciaCtrl && evidenciaCtrl.invalid) return false;
-  }
+  private preguntaEstaCompleta(preg: Pregunta): boolean {
+    const ctrl = this.respuestasGroup.get(preg.id);
+    if (ctrl && ctrl.invalid) return false;
 
-  return true;
-}
+    if (preg.tipoCampo?.nombre === 'MATRIZ') {
+      const matGroup = this.matricesGroup.get(preg.id) as FormGroup;
+      if (matGroup && matGroup.invalid) return false;
+    }
+
+    if (preg.requiere_evidencia) {
+      const evidenciaCtrl = this.evidenciasGroup.get(preg.id);
+      if (evidenciaCtrl && evidenciaCtrl.invalid) return false;
+    }
+
+    return true;
+  }
   private validarPreguntaIndividual(preg: Pregunta): boolean {
     let esValido = true;
 
@@ -601,12 +621,12 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
   }
 
   private guardarPasoEnLocal(): void {
-  if (this.esEditable()) {
-    this.valormap.set(this.respuestasGroup.getRawValue());
-    this.recalcularTotalesFinancieros();
+    if (this.esEditable()) {
+      this.valormap.set(this.respuestasGroup.getRawValue());
+      this.recalcularTotalesFinancieros();
+    }
+    this.persistirAutosave();
   }
-  this.persistirAutosave();
-}
 
   // ---------- CARGA INICIAL ----------
 
@@ -626,7 +646,7 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
       .subscribe({
         next: ({ periodos, fichas, formularios, perfil }) => {
           this.datosCompletosPerfil = perfil; // Guardamos el perfil para la precarga
-          
+
           const pActivo = periodos.find(p => p.activo);
           this.periodoActivo.set(pActivo || null);
           this.misFichas.set(fichas);
@@ -683,7 +703,7 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
 
   volverALista(): void {
     if (this.isLoading() || this.enviando()) return;
-    
+
     this.vistaActual.set('LISTA');
     this.fichaActiva.set(null);
     this.formularioActivo.set(null);
@@ -696,7 +716,7 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
       matrices: this.fb.group({}),
       evidencias: this.fb.group({})
     });
-    this.cargarDatosEstudiante(); 
+    this.cargarDatosEstudiante();
   }
 
   evaluarPrecarga(fichas: FichaRevision[]): void {
@@ -879,10 +899,10 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
 
     preguntasTodas.forEach((p) => this.construirControlesPreguntas(p));
     this.aplicarRespuestasGuardadas(this.respuestasBDCache);
-    
+
     // ✅ LLAMAMOS A LA PRECARGA DE DATOS AQUÍ
     this.precargarCamposPerfil();
-    
+
     this.recalcularTotalesFinancieros();
 
     if (!this.esEditable()) {
@@ -966,7 +986,6 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
   construirControlesPreguntas(p: Pregunta): void {
     const isMultiple = p.tipoCampo?.nombre === 'SELECCION_MULTIPLE';
     const isMatriz = p.tipoCampo?.nombre === 'MATRIZ';
-    const isNumeric = p.tipoCampo?.nombre === 'NUMERICO';
 
     if (isMultiple) {
       if (!this.respuestasGroup.contains(p.id)) {
@@ -983,10 +1002,33 @@ private preguntaEstaCompleta(preg: Pregunta): boolean {
     } else if (isMatriz) {
       this.cargarEstructuraMatriz(p);
     } else {
-      const validators = p.es_obligatorio ? [Validators.required] : [];
-      if (isNumeric) {
-        validators.push(Validators.pattern(NUMERIC_REGEX));
-        validators.push(Validators.min(0));
+      const validators: ValidatorFn[] = [];
+
+      // 1. Si es obligatorio, requerimos valor Y que no sean puros espacios
+      if (p.es_obligatorio) {
+        validators.push(Validators.required, noWhitespaceValidator());
+      }
+
+      const tipo = p.tipoCampo?.nombre as string;
+
+      // 2. Blindaje por tipo de campo
+      if (tipo === 'NUMERICO') {
+        // Obliga formato decimal, no negativos, máximo 9,999,999
+        validators.push(Validators.pattern(NUMERIC_REGEX), Validators.min(0), Validators.max(9999999));
+      } else if (tipo === 'NUMERICO_ENTERO') {
+        validators.push(Validators.pattern(NUMERICO_ENTERO_REGEX), Validators.min(0), Validators.max(9999999));
+      } else if (tipo === 'CORREO') {
+        // Correo válido y máximo 100 caracteres
+        validators.push(Validators.email, Validators.maxLength(100));
+      } else if (tipo === 'TELEFONO') {
+        // Exactamente 10 dígitos
+        validators.push(Validators.pattern(TELEFONO_REGEX), Validators.maxLength(10));
+      } else if (tipo === 'CEDULA') {
+        // Tu validador estrella
+        validators.push(cedulaEcuatorianaValidator(), Validators.maxLength(10));
+      } else if (tipo === 'TEXTO') {
+        // 🔥 Limita el texto a 255 caracteres para que no te metan la Biblia entera
+        validators.push(Validators.maxLength(255), Validators.pattern(ALFANUMERICO_REGEX));
       }
 
       if (!this.respuestasGroup.contains(p.id)) {

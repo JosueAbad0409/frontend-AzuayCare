@@ -136,16 +136,86 @@ export class PeriodosComponent implements OnInit, OnDestroy {
         }
       });
   }
+  /**
+   * Calcula automáticamente las fechas y el nombre del próximo periodo 
+   * basándose en el último periodo registrado en el sistema.
+   */
+  private calcularSugerenciaFechas(): { nombre: string; inicio: string; fin: string } {
+    const lista = this.periodos();
+    
+    // Si no hay periodos, sugerimos desde el mes actual
+    if (!lista || lista.length === 0) {
+      const hoy = new Date();
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 5, 0); 
+      return { nombre: 'Nuevo Periodo', inicio: this.formatearFechaInput(hoy), fin: this.formatearFechaInput(fin) };
+    }
 
-  abrirFormularioSwal(periodo?: PeriodoMatricula): void {
+    // Buscamos el periodo con la fecha de fin más reciente
+    const ultimoPeriodo = lista.reduce((prev, current) => {
+      const fechaPrev = new Date(prev.fecha_fin || 0);
+      const fechaCurr = new Date(current.fecha_fin || 0);
+      return (fechaPrev > fechaCurr) ? prev : current;
+    });
+
+    const ultimaFechaFin = new Date(ultimoPeriodo.fecha_fin + 'T00:00:00');
+
+    // Sugerencia: Inicia el día 1 del MES SIGUIENTE al que terminó el último periodo
+    const sugInicio = new Date(ultimaFechaFin.getFullYear(), ultimaFechaFin.getMonth() + 1, 1);
+    
+    // Sugerencia: Termina el último día del mes, 4 meses después (ciclo de 5 meses)
+    const sugFin = new Date(sugInicio.getFullYear(), sugInicio.getMonth() + 5, 0);
+
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const nombreSugerido = `${meses[sugInicio.getMonth()]} - ${meses[sugFin.getMonth()]} ${sugInicio.getFullYear()}`;
+
+    return {
+      nombre: nombreSugerido,
+      inicio: this.formatearFechaInput(sugInicio),
+      fin: this.formatearFechaInput(sugFin)
+    };
+  }
+
+  private formatearFechaInput(d: Date): string {
+    const mes = (d.getMonth() + 1).toString().padStart(2, '0');
+    const dia = d.getDate().toString().padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  }
+  // 🔥 Evita que el usuario escriba más de 4 dígitos en el año (bloquea locuras como 555555)
+  limitarAnioInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.value) {
+      const partes = input.value.split('-'); // Formato YYYY-MM-DD
+      if (partes[0] && partes[0].length > 4) {
+        partes[0] = partes[0].slice(0, 4); // Corta a máximo 4 dígitos
+        input.value = partes.join('-');
+      }
+    }
+  }
+
+abrirFormularioSwal(periodo?: PeriodoMatricula): void {
     const isEditing = !!periodo;
     const titleText = isEditing ? 'Editar Periodo' : 'Registrar Nuevo Periodo';
     const confirmText = isEditing ? 'Actualizar' : 'Guardar Periodo';
 
-    const formatearFecha = (fecha?: string) => fecha ? fecha.split('T')[0] : '';
-    const fechaInicioVal = isEditing ? formatearFecha(periodo?.fecha_inicio) : '';
-    const fechaFinVal = isEditing ? formatearFecha(periodo?.fecha_fin) : '';
+    const formatearFechaStr = (fecha?: string) => fecha ? fecha.split('T')[0] : '';
+    
+    const sugerencia = !isEditing ? this.calcularSugerenciaFechas() : null;
+    
+    const nombreVal = isEditing ? periodo.nombre : sugerencia?.nombre;
+    const fechaInicioVal = isEditing ? formatearFechaStr(periodo?.fecha_inicio) : sugerencia?.inicio;
+    const fechaFinVal = isEditing ? formatearFechaStr(periodo?.fecha_fin) : sugerencia?.fin;
     const activoVal = isEditing && periodo?.activo ? 'checked' : '';
+
+    const helpBanner = !isEditing ? `
+      <div style="background: #eff6ff; color: #1e3a8a; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; border: 1px solid #bfdbfe; display: flex; align-items: flex-start; gap: 10px; text-align: left;">
+        <i class="fas fa-lightbulb" style="margin-top: 2px; color: #3b82f6;"></i>
+        <span><strong>Sugerencia inteligente:</strong> Hemos calculado estas fechas basándonos en el último periodo registrado para evitar cruces. Puedes modificarlas si lo necesitas.</span>
+      </div>
+    ` : '';
+
+    const anioActual = new Date().getFullYear();
+    const anioMinimo = anioActual - 5; 
+    const anioMaximo = anioActual + 10; 
 
     Swal.fire({
       title: titleText,
@@ -166,19 +236,27 @@ export class PeriodosComponent implements OnInit, OnDestroy {
             </div>
           </div>
 
+          ${helpBanner}
+
           <div class="swal-field-group">
             <label for="swal-nombre" class="swal-form-label">Nombre del Periodo *</label>
-            <input id="swal-nombre" type="text" class="swal-form-input" placeholder="Ej. Abril - Agosto 2026" value="${isEditing ? periodo.nombre : ''}">
+            <input id="swal-nombre" type="text" class="swal-form-input" placeholder="Ej. Abril - Agosto 2026" value="${nombreVal}">
           </div>
           
           <div class="swal-form-row">
             <div class="swal-form-col">
               <label for="swal-inicio" class="swal-form-label">Fecha de Inicio *</label>
-              <input id="swal-inicio" type="date" class="swal-form-input" value="${fechaInicioVal}">
+              <!-- 🔥 BLOQUEO ESTRICTO: min, max y oninput para prohibir más de 4 dígitos -->
+              <input id="swal-inicio" type="date" class="swal-form-input" value="${fechaInicioVal}" 
+                     min="${anioMinimo}-01-01" max="${anioMaximo}-12-31" 
+                     oninput="if(this.value.length > 10) { this.value = ''; }">
             </div>
             <div class="swal-form-col">
               <label for="swal-fin" class="swal-form-label">Fecha de Fin *</label>
-              <input id="swal-fin" type="date" class="swal-form-input" value="${fechaFinVal}">
+              <!-- 🔥 BLOQUEO ESTRICTO: min, max y oninput para prohibir más de 4 dígitos -->
+              <input id="swal-fin" type="date" class="swal-form-input" value="${fechaFinVal}" 
+                     min="${anioMinimo}-01-01" max="${anioMaximo}-12-31" 
+                     oninput="if(this.value.length > 10) { this.value = ''; }">
             </div>
           </div>
 
@@ -207,11 +285,38 @@ export class PeriodosComponent implements OnInit, OnDestroy {
           return false;
         }
         if (!fecha_inicio || !fecha_fin) {
-          Swal.showValidationMessage('Las fechas de inicio y fin son obligatorias.');
+          Swal.showValidationMessage('Las fechas son obligatorias y deben tener un año válido de 4 dígitos.');
           return false;
         }
-        if (new Date(fecha_inicio) > new Date(fecha_fin)) {
-          Swal.showValidationMessage('La fecha de inicio no puede ser mayor a la fecha de fin.');
+        
+        const dInicio = new Date(fecha_inicio + 'T00:00:00');
+        const dFin = new Date(fecha_fin + 'T00:00:00');
+
+        const yearInicio = dInicio.getFullYear();
+        const yearFin = dFin.getFullYear();
+        
+        if (yearInicio < anioMinimo || yearInicio > anioMaximo || yearFin < anioMinimo || yearFin > anioMaximo) {
+          Swal.showValidationMessage(`Por favor, ingresa un año válido (entre ${anioMinimo} y ${anioMaximo}).`);
+          return false;
+        }
+
+        if (dInicio >= dFin) {
+          Swal.showValidationMessage('La fecha de inicio debe ser anterior a la fecha de fin.');
+          return false;
+        }
+
+        // VALIDACIÓN ANTI-SOLAPAMIENTO
+        const solapado = this.periodos().find(p => {
+          if (isEditing && p.id === periodo.id) return false; 
+          
+          const pInicio = new Date(p.fecha_inicio.split('T')[0] + 'T00:00:00');
+          const pFin = new Date(p.fecha_fin.split('T')[0] + 'T00:00:00');
+          
+          return (dInicio <= pFin) && (dFin >= pInicio);
+        });
+
+        if (solapado) {
+          Swal.showValidationMessage(`Las fechas chocan con el periodo existente: "${solapado.nombre}".`);
           return false;
         }
 

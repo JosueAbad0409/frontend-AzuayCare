@@ -1332,20 +1332,10 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  agregarFilaMatriz(event: { preguntaId: string; texto: string; es_multiple: boolean }): void {
-    if (this.esSoloLectura()) return;
-    this.matricesService.createFila({
-      pregunta_id: event.preguntaId,
-      texto_fila: event.texto,
-      es_multiple: event.es_multiple
-    }).subscribe({
-      next: () => {
-        this.toastService.show('Fila agregada a la matriz.', 'success');
-        this.cargarMatrizDetalles(event.preguntaId);
-      },
-      error: (err: HttpErrorResponse) => this.toastService.show(this.extraerMensajeError(err, 'No se pudo agregar la fila.'), 'error')
-    });
-  }
+// ✅ ELIMINADO: Ya no usamos crear filas directamente
+// agregarFilaMatriz(event: { preguntaId: string; texto: string; es_multiple: boolean }): void {
+//   // Este método no se usa porque todo se guarda en guardarPregunta()
+// }
 
   // 🔧 CORREGIDO: recibe preguntaId como segundo parámetro (igual que eliminarFilaExistente),
   // porque el evento actualizarFila solo trae { filaId, es_multiple }, no el preguntaId.

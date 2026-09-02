@@ -116,23 +116,12 @@ export class CompletarPerfilComponent implements OnInit {
   readonly generos = ['Masculino', 'Femenino', 'LGBTIQ+', 'Prefiero no decirlo'];
   readonly estadosCiviles = ['Soltero/a', 'Casado/a', 'Divorciado/a', 'Viudo/a', 'Unión libre'];
   readonly etnias = ['Mestizo/a', 'Indígena', 'Afroecuatoriano/a', 'Montubio/a', 'Blanco/a', 'Mulato/a', 'Otro'];
-  
-  readonly opcionesEmbarazo = [
-    { value: 'no', label: 'No' }, { value: '1', label: 'Sí — 1 mes' }, { value: '2', label: 'Sí — 2 meses' },
-    { value: '3', label: 'Sí — 3 meses' }, { value: '4', label: 'Sí — 4 meses' }, { value: '5', label: 'Sí — 5 meses' },
-    { value: '6', label: 'Sí — 6 meses' }, { value: '7', label: 'Sí — 7 meses' }, { value: '8', label: 'Sí — 8 meses' },
-    { value: '9', label: 'Sí — 9 meses' }
-  ];
 
   private readonly nombreRegex = /^[a-zA-ZñÑáéíóúÁÉÍÓÚüÜ\s]+$/;
   readonly maxDateNacimiento: string;
   readonly minDateNacimiento: string;
   readonly perfilForm: FormGroup;
 
-  get esInstitucionalBloqueado(): boolean {
-    const email = this.authService.user()?.email || '';
-    return email.includes('tecazuay.edu.ec');
-  }
 
   constructor() {
     const hoy = new Date();
@@ -155,13 +144,9 @@ export class CompletarPerfilComponent implements OnInit {
       ciclo_id: [{ value: null as string | null, disabled: true }, Validators.required],
   
       sexo: ['', Validators.required],
-      mes_embarazo: ['no'],
       genero: ['', Validators.required],
       estado_civil: ['', Validators.required],
       
-      tiene_hijos: [null as boolean | null, Validators.required],
-      hijos_menores_5_anios: [''], 
-
       etnia: ['', Validators.required],
       pueblo_nacionalidad: [''],
       etnia_otra: [''],
@@ -177,7 +162,6 @@ export class CompletarPerfilComponent implements OnInit {
       canton_nacimiento_id: [{ value: '', disabled: true }],
     });
 
-    // Estado inicial estricto de UI/UX: los buscadores dependientes nacen inactivos/deshabilitados
     this.filtroProvinciaControl.disable({ emitEvent: false });
     this.filtroCantonControl.disable({ emitEvent: false });
 
@@ -220,14 +204,12 @@ export class CompletarPerfilComponent implements OnInit {
         this.perfilForm.patchValue({ 
           primer_nombre: this.sanitizeInput(user.primer_nombre || pNombre), 
           primer_apellido: this.sanitizeInput(user.primer_apellido || pApellido), 
-          email_institucional: esInstitucional ? email : '',
+          email_institucional: email, // 🔥 Queda así de limpio
           cedula: this.sanitizeInput(user.cedula || ''),
           numero_celular: this.sanitizeInput(user.numero_celular || ''),
           sexo: user.sexo || '',
           genero: user.genero || '',
           estado_civil: user.estado_civil || '',
-          tiene_hijos: user.tiene_hijos !== undefined ? user.tiene_hijos : null,
-          hijos_menores_5_anios: user.hijos_menores_5_anios || '',
           etnia: user.etnia || '',
           pueblo_nacionalidad: this.sanitizeInput(user.pueblo_nacionalidad || ''),
           etnia_otra: this.sanitizeInput(user.etnia_otra || ''),
@@ -425,19 +407,6 @@ export class CompletarPerfilComponent implements OnInit {
       controlDoc.updateValueAndValidity({ emitEvent: false });
     });
 
-    this.perfilForm.controls['sexo'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((sexo) => {
-      const mes = this.perfilForm.controls['mes_embarazo'];
-      if (sexo === 'Mujer') { mes.setValidators([Validators.required]); if (!mes.value) mes.setValue('no', { emitEvent: false }); }
-      else { mes.clearValidators(); mes.setValue('no', { emitEvent: false }); }
-      mes.updateValueAndValidity({ emitEvent: false });
-    });
-
-    this.perfilForm.controls['tiene_hijos'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tiene) => {
-      const menores = this.perfilForm.controls['hijos_menores_5_anios'];
-      if (tiene === true) menores.setValidators([Validators.required, Validators.min(0), Validators.max(20)]); else { menores.clearValidators(); menores.setValue('', { emitEvent: false }); }
-      menores.updateValueAndValidity({ emitEvent: false });
-    });
-
     this.perfilForm.controls['etnia'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((etnia) => {
       const pueblo = this.perfilForm.controls['pueblo_nacionalidad'];
       const etniaOtra = this.perfilForm.controls['etnia_otra'];
@@ -489,7 +458,7 @@ export class CompletarPerfilComponent implements OnInit {
             if (provs && provs.length > 0) {
               ctrlProv.enable({ emitEvent: false }); 
               ctrlProv.setValidators([Validators.required]);
-              this.filtroProvinciaControl.enable({ emitEvent: false }); // Desbloqueo síncrono UX del buscador
+              this.filtroProvinciaControl.enable({ emitEvent: false });
             } else { 
               ctrlProv.clearValidators(); 
               ctrlCan.clearValidators(); 
@@ -524,7 +493,7 @@ export class CompletarPerfilComponent implements OnInit {
             if (cants && cants.length > 0) {
               ctrlCan.enable({ emitEvent: false }); 
               ctrlCan.setValidators([Validators.required]);
-              this.filtroCantonControl.enable({ emitEvent: false }); // Desbloqueo síncrono UX del buscador
+              this.filtroCantonControl.enable({ emitEvent: false });
             } else { 
               ctrlCan.clearValidators(); 
               this.filtroCantonControl.disable({ emitEvent: false });
@@ -721,7 +690,6 @@ export class CompletarPerfilComponent implements OnInit {
       sexo: v.sexo, 
       genero: v.genero, 
       estado_civil: v.estado_civil, 
-      tiene_hijos: !!v.tiene_hijos,
       etnia: v.etnia,
       numero_celular: this.sanitizeInput(v.numero_celular),
       fecha_nacimiento: `${day}/${month}/${year}`, 
@@ -736,13 +704,11 @@ export class CompletarPerfilComponent implements OnInit {
     if (v.provincia_nacimiento_id) payload.provincia_nacimiento_id = v.provincia_nacimiento_id;
     if (v.canton_nacimiento_id) payload.canton_nacimiento_id = v.canton_nacimiento_id;
 
-    if (v.tiene_hijos) payload.hijos_menores_5_anios = Number(v.hijos_menores_5_anios);
     if (v.etnia && v.etnia.includes('Indígena')) payload.pueblo_nacionalidad = this.sanitizeInput(v.pueblo_nacionalidad);
     if (v.etnia === 'Otro') payload.etnia_otra = this.sanitizeInput(v.etnia_otra);
     if (v.segundo_nombre) payload.segundo_nombre = this.sanitizeInput(v.segundo_nombre);
     if (v.segundo_apellido) payload.segundo_apellido = this.sanitizeInput(v.segundo_apellido);
     if (v.email_institucional) payload.email_institucional = this.sanitizeInput(v.email_institucional);
-    if (v.sexo === 'Mujer') payload.esta_embarazada = (v.mes_embarazo !== 'no' && v.mes_embarazo !== '');
 
     this.usuarioService.completarPerfil(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {

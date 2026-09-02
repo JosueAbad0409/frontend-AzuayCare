@@ -1271,3 +1271,87 @@
     flex: 1 1 auto;
   }
 }
+
+/* ====================================================
+   ESTILOS PROFESIONALES PARA MAPA DE VULNERABILIDAD 
+   ==================================================== */
+.prof-conditions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.prof-condition-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.prof-icon-box {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.prof-content-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prof-header-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.prof-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.prof-stats-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.prof-count {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.prof-divider {
+  color: #cbd5e1;
+  font-size: 0.7rem;
+}
+
+.prof-pct {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.prof-track {
+  width: 100%;
+  height: 6px;
+  background-color: #f1f5f9;
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.prof-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}

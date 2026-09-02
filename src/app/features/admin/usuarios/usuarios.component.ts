@@ -97,13 +97,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly etnias = ['Mestizo/a', 'Indígena', 'Afroecuatoriano/a', 'Montubio/a', 'Blanco/a', 'Mulato/a', 'Otro'];
   readonly idiomas = ['Español', 'Kichwa', 'Shuar', 'Achuar', 'Cha´palaa', 'Awapit', 'Tsafiki', 'Inglés', 'Otro'];
 
-  readonly opcionesEmbarazo = [
-    { value: 'no', label: 'No está embarazada' }, { value: '1', label: 'Sí — 1 mes' }, { value: '2', label: 'Sí — 2 meses' },
-    { value: '3', label: 'Sí — 3 meses' }, { value: '4', label: 'Sí — 4 meses' }, { value: '5', label: 'Sí — 5 meses' },
-    { value: '6', label: 'Sí — 6 meses' }, { value: '7', label: 'Sí — 7 meses' }, { value: '8', label: 'Sí — 8 meses' },
-    { value: '9', label: 'Sí — 9 meses' }
-  ];
-
   private readonly nombreRegex = /^[a-zA-ZñÑáéíóúÁÉÍÓÚüÜ\s]+$/;
   readonly maxDateNacimiento: string;
   readonly minDateNacimiento: string;
@@ -115,9 +108,9 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     primer_apellido: 'identidad', segundo_apellido: 'identidad', email_institucional: 'identidad',
     numero_celular: 'identidad', rol_id: 'identidad',
     carrera_id: 'academico', ciclo_id: 'academico',
-    sexo: 'socioeconomico', mes_embarazo: 'socioeconomico', genero: 'socioeconomico', estado_civil: 'socioeconomico',
-    tiene_hijos: 'socioeconomico', hijos_menores_5_anios: 'socioeconomico', etnia: 'socioeconomico',
-    pueblo_nacionalidad: 'socioeconomico', etnia_otra: 'socioeconomico', idioma: 'socioeconomico', idioma_otro: 'socioeconomico',
+    sexo: 'socioeconomico', genero: 'socioeconomico', estado_civil: 'socioeconomico',
+    etnia: 'socioeconomico', pueblo_nacionalidad: 'socioeconomico', etnia_otra: 'socioeconomico', 
+    idioma: 'socioeconomico', idioma_otro: 'socioeconomico',
     fecha_nacimiento: 'socioeconomico', nacionalidad_id: 'socioeconomico', pais_nacimiento_id: 'socioeconomico',
     provincia_nacimiento_id: 'socioeconomico', canton_nacimiento_id: 'socioeconomico'
   };
@@ -252,12 +245,8 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       ciclo_id: [{ value: null as string | null, disabled: true }, Validators.required],
 
       sexo: ['', Validators.required],
-      mes_embarazo: ['no'],
       genero: ['', Validators.required],
       estado_civil: ['', Validators.required],
-
-      tiene_hijos: [null as boolean | null, Validators.required],
-      hijos_menores_5_anios: [''],
 
       etnia: ['', Validators.required],
       pueblo_nacionalidad: [''],
@@ -593,27 +582,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       if (ciclosFiltrados.length > 0) cicloControl.enable({ emitEvent: false }); else cicloControl.disable({ emitEvent: false });
     });
 
-    // Sexo -> estado de embarazo
-    this.edicionForm.controls['sexo'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((sexo) => {
-      const mes = this.edicionForm.controls['mes_embarazo'];
-      if (sexo === 'Mujer') {
-        mes.setValidators([Validators.required]);
-        if (!mes.value) mes.setValue('no', { emitEvent: false });
-      } else {
-        mes.clearValidators();
-        mes.setValue('no', { emitEvent: false });
-      }
-      mes.updateValueAndValidity({ emitEvent: false });
-    });
-
-    // Tiene hijos -> hijos menores de 5 años
-    this.edicionForm.controls['tiene_hijos'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tiene) => {
-      const menores = this.edicionForm.controls['hijos_menores_5_anios'];
-      if (tiene === true) menores.setValidators([Validators.required, Validators.min(0), Validators.max(20)]);
-      else { menores.clearValidators(); menores.setValue('', { emitEvent: false }); }
-      menores.updateValueAndValidity({ emitEvent: false });
-    });
-
     // Etnia -> pueblo / etnia otra
     this.edicionForm.controls['etnia'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((etnia) => {
       const pueblo = this.edicionForm.controls['pueblo_nacionalidad'];
@@ -762,8 +730,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       cedula: '', numero_celular: '', email_institucional: '',
       primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
       rol_id: '', carrera_id: null, ciclo_id: null,
-      sexo: '', mes_embarazo: 'no', genero: '', estado_civil: '',
-      tiene_hijos: null, hijos_menores_5_anios: '',
+      sexo: '', genero: '', estado_civil: '',
       etnia: '', pueblo_nacionalidad: '', etnia_otra: '',
       idioma: '', idioma_otro: '',
       fecha_nacimiento: '', nacionalidad_id: '', pais_nacimiento_id: '',
@@ -793,11 +760,8 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       segundo_apellido: this.sanitizeInput(u.segundo_apellido || ''),
       rol_id: u.rol?.id || u.rol_id || '',
       sexo: u.sexo || '',
-      mes_embarazo: u.esta_embarazada ? '1' : 'no',
       genero: u.genero || '',
       estado_civil: u.estado_civil || '',
-      tiene_hijos: u.tiene_hijos !== undefined ? !!u.tiene_hijos : null,
-      hijos_menores_5_anios: u.hijos_menores_5_anios || '',
       etnia: u.etnia || '',
       pueblo_nacionalidad: this.sanitizeInput(u.pueblo_nacionalidad || ''),
       etnia_otra: this.sanitizeInput(u.etnia_otra || ''),
@@ -899,15 +863,12 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       primer_apellido: this.sanitizeInput(v.primer_apellido),
       segundo_apellido: this.sanitizeInput(v.segundo_apellido),
       email_institucional: this.sanitizeInput(v.email_institucional),
+      numero_celular: this.sanitizeInput(v.numero_celular), // 🔥 ESTA ES LA LÍNEA QUE FALTABA
       carrera_id: v.carrera_id,
       ciclo_id: v.ciclo_id,
       sexo: v.sexo,
-      esta_embarazada: v.sexo === 'Mujer' && v.mes_embarazo !== 'no' && !!v.mes_embarazo,
       genero: v.genero,
-      numero_celular: this.sanitizeInput(v.numero_celular),
       estado_civil: v.estado_civil,
-      tiene_hijos: !!v.tiene_hijos,
-      hijos_menores_5_anios: v.tiene_hijos ? Number(v.hijos_menores_5_anios) : 0,
       etnia: v.etnia,
       pueblo_nacionalidad: v.etnia?.includes('Indígena') ? this.sanitizeInput(v.pueblo_nacionalidad) : null,
       etnia_otra: v.etnia === 'Otro' ? this.sanitizeInput(v.etnia_otra) : null,

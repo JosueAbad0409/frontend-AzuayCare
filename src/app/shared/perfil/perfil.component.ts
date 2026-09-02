@@ -283,19 +283,6 @@ export class PerfilComponent implements OnInit {
     return String(val);
   }
 
-  getBooleanDato(prop: string): string {
-    const data: any = this.datosCompletosEstudiante() || this.usuario();
-    if (!data) return 'No especificado';
-
-    const val = data[prop];
-    if (val === undefined || val === null || val === '') return 'No especificado';
-
-    if (val === false || val === 'false' || val === '0' || val === 0) {
-      return 'No';
-    }
-    return 'Sí';
-  }
-
   getEtniaDetalle(): string {
     const d = this.datosCompletosEstudiante();
     if (!d || !d.etnia) return 'No especificado';
@@ -303,13 +290,6 @@ export class PerfilComponent implements OnInit {
     if (d.pueblo_nacionalidad) texto += ` (${d.pueblo_nacionalidad})`;
     if (d.etnia_otra) texto += ` (${d.etnia_otra})`;
     return texto;
-  }
-
-  getEstadoEmbarazo(): string {
-    const d = this.datosCompletosEstudiante();
-    if (!d || (d.sexo !== 'Mujer' && d.sexo !== 'MUJER')) return 'N/A';
-    if (d.esta_embarazada === true) return 'En curso (Gestación)';
-    return 'No';
   }
 
   toggleEdicionCoordinador(): void {

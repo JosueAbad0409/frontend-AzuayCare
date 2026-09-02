@@ -42,6 +42,25 @@
       </div>
 
       <div class="filter-controls">
+        
+        <!-- Filtro por Periodo (NUEVO) -->
+        <div class="select-group">
+          <i class="fas fa-calendar select-icon" aria-hidden="true"></i>
+          <select 
+            [value]="filtroPeriodo()" 
+            (change)="onPeriodoChange($event)" 
+            class="filter-select"
+            aria-label="Filtrar por periodo académico"
+          >
+            <option value="TODOS">Todos los Periodos</option>
+            @for (p of periodos(); track p.id) {
+              <option [value]="p.id">
+                {{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}
+              </option>
+            }
+          </select>
+        </div>
+
         <!-- Filtro por Tipo -->
         <div class="select-group">
           <i class="fas fa-folder select-icon" aria-hidden="true"></i>

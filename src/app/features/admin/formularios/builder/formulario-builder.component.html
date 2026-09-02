@@ -416,9 +416,9 @@
               [filasExistentes]="pregunta.filasMatriz || []"
               [columnasExistentes]="pregunta.columnasMatriz || []"
               [readonly]="true"
-              (agregarFila)="agregarFilaMatriz($event)"
+              (guardarFilas)="onGuardarFilas($event)"
               (eliminarFila)="eliminarFilaExistente($event, pregunta.id)"
-              (agregarColumna)="agregarColumnaMatriz($event)"
+              (guardarColumnas)="onGuardarColumnas($event)"
               (eliminarColumna)="eliminarColumnaExistente($event, pregunta.id)"
               (actualizarFila)="actualizarFilaExistente($event, pregunta.id)">
             </app-matriz-builder>
