@@ -1,4 +1,7 @@
+login.component.html
+
 <main class="split-layout">
+  <!-- Panel Visual Izquierdo -->
   <section class="visual-pane" aria-hidden="true">
     <div class="visual-bg-container">
       <img src="images/tec-azuay-inicio-sesion.jpg" alt="" class="visual-bg-image" />
@@ -15,12 +18,12 @@
     </div>
   </section>
 
+  <!-- Panel de Formulario Derecho -->
   <section class="login-pane">
     <div class="pane-ambient-light"></div>
     <div class="watermark-symbol" aria-hidden="true">
       <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="20" y="20" width="160" height="160" rx="16" stroke="currentColor" stroke-width="2"
-          stroke-dasharray="8 8" />
+        <rect x="20" y="20" width="160" height="160" rx="16" stroke="currentColor" stroke-width="2" stroke-dasharray="8 8" />
         <line x1="40" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="2" />
         <line x1="40" y1="90" x2="120" y2="90" stroke="currentColor" stroke-width="2" />
         <line x1="40" y1="120" x2="140" y2="120" stroke="currentColor" stroke-width="2" />
@@ -36,15 +39,12 @@
       <article class="login-card">
         <div class="card-glow"></div>
         <header class="login-header">
-          <div class="logo-mark" aria-hidden="true">
-            <span>A</span>
-          </div>
           <h2 class="title">Tec Azuay<span class="text-accent">Care</span></h2>
           <p class="subtitle">Plataforma de Gestión Integral Estudiantil y Bienestar</p>
         </header>
 
         <div class="auth-box">
-          <!-- ✅ Pestañas de Navegación -->
+          <!-- Pestañas Tipo Segmented Control -->
           <div class="auth-tabs" [class.is-hidden]="isLoading()">
             <button type="button" (click)="toggleMode('login')" [class.active]="authMode() === 'login'">
               Iniciar Sesión
@@ -56,11 +56,16 @@
 
           <div class="auth-instruction">
             <span class="step-num">01</span>
-            @if (authMode() === 'login') {
-            <p>Ingresa con tu correo institucional (<strong>@tecazuay.edu.ec</strong>) o personal.</p>
-            } @else {
-            <p>Regístrate de forma segura para obtener acceso a la plataforma.</p>
-            }
+            <div>
+              @if (authMode() === 'login') {
+              <p>Ingresa con tu correo institucional (<strong>@tecazuay.edu.ec</strong>) o personal.</p>
+              } @else {
+              <p>Regístrate de forma segura para obtener acceso a la plataforma.</p>
+              }
+              <button type="button" class="inline-guide-link" (click)="openGuideModal()">
+                ¿Qué opción debo usar?
+              </button>
+            </div>
           </div>
 
           <!-- Alertas -->
@@ -92,9 +97,9 @@
           </div>
           }
 
-          <!-- ✅ Formulario de LOGIN -->
+          <!-- Formulario LOGIN -->
           @if (authMode() === 'login' && !isLoading()) {
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" class="local-auth-form">
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" class="local-auth-form" novalidate>
             <div class="form-group">
               <label for="login-email">Correo Electrónico</label>
               <input id="login-email" type="email" formControlName="email" placeholder="ejemplo@tecazuay.edu.ec"
@@ -116,16 +121,13 @@
                 <button type="button" class="toggle-password" (click)="showLoginPassword.set(!showLoginPassword())"
                   [attr.aria-label]="showLoginPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   @if (!showLoginPassword()) {
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
                   } @else {
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path
-                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                     <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                   }
@@ -140,9 +142,9 @@
           </form>
           }
 
-          <!-- ✅ Formulario de REGISTRO -->
+          <!-- Formulario REGISTRO -->
           @if (authMode() === 'register' && !isLoading()) {
-          <form [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()" class="local-auth-form">
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()" class="local-auth-form" novalidate>
             <div class="form-group">
               <label for="reg-email">Correo Electrónico</label>
               <input id="reg-email" type="email" formControlName="email" placeholder="ejemplo@tecazuay.edu.ec"
@@ -165,16 +167,13 @@
                   (click)="showRegisterPassword.set(!showRegisterPassword())"
                   [attr.aria-label]="showRegisterPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   @if (!showRegisterPassword()) {
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
                   } @else {
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path
-                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                     <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                   }
@@ -200,7 +199,7 @@
           </div>
 
           @if (isServerWarming()) {
-          <p class="text-xs text-muted" style="text-align: center; margin-top: 1rem; opacity: 0.7;">
+          <p class="text-xs text-muted" style="text-align: center; margin-top: 0.5rem; opacity: 0.7;">
             Preparando el servicio de autenticación…
           </p>
           }
@@ -229,11 +228,187 @@
         </div>
 
         <footer class="login-footer">
-          <a href="https://tecazuay.edu.ec" target="_blank" rel="noopener" class="help-link">
-            Conoce más sobre el Tec Azuay
-          </a>
+          <button type="button" class="help-btn" (click)="showHelpModal.set(true)">
+            <svg class="help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>¿Necesitas ayuda?</span>
+          </button>
+
+          <span class="footer-dot">•</span>
+
+          <button type="button" class="download-apk-btn" (click)="showQrModal.set(true)">
+            <svg class="phone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
+            </svg>
+            <span>Descarga la app móvil</span>
+          </button>
         </footer>
       </article>
     </div>
   </section>
+
+  <!-- Modal del Código QR -->
+  @if (showQrModal()) {
+  <div class="qr-modal-backdrop" (click)="showQrModal.set(false)" (keydown.escape)="showQrModal.set(false)" tabindex="-1">
+    <div class="qr-modal-card" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" (click)="$event.stopPropagation()">
+      <button type="button" class="qr-modal-close" (click)="showQrModal.set(false)" aria-label="Cerrar ventana">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      <div class="qr-modal-header">
+        <div class="qr-modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </div>
+        <h3 id="qr-modal-title">Aplicación Móvil AzuayCare</h3>
+        <p>Escanea el código QR con la cámara de tu celular o usa el enlace directo para descargar la APK.</p>
+      </div>
+
+      <div class="qr-image-box">
+        <img src="images/qr-apk movil.png" alt="Código QR para descargar la App Movil AzuayCare" class="qr-img" />
+      </div>
+
+      <a href="https://drive.google.com/file/d/1Z5AJYKMhloju31mOvulutIJbqw3jacr9/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-download-direct">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Descargar APK Directamente
+      </a>
+    </div>
+  </div>
+  }
+
+  <!-- Modal de Ayuda / FAQ Rediseñado -->
+  @if (showHelpModal()) {
+  <div class="qr-modal-backdrop" (click)="showHelpModal.set(false)" (keydown.escape)="showHelpModal.set(false)" tabindex="-1">
+    <div class="help-modal-card" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" (click)="$event.stopPropagation()">
+      <button type="button" class="qr-modal-close" (click)="showHelpModal.set(false)" aria-label="Cerrar ayuda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      <div class="help-modal-header">
+        <div class="help-modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <h3 id="help-modal-title">Preguntas Frecuentes</h3>
+        <p>Resuelve tus dudas rápidas para acceder a TecAzuayCare</p>
+      </div>
+
+      <div class="help-faq-list">
+        <details class="help-faq-item" open>
+          <summary>
+            <span class="faq-title-text">¿Qué correo debo usar?</span>
+            <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="faq-content">
+            <p>
+              Si eres estudiante, usa tu correo institucional (<strong>@tecazuay.edu.ec</strong>). Si aún no lo tienes pero usas Gmail, te recomendamos hacer clic en <strong>"Continuar con Google"</strong>. Si utilizas otro proveedor (Outlook, Hotmail, Yahoo), regístrate con la opción <strong>"Crear Cuenta"</strong>.
+            </p>
+          </div>
+        </details>
+
+        <details class="help-faq-item">
+          <summary>
+            <span class="faq-title-text">¿Olvidé mi contraseña, qué hago?</span>
+            <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="faq-content">
+            <p>
+              Por el momento, contacta a soporte académico o bienestar estudiantil para restablecerla. Próximamente habilitaremos la recuperación automática.
+            </p>
+          </div>
+        </details>
+
+        <details class="help-faq-item">
+          <summary>
+            <span class="faq-title-text">¿Puedo iniciar sesión con Google?</span>
+            <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="faq-content">
+            <p>
+              Sí, usa el botón <strong>"Continuar con Google"</strong> al final del formulario. Es la forma más rápida si ya tienes una cuenta de Google institucional o personal.
+            </p>
+          </div>
+        </details>
+
+        <details class="help-faq-item">
+          <summary>
+            <span class="faq-title-text">¿Cómo descargo la app móvil?</span>
+            <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="faq-content">
+            <p>
+              Haz clic en el enlace <strong>"Descarga la app móvil"</strong> en la parte inferior para escanear el código QR o descargar la APK directamente.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Modal de Guía por Pasos -->
+  @if (showGuideModal()) {
+  <div class="qr-modal-backdrop" (click)="showGuideModal.set(false)" (keydown.escape)="showGuideModal.set(false)" tabindex="-1">
+    <div class="guide-modal-card" role="dialog" aria-modal="true" aria-labelledby="guide-modal-title" (click)="$event.stopPropagation()">
+      <button type="button" class="qr-modal-close" (click)="showGuideModal.set(false)" aria-label="Cerrar ventana">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      <div class="guide-progress">
+        @for (step of guideSteps; track $index) {
+          <span class="guide-dot" [class.active]="$index === guideStep()"></span>
+        }
+      </div>
+
+      <div class="guide-content">
+        <h3 id="guide-modal-title">{{ guideSteps[guideStep()].title }}</h3>
+        <p>{{ guideSteps[guideStep()].text }}</p>
+
+        @if (guideStep() === guideSteps.length - 1) {
+          <button type="button" class="guide-inline-action" (click)="showGuideModal.set(false); showQrModal.set(true)">
+            Ver código QR ahora →
+          </button>
+        }
+      </div>
+
+      <div class="guide-nav">
+        <button type="button" class="guide-nav-btn secondary" (click)="prevGuideStep()" [disabled]="guideStep() === 0">
+          Anterior
+        </button>
+        @if (guideStep() < guideSteps.length - 1) {
+          <button type="button" class="guide-nav-btn primary" (click)="nextGuideStep()">
+            Siguiente
+          </button>
+        } @else {
+          <button type="button" class="guide-nav-btn primary" (click)="showGuideModal.set(false)">
+            Entendido
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+  }
 </main>

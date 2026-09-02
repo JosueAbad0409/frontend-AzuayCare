@@ -1,5 +1,8 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+login.component ts
+
+
+import { Component, OnInit, OnDestroy, inject, signal, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -8,29 +11,57 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule], // ✅ Agregamos ReactiveFormsModule
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly platformId = inject(PLATFORM_ID);
+  private retryTimeoutId?: ReturnType<typeof setTimeout>;
 
   isLoading = signal(false);
   error = signal('');
   successMessage = signal('');
   isServerWarming = signal(false);
   
-  // ✅ Controla qué formulario se muestra
+  // Controla qué formulario se muestra
   authMode = signal<'login' | 'register'>('login');
   
-  // ✅ Control de visibilidad de contraseña
+  // Control de visibilidad de contraseña
   showLoginPassword = signal(false);
   showRegisterPassword = signal(false);
 
-  // ✅ Formularios con validaciones estrictas
+  // Signals para controlar la visibilidad de modales
+  showQrModal = signal(false);
+  showHelpModal = signal(false);
+  showGuideModal = signal(false);
+  guideStep = signal(0);
+
+  // Pasos de la guía interactiva
+  guideSteps = [
+    {
+      title: '¿Tienes correo de Gmail o del Tec Azuay?',
+      text: 'Si tu correo termina en @gmail.com o es tu correo institucional @tecazuay.edu.ec, usa el botón "Continuar con Google" al final del formulario. Es más rápido y no necesitas crear una contraseña nueva.'
+    },
+    {
+      title: '¿Tienes otro tipo de correo?',
+      text: 'Si usas un correo distinto (Outlook, Hotmail, Yahoo, u otro que no sea de Google), regístrate con la pestaña "Crear Cuenta" usando ese correo y una contraseña. Luego inicia sesión normalmente con "Iniciar Sesión".'
+    },
+    {
+      title: '¿Ya tienes cuenta creada?',
+      text: 'Si ya te registraste antes con correo y contraseña, no necesitas volver a crear cuenta: solo ve a la pestaña "Iniciar Sesión" e ingresa tus datos.'
+    },
+    {
+      title: '¿Prefieres usar la app móvil?',
+      text: 'También puedes acceder desde tu celular. Al final de esta página encontrarás el botón "Descarga la app móvil aquí", donde podrás escanear el código QR o descargar la APK directamente.'
+    }
+  ];
+
+  // Formularios con validaciones estrictas
   loginForm: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]]
@@ -42,9 +73,17 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.loadGoogleScript();
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadGoogleScript();
+    }
     this.isServerWarming.set(true);
     this.auth.warmUpBackend().finally(() => this.isServerWarming.set(false));
+  }
+
+  ngOnDestroy(): void {
+    if (this.retryTimeoutId) {
+      clearTimeout(this.retryTimeoutId);
+    }
   }
 
   // ==========================================
@@ -59,6 +98,23 @@ export class LoginComponent implements OnInit {
     this.registerForm.reset();
   }
 
+  openGuideModal(): void {
+    this.guideStep.set(0);
+    this.showGuideModal.set(true);
+  }
+
+  nextGuideStep(): void {
+    if (this.guideStep() < this.guideSteps.length - 1) {
+      this.guideStep.update(s => s + 1);
+    }
+  }
+
+  prevGuideStep(): void {
+    if (this.guideStep() > 0) {
+      this.guideStep.update(s => s - 1);
+    }
+  }
+
   async onSubmitLogin() {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -68,7 +124,6 @@ export class LoginComponent implements OnInit {
     this.isLoading.set(true);
     this.error.set('');
     try {
-      // ⚠️ Asegúrate de tener este método en tu AuthService de Angular
       await this.auth.loginLocal(this.loginForm.value);
       await this.navigateBasedOnRole();
     } catch (err: any) {
@@ -87,10 +142,9 @@ export class LoginComponent implements OnInit {
     this.isLoading.set(true);
     this.error.set('');
     try {
-      // ⚠️ Asegúrate de tener este método en tu AuthService de Angular
       const res = await this.auth.registroLocal(this.registerForm.value);
       this.successMessage.set(res.message || 'Registro exitoso. Ahora inicia sesión.');
-      this.toggleMode('login'); // Volvemos al login tras registrar
+      this.toggleMode('login');
     } catch (err: any) {
       this.error.set(err?.error?.message || err?.message || 'Error al registrar la cuenta.');
     } finally {
@@ -133,7 +187,7 @@ export class LoginComponent implements OnInit {
       this.error.set('No se pudo inicializar el acceso con Google. Recarga la página.');
       return;
     }
-    setTimeout(() => this.waitForGoogleReady(retries - 1), 250);
+    this.retryTimeoutId = setTimeout(() => this.waitForGoogleReady(retries - 1), 250);
   }
 
   private initGsi(): void {
@@ -182,7 +236,7 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  // ✅ Redirección unificada para Google y Local
+  // Redirección unificada para Google y Local
   private async navigateBasedOnRole() {
     const rol = this.auth.user()?.rol;
     if ((rol === 'ESTUDIANTE' || rol === 'INVITADO') && !this.auth.perfilCompleto()) {
