@@ -211,6 +211,13 @@
 
   <!-- LISTA DE SECCIONES -->
   <main class="sections-list" aria-label="Lista de Secciones">
+    <!-- 🔥 INDICADOR DE CARGA PARA PLANTILLA Y NUEVAS SECCIONES -->
+    @if (isSavingSeccion()) {
+      <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-4 flex items-center justify-center gap-3 shadow-sm animate-pulse w-full box-border">
+        <i class="fas fa-circle-notch fa-spin text-xl text-blue-600"></i>
+        <span class="font-bold text-sm">Construyendo sección y preguntas... Por favor espera.</span>
+      </div>
+    }
     @for (seccion of secciones(); track seccion.id || $index; let i = $index) {
     <div class="section-card">
       <div class="section-header cursor-pointer" (click)="toggleSeccionColapso(seccion.id)">

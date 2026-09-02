@@ -42,13 +42,13 @@ export class FormularioBuilderComponent implements OnInit {
   // ✅ ViewChild para matriz-builder
   @ViewChild('matrizBuilder') matrizBuilder?: MatrizBuilderComponent;
 
+  // 🔥 ACTUALIZADO: Rangos predeterminados con tus QUINTILES
   private readonly RANGOS_BALANCE_PREDETERMINADOS = [
-    { variable_calculo: 'BALANCE', nombre: 'Crítico / Déficit', valor_min: 0, valor_max: 0, es_vulnerable: true, orden: 1 },
-    { variable_calculo: 'BALANCE', nombre: 'Vulnerable', valor_min: 1, valor_max: 200, es_vulnerable: true, orden: 2 },
-    { variable_calculo: 'BALANCE', nombre: 'Medio bajo', valor_min: 201, valor_max: 500, es_vulnerable: false, orden: 3 },
-    { variable_calculo: 'BALANCE', nombre: 'Medio', valor_min: 501, valor_max: 1000, es_vulnerable: false, orden: 4 },
-    { variable_calculo: 'BALANCE', nombre: 'Medio alto', valor_min: 1001, valor_max: 2000, es_vulnerable: false, orden: 5 },
-    { variable_calculo: 'BALANCE', nombre: 'Alto / Holgado', valor_min: 2001, valor_max: 999999, es_vulnerable: false, orden: 6 },
+    { variable_calculo: 'BALANCE', nombre: 'QUINTIL 1', valor_min: 0, valor_max: 300, es_vulnerable: true, orden: 1 },
+    { variable_calculo: 'BALANCE', nombre: 'QUINTIL 2', valor_min: 301, valor_max: 520, es_vulnerable: true, orden: 2 },
+    { variable_calculo: 'BALANCE', nombre: 'QUINTIL 3', valor_min: 521, valor_max: 800, es_vulnerable: false, orden: 3 },
+    { variable_calculo: 'BALANCE', nombre: 'QUINTIL 4', valor_min: 801, valor_max: 1500, es_vulnerable: false, orden: 4 },
+    { variable_calculo: 'BALANCE', nombre: 'QUINTIL 5', valor_min: 1501, valor_max: 99999, es_vulnerable: false, orden: 5 },
   ];
 
   private readonly SWAL_CUSTOM_CLASS = {
@@ -351,6 +351,7 @@ export class FormularioBuilderComponent implements OnInit {
       const tipoTexto = this.tiposCampo().find(t => t.nombre === 'TEXTO')?.id || this.tiposCampo()[0].id;
       const tipoFecha = this.tiposCampo().find(t => t.nombre === 'FECHA')?.id || tipoTexto;
 
+      // 🔥 ACTUALIZADO: Aquí quité la pregunta del embarazo y los hijos
       const preguntasPlantilla = [
         { enunciado: 'Número de Cédula o Pasaporte', tipo_campo_id: tipoTexto },
         { enunciado: 'Nombres Completos', tipo_campo_id: tipoTexto },
@@ -360,10 +361,9 @@ export class FormularioBuilderComponent implements OnInit {
         { enunciado: 'Fecha de Nacimiento', tipo_campo_id: tipoFecha },
         { enunciado: 'Nacionalidad', tipo_campo_id: tipoTexto },
         { enunciado: 'País, Provincia y Ciudad de Nacimiento', tipo_campo_id: tipoTexto },
-        { enunciado: 'Sexo y Estado de Gestación', tipo_campo_id: tipoTexto },
+        { enunciado: 'Sexo biológico', tipo_campo_id: tipoTexto },
         { enunciado: 'Género', tipo_campo_id: tipoTexto },
         { enunciado: 'Estado Civil', tipo_campo_id: tipoTexto },
-        { enunciado: '¿Tiene Hijos? (Menores de 5 años)', tipo_campo_id: tipoTexto },
         { enunciado: 'Etnia / Pueblo o Nacionalidad', tipo_campo_id: tipoTexto },
         { enunciado: 'Idioma(s)', tipo_campo_id: tipoTexto }
       ];
@@ -1331,11 +1331,6 @@ export class FormularioBuilderComponent implements OnInit {
       next: (columnas) => this.secciones.update(secs => secs.map(s => ({ ...s, preguntas: s.preguntas?.map(p => p.id === preguntaId ? { ...p, columnasMatriz: columnas } : p) })))
     });
   }
-
-// ✅ ELIMINADO: Ya no usamos crear filas directamente
-// agregarFilaMatriz(event: { preguntaId: string; texto: string; es_multiple: boolean }): void {
-//   // Este método no se usa porque todo se guarda en guardarPregunta()
-// }
 
   // 🔧 CORREGIDO: recibe preguntaId como segundo parámetro (igual que eliminarFilaExistente),
   // porque el evento actualizarFila solo trae { filaId, es_multiple }, no el preguntaId.
