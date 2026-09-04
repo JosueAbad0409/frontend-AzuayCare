@@ -8,6 +8,12 @@
       <p class="text-sm text-slate-500 mt-1">
         Administración del directorio general, asignación de coordinadores por carrera e identidades socioeconómicas.
       </p>
+
+      <!-- AVISO MODO CONSULTA PARA COORDINADOR -->
+      <div *ngIf="esCoordinadorCarrera()" class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+        <i class="fas fa-eye text-amber-600"></i>
+        <span>Acceso en <strong>Modo Solo Consulta</strong> para la carrera: <strong>{{ carreraCoordinadorNombre() || 'Carrera Asignada' }}</strong>.</span>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
@@ -18,7 +24,9 @@
         <i class="fas fa-filter-circle-xmark text-slate-400"></i> Limpiar Filtros
       </button>
 
+      <!-- BOTÓN ASIGNAR SOLO VISIBLE PARA ADMINISTRADORES / BIENESTAR -->
       <button
+        *ngIf="!esCoordinadorCarrera()"
         (click)="abrirModalAsignar()"
         [disabled]="isLoading() || isSaving()"
         class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm disabled:opacity-50">
@@ -34,11 +42,11 @@
   </div>
 
   <ng-container *ngIf="!isLoading()">
-    <!-- TABLA 1: DIRECTORIO COMPLETO DE USUARIOS -->
+    <!-- TABLA 1: DIRECTORIO DE USUARIOS DE LA CARRERA -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
         <h2 class="font-bold text-slate-800 flex items-center gap-2">
-          <i class="fas fa-address-book text-violet-600"></i> Directorio General de Usuarios
+          <i class="fas fa-address-book text-violet-600"></i> Directivo de Estudiantes / Usuarios
         </h2>
         <span class="text-xs font-semibold px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full">
           {{ usuariosFiltrados().length }} Registros
@@ -86,9 +94,10 @@
               <td class="p-2">
                 <select
                   [value]="filterRol()"
+                  [disabled]="esCoordinadorCarrera()"
                   (change)="onColumnFilterInput('rol', $event)"
-                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-violet-500 outline-none bg-white">
-                  <option value="">Todos los Roles</option>
+                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-violet-500 outline-none bg-white disabled:bg-slate-100 disabled:text-slate-600 font-medium">
+                  <option *ngIf="!esCoordinadorCarrera()" value="">Todos los Roles</option>
                   <option *ngFor="let rol of rolesDisponibles()" [value]="rol">{{ rol }}</option>
                 </select>
               </td>
@@ -97,8 +106,9 @@
                   type="text"
                   placeholder="Buscar carrera..."
                   [value]="filterCarrera()"
+                  [disabled]="esCoordinadorCarrera()"
                   (input)="onColumnFilterInput('carrera', $event)"
-                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-violet-500 outline-none">
+                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-violet-500 outline-none disabled:bg-slate-100 disabled:text-slate-500">
               </td>
               <td class="p-2">
                 <select
@@ -141,19 +151,32 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-2">
+                  <!-- BOTÓN EDITAR -->
                   <button
                     (click)="abrirModalEditar(u)"
                     [disabled]="cargandoUsuarioEdicion()"
-                    title="Editar datos socioeconómicos y perfil"
-                    class="p-1.5 text-violet-600 hover:text-violet-800 hover:bg-violet-50 rounded transition-colors disabled:opacity-40">
-                    <i class="fas" [ngClass]="cargandoUsuarioEdicion() ? 'fa-circle-notch fa-spin' : 'fa-user-pen'"></i>
+                    [title]="esCoordinadorCarrera() ? 'Ver ficha e información socioeconómica' : 'Editar datos socioeconómicos y perfil'"
+                    class="p-1.5 rounded transition-colors disabled:opacity-40"
+                    [ngClass]="esCoordinadorCarrera() ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' : 'text-violet-600 hover:text-violet-800 hover:bg-violet-50'">
+                    <i class="fas" [ngClass]="cargandoUsuarioEdicion() ? 'fa-circle-notch fa-spin' : (esCoordinadorCarrera() ? 'fa-eye' : 'fa-user-pen')"></i>
                   </button>
+
+                  <!-- BOTÓN DESACTIVAR (Si está activo) -->
                   <button
-                    *ngIf="!u.fecha_desactivacion"
+                    *ngIf="!u.fecha_desactivacion && !esCoordinadorCarrera()"
                     (click)="eliminarUsuario(u.id)"
                     title="Desactivar usuario"
                     class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
                     <i class="fas fa-user-minus"></i>
+                  </button>
+
+                  <!-- 🟢 BOTÓN REACTIVAR (Si está inactivo) -->
+                  <button
+                    *ngIf="u.fecha_desactivacion && !esCoordinadorCarrera()"
+                    (click)="reactivarUsuario(u.id)"
+                    title="Reactivar usuario"
+                    class="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded transition-colors">
+                    <i class="fas fa-user-check"></i>
                   </button>
                 </div>
               </td>
@@ -161,7 +184,7 @@
             <tr *ngIf="usuariosFiltrados().length === 0">
               <td colspan="7" class="p-8 text-center text-slate-400">
                 <i class="fas fa-users-slash text-3xl mb-2"></i>
-                <p>No se encontraron usuarios con los criterios de búsqueda especificados.</p>
+                <p>No se encontraron alumnos con los criterios especificados para tu carrera.</p>
               </td>
             </tr>
           </tbody>
@@ -188,7 +211,7 @@
               <th class="p-3">Carrera Asignada</th>
               <th class="p-3">Fecha Inicio</th>
               <th class="p-3">Fecha Fin</th>
-              <th class="p-3 text-center">Acciones</th>
+              <th class="p-3 text-center" *ngIf="!esCoordinadorCarrera()">Acciones</th>
             </tr>
             <tr class="bg-slate-50 border-b border-slate-200">
               <td class="p-2">
@@ -204,17 +227,18 @@
                   type="text"
                   placeholder="Buscar carrera..."
                   [value]="filterAsigCarrera()"
+                  [disabled]="esCoordinadorCarrera()"
                   (input)="onColumnFilterInput('asigCarrera', $event)"
-                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none">
+                  class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-slate-100 disabled:text-slate-500">
               </td>
-              <td class="p-2" colspan="2">
+              <td class="p-2" [attr.colspan]="esCoordinadorCarrera() ? 2 : 2">
                 <input
                   type="date"
                   [value]="filterAsigFecha()"
                   (input)="onColumnFilterInput('asigFecha', $event)"
                   class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
               </td>
-              <td class="p-2"></td>
+              <td class="p-2" *ngIf="!esCoordinadorCarrera()"></td>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-600">
@@ -233,7 +257,7 @@
                 <span *ngIf="a.fecha_fin">{{ a.fecha_fin | date:'dd/MM/yyyy' }}</span>
                 <span *ngIf="!a.fecha_fin" class="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">Vigente</span>
               </td>
-              <td class="p-3 text-center">
+              <td class="p-3 text-center" *ngIf="!esCoordinadorCarrera()">
                 <button
                   (click)="desasignar(a.usuario_id, a.carrera_id)"
                   title="Remover asignación de coordinador"
@@ -243,7 +267,7 @@
               </td>
             </tr>
             <tr *ngIf="asignacionesFiltradas().length === 0">
-              <td colspan="5" class="p-8 text-center text-slate-400">
+              <td [attr.colspan]="esCoordinadorCarrera() ? 4 : 5" class="p-8 text-center text-slate-400">
                 <i class="fas fa-folder-open text-3xl mb-2"></i>
                 <p>No se encontraron asignaciones de coordinación activas.</p>
               </td>
@@ -255,13 +279,10 @@
   </ng-container>
 </div>
 
-<!-- ========================================================== -->
-<!--  MODAL DE EDICIÓN NATIVO (Reactive Forms) - Reemplaza SweetAlert2  -->
-<!-- ========================================================== -->
+<!-- MODAL DE EDICIÓN NATIVO -->
 <div *ngIf="modalEdicionAbierto()" class="edit-modal-overlay" (click)="cerrarModalEdicion()">
   <div class="edit-modal-panel" (click)="$event.stopPropagation()">
 
-    <!-- Cabecera con datos del usuario -->
     <header class="edit-modal-header">
       <div class="edit-modal-avatar">
         {{ (usuarioEditando()?.primer_nombre?.[0] || 'U') }}{{ (usuarioEditando()?.primer_apellido?.[0] || '') }}
@@ -286,6 +307,11 @@
       </button>
     </header>
 
+    <div *ngIf="esCoordinadorCarrera()" class="mx-6 mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold flex items-center gap-2">
+      <i class="fas fa-lock text-blue-600"></i>
+      <span>Visualización en modo lectura. No es posible guardar modificaciones en la información del estudiante.</span>
+    </div>
+
     @if (errorEdicion()) {
     <div class="edit-alert-error shake-error">
       <i class="fas fa-exclamation-triangle mt-0.5"></i>
@@ -293,7 +319,6 @@
     </div>
     }
 
-    <!-- Tabs -->
     <nav class="edit-tabs">
       <button type="button" (click)="cambiarTab('identidad')" class="edit-tab-btn" [class.active]="tabActivo() === 'identidad'">
         <i class="fas fa-id-card"></i> Identidad Base
@@ -308,7 +333,6 @@
 
     <form [formGroup]="edicionForm" (ngSubmit)="guardarEdicion()" class="edit-modal-body" novalidate>
 
-      <!-- TAB 1: IDENTIDAD BASE -->
       <section *ngIf="tabActivo() === 'identidad'" class="edit-tab-panel">
         <div class="edit-section-title"><i class="fas fa-user-gear"></i> Datos de Registro Principal</div>
 
@@ -376,7 +400,6 @@
         </div>
       </section>
 
-      <!-- TAB 2: ACADÉMICO -->
       <section *ngIf="tabActivo() === 'academico'" class="edit-tab-panel">
         <div class="edit-section-title"><i class="fas fa-graduation-cap"></i> Ubicación Académica Institucional</div>
 
@@ -399,7 +422,6 @@
         </div>
       </section>
 
-      <!-- TAB 3: SOCIOECONÓMICO Y UBICACIÓN -->
       <section *ngIf="tabActivo() === 'socioeconomico'" class="edit-tab-panel">
         <div class="edit-section-title"><i class="fas fa-address-card"></i> Demografía y Estado Personal</div>
 
@@ -531,9 +553,10 @@
 
       <footer class="edit-modal-footer">
         <button type="button" (click)="cerrarModalEdicion()" [disabled]="guardandoEdicion()" class="edit-btn-secondary">
-          <i class="fas fa-xmark"></i> Cancelar
+          <i class="fas fa-xmark"></i> {{ esCoordinadorCarrera() ? 'Cerrar' : 'Cancelar' }}
         </button>
-        <button type="submit" [disabled]="guardandoEdicion()" class="edit-btn-primary">
+
+        <button *ngIf="!esCoordinadorCarrera()" type="submit" [disabled]="guardandoEdicion()" class="edit-btn-primary">
           @if (guardandoEdicion()) { <i class="fas fa-circle-notch fa-spin"></i> Guardando... }
           @else { <i class="fas fa-check-circle"></i> Guardar Cambios }
         </button>

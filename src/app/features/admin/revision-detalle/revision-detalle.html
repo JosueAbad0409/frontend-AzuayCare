@@ -21,11 +21,13 @@
       </div>
     </div>
     <div class="header-right">
-      <button type="button" class="btn btn-export-pdf" (click)="exportarPdf()"
-        [disabled]="exportandoPdf() || isLoading()" aria-label="Exportar ficha a PDF">
-        <i class="fas" [ngClass]="exportandoPdf() ? 'fa-spinner fa-spin' : 'fa-file-pdf'" aria-hidden="true"></i>
-        <span>Exportar PDF</span>
-      </button>
+      @if (!esCoordinadorCarrera()) {
+        <button type="button" class="btn btn-export-pdf" (click)="exportarPdf()"
+          [disabled]="exportandoPdf() || isLoading()" aria-label="Exportar ficha a PDF">
+          <i class="fas" [ngClass]="exportandoPdf() ? 'fa-spinner fa-spin' : 'fa-file-pdf'" aria-hidden="true"></i>
+          <span>Exportar PDF</span>
+        </button>
+      }
 
       <span class="estado-badge" [attr.data-estado]="ficha()!.estado_ficha" role="status">
         {{ ficha()!.estado_ficha === 'ENVIADA' ? 'Por Validar' : ficha()!.estado_ficha }}
@@ -49,7 +51,6 @@
     @if (tabActiva() === 'DETALLE') {
     <div class="student-card">
       <div class="student-main">
-        <!-- AVATAR 150PX CON OVERLAY FLOTANTE HD -->
         <div class="student-avatar-container">
           <div class="student-avatar">
             @if (ficha()?.usuario?.foto_url && !imageError()) {
@@ -231,7 +232,19 @@
     }
     }
 
-    @if (puedeRevisar()) {
+    @if (esCoordinadorCarrera()) {
+    <div class="review-panel locked-panel">
+      <div class="locked-content">
+        <i class="fas fa-lock locked-icon" aria-hidden="true"></i>
+        <div>
+          <p class="locked-title">Modo Solo Consulta</p>
+          <p class="locked-desc">
+            Como Coordinador de Carrera posees acceso de solo lectura. No puedes cambiar estados, descargar PDF ni habilitar edición.
+          </p>
+        </div>
+      </div>
+    </div>
+    } @else if (puedeRevisar()) {
     <div class="review-panel">
       <label class="form-label" for="txt-comentario">Comentario de Revisión / Justificación</label>
       <textarea id="txt-comentario" class="form-control" rows="3" [value]="comentario()"

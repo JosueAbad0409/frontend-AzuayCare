@@ -288,7 +288,8 @@
         <img src="/images/qr-apk movil.png" alt="Código QR para descargar la App Movil AzuayCare" class="qr-img" />
       </div>
 
-      <a href="https://drive.google.com/file/d/1Z5AJYKMhloju31mOvulutIJbqw3jacr9/view?usp=sharing" target="_blank"
+      <!-- Enlace actualizado -->
+      <a href="https://drive.google.com/file/d/1jHXu8uyAo9MiLDt8NUNR7wPqZRuZs7j8/view?usp=sharing" target="_blank"
         rel="noopener noreferrer" class="btn-download-direct">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -430,15 +431,15 @@
         <button type="button" class="guide-nav-btn secondary" (click)="prevGuideStep()" [disabled]="guideStep() === 0">
           Anterior
         </button>
-        @if (guideStep() < guideSteps.length - 1) { <button type="button" class="guide-nav-btn primary"
-          (click)="nextGuideStep()">
+        @if (guideStep() < guideSteps.length - 1) {
+        <button type="button" class="guide-nav-btn primary" (click)="nextGuideStep()">
           Siguiente
-          </button>
-          } @else {
-          <button type="button" class="guide-nav-btn primary" (click)="showGuideModal.set(false)">
-            Entendido
-          </button>
-          }
+        </button>
+        } @else {
+        <button type="button" class="guide-nav-btn primary" (click)="showGuideModal.set(false)">
+          Entendido
+        </button>
+        }
       </div>
     </div>
   </div>

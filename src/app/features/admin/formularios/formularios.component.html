@@ -43,7 +43,7 @@
 
       <div class="filter-controls">
         
-        <!-- Filtro por Periodo (NUEVO) -->
+        <!-- Filtro por Periodo -->
         <div class="select-group">
           <i class="fas fa-calendar select-icon" aria-hidden="true"></i>
           <select 
@@ -52,9 +52,9 @@
             class="filter-select"
             aria-label="Filtrar por periodo académico"
           >
-            <option value="TODOS">Todos los Periodos</option>
+            <option value="TODOS" [selected]="filtroPeriodo() === 'TODOS'">Todos los Periodos</option>
             @for (p of periodos(); track p.id) {
-              <option [value]="p.id">
+              <option [value]="p.id" [selected]="filtroPeriodo() === p.id">
                 {{ p.nombre }} {{ p.activo ? '(ACTIVO)' : '' }}
               </option>
             }

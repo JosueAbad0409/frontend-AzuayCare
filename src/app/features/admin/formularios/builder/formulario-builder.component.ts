@@ -52,12 +52,11 @@ export class FormularioBuilderComponent implements OnInit {
   ];
 
   private readonly SWAL_CUSTOM_CLASS = {
-    popup: 'custom-swal-popup',
-    confirmButton: 'custom-swal-confirm',
-    cancelButton: 'custom-swal-cancel',
-    title: 'custom-swal-title',
-    denyButton: 'custom-swal-confirm-danger'
-  };
+  popup: 'custom-swal-popup',
+  confirmButton: 'custom-swal-confirm',
+  cancelButton: 'custom-swal-cancel',
+  title: 'custom-swal-title'
+};
 
   // ✅ Properties para guardar datos de matriz
   private filasGuardar: any[] = [];
@@ -431,6 +430,7 @@ export class FormularioBuilderComponent implements OnInit {
       </div>
     `,
       showCancelButton: true,
+      showDenyButton: false,
       focusConfirm: false,
       confirmButtonText: '<i class="fas fa-save"></i> Guardar Sección',
       cancelButtonText: '<i class="fas fa-times"></i> Cancelar',

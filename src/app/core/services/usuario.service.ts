@@ -33,6 +33,10 @@ export class UsuarioService {
     return this.updateUsuario(id, dto);
   }
 
+  reactivar(id: string): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${this.apiUrl}/${id}/reactivar`, {});
+  }
+
   deleteUsuario(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
@@ -49,7 +53,6 @@ export class UsuarioService {
     return this.http.patch<any>(`${this.apiUrl}/perfil/completar`, payload);
   }
 
-  // ✅ Firma completa para llamadas administrativas desde usuarios.component.ts
   completarPerfilEstudiante(usuarioId: string, rol: string, dto: CompletarPerfilDto | any): Observable<any> {
     const params = new HttpParams().set('rol', rol);
     return this.http.post<any>(`${this.apiUrl}/${usuarioId}/completar-perfil`, dto, { params });

@@ -3,7 +3,6 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { perfilCompletoGuard } from './core/guards/perfil-completo.guard';
 
-
 export const routes: Routes = [
   {
     path: '',
@@ -14,7 +13,6 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent)
   },
-
   {
     path: 'completar-perfil',
     loadComponent: () =>
@@ -75,12 +73,13 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
-        loadComponent: () => import('./features/admin/usuarios/usuarios.component').then(m => m.UsuariosComponent)
+        loadComponent: () => import('./features/admin/usuarios/usuarios.component').then(m => m.UsuariosComponent),
+        canActivate: [roleGuard(['COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'])]
       },
       {
         path: 'prioridad-atencion',
         loadComponent: () => import('./features/admin/prioridad-atencion/prioridad-atencion').then(m => m.PrioridadAtencionComponent),
-        canActivate: [roleGuard(['COORDINADOR_BIENESTAR'])]
+        canActivate: [roleGuard(['COORDINADOR_BIENESTAR', 'COORDINADOR_CARRERA'])]
       },
       {
         path: 'perfil',

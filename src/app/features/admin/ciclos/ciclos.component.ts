@@ -127,7 +127,6 @@ export class CiclosComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Retorna lista procesada de carreras asociadas a un ciclo */
   getCarrerasLista(ciclo: Ciclo): { id: string; nombre: string }[] {
     return (ciclo.ciclosCarreras || [])
       .filter((cc) => cc.carrera?.nombre)
@@ -228,7 +227,6 @@ export class CiclosComponent implements OnInit, OnDestroy {
           }
         };
 
-        // Escucha cambios individuales en cada checkbox
         container?.addEventListener('change', (e: Event) => {
           const target = e.target as HTMLInputElement;
           if (target && target.classList.contains('swal-carrera-check')) {
@@ -241,7 +239,6 @@ export class CiclosComponent implements OnInit, OnDestroy {
           }
         });
 
-        // Evento para "Seleccionar todas / Desmarcar todas"
         toggleBtn?.addEventListener('click', () => {
           const checks = Array.from(document.querySelectorAll('.swal-carrera-check')) as HTMLInputElement[];
           const shouldCheckAll = !checks.every(c => c.checked);
@@ -333,6 +330,41 @@ export class CiclosComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  reactivar(id: string): void {
+    if (this.isSaving()) return;
+
+    Swal.fire({
+      title: '¿Reactivar Ciclo?',
+      text: 'El ciclo volverá a estar disponible para su asignación en las carreras.',
+      icon: 'info',
+      showCancelButton: true,
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel',
+        title: 'custom-swal-title'
+      },
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-check-circle" aria-hidden="true"></i> <span>Sí, reactivar</span>',
+      cancelButtonText: '<span>Cancelar</span>'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isSaving.set(true);
+        this.ciclosService.reactivarCiclo(id).subscribe({
+          next: () => {
+            this.isSaving.set(false);
+            this.toastService.show('Ciclo reactivado con éxito.', 'success');
+            this.cargarCiclos();
+          },
+          error: (err) => {
+            this.isSaving.set(false);
+            this.toastService.show(err?.error?.message || 'Error al reactivar el ciclo.', 'error');
+          }
+        });
+      }
+    });
   }
 
   darDeBaja(id: string): void {

@@ -58,11 +58,26 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
 
   readonly esCoordinadorBienestar = computed(() => {
     const rol = this.authService.user()?.rol as any;
-    return rol === 'COORDINADOR_BIENESTAR' || rol?.nombre === 'COORDINADOR_BIENESTAR';
+    const rolStr = typeof rol === 'string' ? rol : rol?.nombre || '';
+    return rolStr.includes('COORDINADOR_BIENESTAR') || rolStr.includes('ADMIN');
+  });
+
+  readonly esCoordinadorCarrera = computed(() => {
+    const rol = this.authService.user()?.rol as any;
+    const rolStr = typeof rol === 'string' ? rol : rol?.nombre || '';
+    return rolStr.includes('COORDINADOR_CARRERA');
+  });
+
+  readonly tieneAccesoPrioridad = computed(() => {
+    return this.esCoordinadorBienestar() || this.esCoordinadorCarrera();
+  });
+
+  readonly tieneAccesoUsuarios = computed(() => {
+    return this.esCoordinadorBienestar() || this.esCoordinadorCarrera();
   });
 
   ngOnInit(): void {
-    if (this.esCoordinadorBienestar()) {
+    if (this.tieneAccesoPrioridad()) {
       this.cargarCasosAlto();
     }
   }
@@ -72,24 +87,46 @@ export class AdminLayoutComponent implements OnInit, AfterViewInit {
   }
 
   private cargarCasosAlto(): void {
-    // 3. Primero obtenemos los periodos
     this.periodoService.getPeriodos().subscribe({
       next: (periodos) => {
-        // Buscamos cuál está activo
-        const periodoActivo = (periodos || []).find(p => p.activo);
-        
+        const periodoActivo = (periodos || []).find((p) => p.activo);
+
         if (periodoActivo) {
-          // 4. Le pasamos el ID del periodo activo como 4to parámetro al servicio
-          this.prioridadService.getFichasPorPrioridad(0, 1, 'CON_ALERTAS', periodoActivo.id).subscribe({
-            next: (res) => this.casosAltoCount.set(res?.total || 0),
+          this.prioridadService.getReporteNee(periodoActivo.id).subscribe({
+            next: (res) => {
+              const data = res || [];
+
+              // 🔥 FILTRO CLAVE: Excluir borradores para coincidir con la pantalla de Prioridad de Atención
+              const casosValidos = data.filter((item) => {
+                const est = String(item.estado_ficha || '').toUpperCase().trim();
+                return est !== 'BORRADOR' && est !== '';
+              });
+
+              if (this.esCoordinadorCarrera()) {
+                const user: any = this.authService.user();
+                const carrerasUsuario = user?.carrerasCoordinadas || (user?.carrera ? [user.carrera] : []);
+
+                const nombresCarrera: string[] = carrerasUsuario.map((c: any) =>
+                  (c.nombre || c || '').toLowerCase().trim()
+                );
+
+                const casosFiltrados = casosValidos.filter((item) => {
+                  const carreraItem = (item.carrera || '').toLowerCase().trim();
+                  return nombresCarrera.some((n) => carreraItem.includes(n) || n.includes(carreraItem));
+                });
+
+                this.casosAltoCount.set(casosFiltrados.length);
+              } else {
+                this.casosAltoCount.set(casosValidos.length);
+              }
+            },
             error: () => this.casosAltoCount.set(0),
           });
         } else {
-          // Si no hay periodo activo, el contador se queda en 0
           this.casosAltoCount.set(0);
         }
       },
-      error: () => this.casosAltoCount.set(0)
+      error: () => this.casosAltoCount.set(0),
     });
   }
 

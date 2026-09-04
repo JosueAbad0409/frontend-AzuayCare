@@ -14,6 +14,7 @@ import { RevisionService } from '../../../core/services/revision.service';
 import { HistorialEstadoService } from '../../../core/services/historial-estado.service';
 import { FormularioService } from '../../../core/services/formulario.service';
 import { DependenciasService } from '../../../core/services/dependencias.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { FichaRevision, EstadoFicha } from '../../../core/models/revision-ficha.model';
 import { HistorialEstadoFicha } from '../../../core/models/historial-estado.model';
 import { Seccion, Pregunta } from '../../../core/models/formulario.model';
@@ -40,6 +41,7 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
   private readonly formularioService = inject(FormularioService);
   private readonly dependenciasService = inject(DependenciasService);
+  private readonly authService = inject(AuthService);
 
   readonly ficha = signal<FichaRevision | null>(null);
   readonly respuestas = signal<any[]>([]);
@@ -60,12 +62,24 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   private readonly filterSubject = new Subject<string>();
   private filterSubscription?: Subscription;
 
+  // Detección de Rol Coordinador
+  readonly esCoordinadorCarrera = computed(() => {
+    const stateSoloLectura = history.state?.soloLectura;
+    if (typeof stateSoloLectura === 'boolean') return stateSoloLectura;
+
+    const user: any = this.authService.user();
+    const rolStr = typeof user?.rol === 'string' ? user.rol : JSON.stringify(user?.rol || '');
+    return rolStr.includes('COORDINADOR_CARRERA');
+  });
+
   readonly puedeRevisar = computed(() => {
+    if (this.esCoordinadorCarrera()) return false;
     const estado = this.ficha()?.estado_ficha?.toUpperCase();
     return estado === 'ENVIADA' || estado === 'ENVIADO';
   });
 
   readonly puedeReabrir = computed(() => {
+    if (this.esCoordinadorCarrera()) return false;
     const estado = this.ficha()?.estado_ficha?.toUpperCase();
     return estado === 'VALIDADO' || estado === 'RECHAZADO' || estado === 'RECHAZADA';
   });
@@ -189,6 +203,11 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   }
 
   async exportarPdf(): Promise<void> {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para descargar el PDF de esta ficha.', 'warning');
+      return;
+    }
+
     const f = this.ficha();
     if (!f?.id || this.exportandoPdf()) return;
 
@@ -331,6 +350,11 @@ export class RevisionDetalleComponent implements OnInit, OnDestroy {
   }
 
   cambiarEstado(nuevoEstado: EstadoFicha, esReapertura: boolean = false): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para modificar el estado de la ficha.', 'error');
+      return;
+    }
+
     const f = this.ficha();
 
     if (!f || this.guardando()) return;

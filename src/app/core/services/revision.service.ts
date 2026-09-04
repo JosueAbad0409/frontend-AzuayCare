@@ -27,9 +27,13 @@ export class RevisionService {
     return this.http.get<FichasPaginadasResponse>(`${this.apiUrl}/paginadas`, { params });
   }
 
-  /** Obtiene todas las fichas (sin paginar) */
-  getTodasLasFichas(): Observable<FichaRevision[]> {
-    return this.http.get<FichaRevision[]>(this.apiUrl);
+  /** Obtiene TODAS las fichas sin el límite predeterminado de 10 */
+  getTodasLasFichas(): Observable<any> {
+    const params = new HttpParams()
+      .set('skip', '0')
+      .set('take', '10000');
+
+    return this.http.get<any>(this.apiUrl, { params });
   }
 
   /** Obtiene el detalle completo de una ficha */

@@ -11,11 +11,11 @@
   --border-subtle: #f1f5f9;
   --bg-main: #ffffff;
   --bg-alt: #f8fafc;
-  
+
   --radius-lg: clamp(0.75rem, 2vw, 1.25rem);
   --radius-md: 0.85rem;
   --radius-sm: 0.55rem;
-  
+
   --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
   --shadow-sm: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
@@ -134,12 +134,30 @@
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 18vw, 220px), 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.1rem;
 }
 
 .filter-search-main { grid-column: span 2; }
-@media (max-width: 768px) { .filter-search-main { grid-column: span 1; } }
+.filter-span-2 { grid-column: span 2; }
+.filter-span-all { grid-column: 1 / -1; }
+
+.pointer-events-none { pointer-events: none; }
+.cursor-not-allowed { cursor: not-allowed; }
+
+@media (max-width: 1024px) {
+  .filter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 20vw, 220px), 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-search-main,
+  .filter-span-2,
+  .filter-span-all {
+    grid-column: span 1;
+  }
+}
 
 .filter-item {
   display: flex;
@@ -176,7 +194,6 @@
   color: var(--primary-color);
 }
 
-/* BOTÓN X LIMPIAR SIN SUPERPOSICIÓN */
 .btn-clear-micro {
   position: absolute;
   right: 0.65rem;
@@ -203,7 +220,6 @@
   transform: translateY(-50%) scale(1.1);
 }
 
-/* INPUTS Y SELECTS ESTILIZADOS CON TRUNCAMIENTO DE TEXTO */
 .table-column-input, .table-column-select {
   width: 100%;
   padding: 0.6rem 0.85rem 0.6rem 2.3rem;
@@ -221,13 +237,41 @@
   overflow: hidden;
 }
 
-/* ESPACIO RESERVADO PARA EVITAR QUE EL TEXTO DE CARRERA SE TRASLAPE CON LA X */
+.table-column-input[readonly] {
+  background-color: #f8fafc;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
 .table-column-input.has-clear-btn {
   padding-right: 2.5rem !important;
 }
 
 .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ALINEACIÓN Y FORMATO DE ESTUDIANTE */
+.user-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  justify-content: center;
+}
+
+.user-fullname {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.user-email {
+  display: block;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.2;
 }
 
 .text-ellipsis {
@@ -277,7 +321,6 @@
   font-weight: 400;
 }
 
-/* MENÚ DESPLEGABLE DROPDOWN DINÁMICO CARRERA */
 .dropdown-list-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -366,6 +409,14 @@
   background: var(--primary-color); color: #ffffff; border-color: var(--primary-color); transform: translateY(-1px);
 }
 
+/* CLASE DEL CANDADO (NUEVO) */
+.lock-indicator {
+  font-size: 0.95rem;
+  margin-right: 0.6rem;
+  color: #f59e0b; /* amber-500 */
+  opacity: 0.9;
+}
+
 /* TABLA DESKTOP Y ESTRUCTURA GENERAL */
 .desktop-view-container { display: block; }
 .mobile-view-container { display: none; }
@@ -406,6 +457,7 @@
 
 .carrera-text { display: block; font-weight: 600; color: var(--text-main); }
 .ciclo-text { display: block; font-size: 0.75rem; color: var(--text-light); }
+.formulario-text { display: block; font-weight: 600; color: var(--primary-color); }
 
 .badge {
   display: inline-flex; align-items: center; justify-content: center;
@@ -449,6 +501,7 @@
   .info-row { display: flex; justify-content: space-between; align-items: center; }
   .info-label { color: var(--text-muted); font-weight: 600; }
   .info-val { color: var(--text-main); text-align: right; }
+  .text-purple { color: var(--primary-color); }
   .highlight-row { background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius-sm); }
   .btn-full { width: 100%; margin-top: 0.75rem; }
 }

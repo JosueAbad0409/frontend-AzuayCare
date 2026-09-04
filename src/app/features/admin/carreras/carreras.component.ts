@@ -45,6 +45,7 @@ export class CarrerasComponent implements OnInit, OnDestroy {
     return Array.from(dominios);
   });
 
+  // 🟢 FILTRADO DE ESTADO CORREGIDO
   readonly carrerasFiltradas = computed(() => {
     const term = this.filterSearch().toLowerCase().trim();
     const correoTerm = this.filterCorreo().toLowerCase().trim();
@@ -58,9 +59,14 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       const coincideCorreo = !correoTerm || 
         c.correo_institucional.toLowerCase().includes(correoTerm);
 
+      const estaInactiva = c.fecha_desactivacion !== null && c.fecha_desactivacion !== undefined && c.fecha_desactivacion !== '';
+
       let coincideEstado = true;
-      if (estado === 'ACTIVA') coincideEstado = !c.fecha_desactivacion;
-      else if (estado === 'INACTIVA') coincideEstado = !!c.fecha_desactivacion;
+      if (estado === 'ACTIVA') {
+        coincideEstado = !estaInactiva;
+      } else if (estado === 'INACTIVA') {
+        coincideEstado = estaInactiva;
+      }
 
       return coincideTexto && coincideCorreo && coincideEstado;
     });
@@ -99,11 +105,6 @@ export class CarrerasComponent implements OnInit, OnDestroy {
     this.correoSubject.next(value);
   }
 
-  onCorreoSelectChange(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.filterCorreo.set(value);
-  }
-
   limpiarFiltroCorreo(): void {
     this.filterCorreo.set('');
   }
@@ -125,7 +126,7 @@ export class CarrerasComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (data) => this.carreras.set(data || []),
-        error: (err: HttpErrorResponse) => {
+        error: (_err: HttpErrorResponse) => {
           this.toastService.show('Error al obtener la lista de carreras.', 'error');
         }
       });
@@ -248,12 +249,47 @@ export class CarrerasComponent implements OnInit, OnDestroy {
     });
   }
 
+  reactivarCarrera(id: string): void {
+    if (this.isSaving()) return;
+
+    Swal.fire({
+      title: '¿Reactivar Carrera?',
+      text: 'La carrera volverá a estar disponible en las ofertas académicas.',
+      icon: 'info',
+      showCancelButton: true,
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title',
+        confirmButton: 'custom-swal-confirm',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false,
+      confirmButtonText: '<i class="fas fa-rotate-left" aria-hidden="true"></i> <span>Sí, reactivar</span>',
+      cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isSaving.set(true);
+        this.carreraService.reactivarCarrera(id)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Carrera reactivada con éxito.', 'success');
+              this.cargarCarreras();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(this.extraerMensajeError(err, 'No se pudo reactivar la carrera.'), 'error');
+            }
+          });
+      }
+    });
+  }
+
   eliminarCarrera(id: string): void {
     if (this.isSaving()) return;
 
     Swal.fire({
       title: '¿Estás seguro?',
-      text: '¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer.',
+      text: '¿Estás seguro de desactivar esta carrera?',
       icon: 'warning',
       showCancelButton: true,
       customClass: {
@@ -263,7 +299,7 @@ export class CarrerasComponent implements OnInit, OnDestroy {
         cancelButton: 'custom-swal-cancel'
       },
       buttonsStyling: false,
-      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, eliminar</span>',
+      confirmButtonText: '<i class="fas fa-trash-alt" aria-hidden="true"></i> <span>Sí, desactivar</span>',
       cancelButtonText: '<i class="fas fa-times" aria-hidden="true"></i> <span>Cancelar</span>'
     }).then((result) => {
       if (result.isConfirmed) {
@@ -272,11 +308,11 @@ export class CarrerasComponent implements OnInit, OnDestroy {
           .pipe(finalize(() => this.isSaving.set(false)))
           .subscribe({
             next: () => {
-              this.toastService.show('Carrera eliminada con éxito.', 'info');
+              this.toastService.show('Carrera desactivada con éxito.', 'info');
               this.cargarCarreras();
             },
             error: (err: HttpErrorResponse) => {
-              this.toastService.show(this.extraerMensajeError(err, 'No se pudo eliminar la carrera.'), 'error');
+              this.toastService.show(this.extraerMensajeError(err, 'No se pudo desactivar la carrera.'), 'error');
             }
           });
       }

@@ -1,5 +1,4 @@
 <div class="carreras-card animate-fade-in">
-  <!-- Cabecera Principal -->
   <header class="header-section">
     <div class="title-group">
       <h1 class="title">Gestión de Ciclos Académicos</h1>
@@ -17,7 +16,6 @@
     </button>
   </header>
 
-  <!-- Panel de Control y Filtros -->
   @if (!loading()) {
     <section class="toolbar-section" aria-label="Filtros de búsqueda">
       <div class="search-input-box">
@@ -82,7 +80,6 @@
     </section>
   }
 
-  <!-- Esqueleto de Carga -->
   @if (loading()) {
     <div class="skeleton-wrapper" aria-busy="true" aria-label="Cargando datos">
       <div class="skeleton-row skeleton-header"></div>
@@ -91,7 +88,6 @@
       <div class="skeleton-row"></div>
     </div>
   } @else {
-    <!-- Tabla / Grilla Adaptativa -->
     <div class="table-container">
       <table class="admin-table">
         <thead>
@@ -106,21 +102,18 @@
         <tbody>
           @for (ciclo of ciclosFiltrados(); track ciclo.id) {
             <tr>
-              <!-- Orden -->
               <td class="col-orden text-center" data-label="Orden">
                 <span class="order-chip">
                   <span class="order-hash">#</span>{{ ciclo.orden ?? '-' }}
                 </span>
               </td>
 
-              <!-- Nombre -->
               <td class="col-nombre" data-label="Nombre del Ciclo">
                 <div class="ciclo-info">
                   <span class="ciclo-title-text">{{ ciclo.nombre }}</span>
                 </div>
               </td>
 
-              <!-- Carreras con Mini-Scroll Limpio -->
               <td class="col-carrera" data-label="Carrera(s) Asignada(s)">
                 <div class="carreras-scroll-box">
                   <div class="carreras-tags-wrapper">
@@ -135,7 +128,6 @@
                 </div>
               </td>
 
-              <!-- Estado -->
               <td class="col-estado text-center" data-label="Estado">
                 <span class="badge" [ngClass]="!ciclo.fecha_desactivacion ? 'badge-success' : 'badge-danger'">
                   <span class="status-dot"></span>
@@ -143,7 +135,6 @@
                 </span>
               </td>
 
-              <!-- Acciones -->
               <td class="col-acc text-right" data-label="Acciones">
                 <div class="actions-wrapper">
                   <button 
@@ -156,6 +147,7 @@
                   >
                     <i class="fas fa-pen" aria-hidden="true"></i>
                   </button>
+
                   @if (!ciclo.fecha_desactivacion) {
                     <button 
                       type="button" 
@@ -166,6 +158,19 @@
                       title="Desactivar ciclo"
                     >
                       <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    </button>
+                  }
+
+                  @if (ciclo.fecha_desactivacion) {
+                    <button 
+                      type="button" 
+                      (click)="reactivar(ciclo.id!)" 
+                      class="btn-icon text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50" 
+                      [disabled]="isSaving()"
+                      [attr.aria-label]="'Reactivar ciclo ' + ciclo.nombre"
+                      title="Reactivar ciclo"
+                    >
+                      <i class="fas fa-rotate-left" aria-hidden="true"></i>
                     </button>
                   }
                 </div>

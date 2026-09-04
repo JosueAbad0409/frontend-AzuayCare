@@ -43,7 +43,7 @@ export class FormulariosComponent implements OnInit {
   readonly filtroTipo = signal<string>('TODOS');
   readonly filtroVersion = signal<string>('TODOS');
   readonly filtroEstado = signal<string>('TODOS');
-  readonly filtroPeriodo = signal<string>('TODOS'); // <-- Nuevo filtro
+  readonly filtroPeriodo = signal<string>('TODOS');
 
   readonly isEditMode = signal<boolean>(false);
   readonly selectedFormularioId = signal<string | null>(null);
@@ -60,7 +60,7 @@ export class FormulariosComponent implements OnInit {
     const tipo = this.filtroTipo();
     const version = this.filtroVersion();
     const estado = this.filtroEstado();
-    const periodo = this.filtroPeriodo(); // <-- Obtenemos el valor del filtro
+    const periodo = this.filtroPeriodo();
 
     return this.formularios().filter(form => {
       const coincideTexto = !term || 
@@ -69,9 +69,7 @@ export class FormulariosComponent implements OnInit {
 
       const coincideTipo = tipo === 'TODOS' || form.tipo_formulario_id === tipo;
       const coincideVersion = version === 'TODOS' || form.version.toString() === version;
-      
-      // <-- Validación de periodo
-const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (form as any).periodo?.id === periodo;
+      const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (form as any).periodo?.id === periodo;
 
       let coincideEstado = true;
       if (estado === 'BLOQUEADO') coincideEstado = !!form.bloqueado;
@@ -83,11 +81,14 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
   });
 
   readonly hayFiltrosActivos = computed(() => {
+    const periodoActivo = this.periodos().find(p => p.activo);
+    const periodoPorDefecto = periodoActivo ? periodoActivo.id : 'TODOS';
+
     return this.searchTerm() !== '' || 
            this.filtroTipo() !== 'TODOS' || 
            this.filtroVersion() !== 'TODOS' || 
            this.filtroEstado() !== 'TODOS' ||
-           this.filtroPeriodo() !== 'TODOS'; // <-- Contempla el nuevo filtro
+           this.filtroPeriodo() !== periodoPorDefecto;
   });
 
   ngOnInit(): void {
@@ -118,7 +119,7 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
     this.filtroEstado.set((event.target as HTMLSelectElement).value);
   }
 
-  onPeriodoChange(event: Event): void { // <-- Método para el cambio
+  onPeriodoChange(event: Event): void {
     this.filtroPeriodo.set((event.target as HTMLSelectElement).value);
   }
 
@@ -134,7 +135,9 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
     this.filtroTipo.set('TODOS');
     this.filtroVersion.set('TODOS');
     this.filtroEstado.set('TODOS');
-    this.filtroPeriodo.set('TODOS'); // <-- Limpiar el nuevo filtro
+
+    const periodoActivo = this.periodos().find(p => p.activo);
+    this.filtroPeriodo.set(periodoActivo ? periodoActivo.id : 'TODOS');
   }
 
   cargarDatos(): void {
@@ -151,7 +154,6 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
         this.formularios.set(formularios || []);
         this.tiposFormulario.set(tiposFormulario || []);
 
-        // <-- Seleccionar el periodo activo por defecto
         const periodoActivo = (periodos || []).find(p => p.activo);
         if (periodoActivo) {
           this.filtroPeriodo.set(periodoActivo.id);
@@ -161,6 +163,12 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
         this.toastService.show(this.extraerMensajeError(err, 'Error al cargar los datos iniciales.'), 'error');
       }
     });
+  }
+
+  getNombreTipoFormulario(form: Formulario): string {
+    return form.tipoFormulario?.nombre
+      || this.tiposFormulario().find(t => t.id === form.tipo_formulario_id)?.nombre
+      || 'Sin categoría';
   }
 
   abrirModalCrear(): void {
@@ -459,12 +467,6 @@ const coincidePeriodo = periodo === 'TODOS' || form.periodo_id === periodo || (f
           });
       }
     });
-  }
-
-  getNombreTipoFormulario(form: Formulario): string {
-    return form.tipoFormulario?.nombre
-      || this.tiposFormulario().find(t => t.id === form.tipo_formulario_id)?.nombre
-      || 'Sin categoría';
   }
 
   private escapeHtml(text: string): string {

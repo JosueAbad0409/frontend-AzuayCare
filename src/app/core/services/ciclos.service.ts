@@ -31,6 +31,10 @@ export class CiclosService {
     return this.http.patch<Ciclo>(`${this.apiUrl}/${id}`, dto);
   }
 
+  reactivarCiclo(id: string): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${this.apiUrl}/${id}/reactivar`, {});
+  }
+
   deleteCiclo(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }

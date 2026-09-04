@@ -50,7 +50,8 @@
     </div>
 
     <div class="filter-grid">
-      <!-- Filtro 1: Buscador Global (Con Sanitización de entrada) -->
+      <!-- ================= FILA 1 ================= -->
+      <!-- Filtro 1: Estudiante -->
       <div class="filter-item filter-search-main">
         <label for="filter-estudiante" class="filter-label">Estudiante</label>
         <div class="filter-input-wrap">
@@ -66,7 +67,7 @@
         </div>
       </div>
 
-      <!-- Filtro 2: Cédula (Con Validación Ecuatoriana - Máx 10 dígitos) -->
+      <!-- Filtro 2: Cédula -->
       <div class="filter-item">
         <label for="filter-cedula" class="filter-label">Cédula</label>
         <div class="filter-input-wrap">
@@ -84,56 +85,28 @@
         </div>
       </div>
 
-      <!-- Filtro 3: Carrera (CON PADDING CORREGIDO SIN SUPERPOSICIÓN DE BOTÓN X) -->
-      <div class="filter-item relative">
-        <label for="buscarCarrera" class="filter-label">Carrera</label>
-        <div class="filter-input-wrap">
-          <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
-          <input 
-            id="buscarCarrera" 
-            type="text" 
-            [formControl]="filtroCarreraControl" 
-            autocomplete="off" 
-            placeholder="Buscar carrera..." 
-            (focus)="dropdownCarreraAbierto.set(true)" 
-            (blur)="cerrarDropdownCarrera()" 
-            class="table-column-input uppercase has-clear-btn" 
-          />
-          @if (filtroCarreraControl.value) {
-            <button 
-              type="button" 
-              (click)="limpiarFiltroCarrera()" 
-              class="btn-clear-micro"
-              title="Limpiar filtro de carrera"
-              aria-label="Limpiar filtro de carrera"
-            >
-              <i class="fas fa-circle-xmark" aria-hidden="true"></i>
-            </button>
-          }
+      <!-- Filtro 3: Estado Ficha -->
+      <div class="filter-item">
+        <label for="filter-estado" class="filter-label">Estado Ficha</label>
+        <div class="filter-input-wrap select-wrap">
+          <i class="fas fa-chart-pie search-micro-icon" aria-hidden="true"></i>
+          <select 
+            id="filter-estado"
+            [value]="estadoFiltro()" 
+            (change)="onEstadoChange($event)" 
+            class="table-column-select"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ENVIADA">POR VALIDAR</option>
+            <option value="VALIDADO">VALIDADAS</option>
+            <option value="RECHAZADO">RECHAZADAS</option>
+          </select>
+          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
         </div>
-
-        @if (dropdownCarreraAbierto()) {
-          <ul class="dropdown-list-menu">
-            @for (c of carrerasFiltradas(); track c.id) {
-              <li 
-                (mousedown)="seleccionarCarrera(c)" 
-                class="dropdown-item"
-                [class.is-selected]="filtroCarreraControl.value === c.nombre"
-              >
-                <i class="fas fa-graduation-cap dropdown-icon" aria-hidden="true"></i>
-                <span class="text-ellipsis">{{ c.nombre }}</span>
-              </li>
-            } @empty {
-              <li class="dropdown-item-empty">
-                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                <span>No se encontraron carreras</span>
-              </li>
-            }
-          </ul>
-        }
       </div>
 
-      <!-- Filtro 4: Ciclo (Desplegable Dinámico) -->
+      <!-- ================= FILA 2 ================= -->
+      <!-- Filtro 4: Ciclo -->
       <div class="filter-item">
         <label for="filter-ciclo" class="filter-label">Ciclo</label>
         <div class="filter-input-wrap select-wrap">
@@ -153,44 +126,152 @@
         </div>
       </div>
 
-      <!-- Filtro 5: Periodo -->
+      <!-- Filtro 5: Periodo Lectivo -->
       <div class="filter-item">
         <label for="filter-periodo" class="filter-label">Periodo Lectivo</label>
         <div class="filter-input-wrap select-wrap">
           <i class="fas fa-calendar-alt search-micro-icon" aria-hidden="true"></i>
           <select 
             id="filter-periodo"
-            [value]="filterPeriodo()" 
+            [ngModel]="filterPeriodo()" 
             (change)="onPeriodoChange($event)" 
             class="table-column-select"
           >
             <option value="TODOS">Todos los Periodos</option>
             @for (p of periodosDisponibles(); track p) {
-              <option [value]="p">{{ p }}</option>
+              <option [value]="p">
+                {{ p }} @if (esPeriodoActivo(p)) { (Activo) }
+              </option>
             }
           </select>
           <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
         </div>
       </div>
 
-      <!-- Filtro 6: Estado -->
-      <div class="filter-item">
-        <label for="filter-estado" class="filter-label">Estado Ficha</label>
-        <div class="filter-input-wrap select-wrap">
-          <i class="fas fa-chart-pie search-micro-icon" aria-hidden="true"></i>
-          <select 
-            id="filter-estado"
-            [value]="estadoFiltro()" 
-            (change)="onEstadoChange($event)" 
-            class="table-column-select"
-          >
-            <option value="TODOS">Todos los Estados</option>
-            <option value="ENVIADA">POR VALIDAR</option>
-            <option value="VALIDADO">VALIDADAS</option>
-            <option value="RECHAZADO">RECHAZADAS</option>
-          </select>
-          <i class="fas fa-chevron-down select-chevron-icon" aria-hidden="true"></i>
+      <!-- Filtro 6: Carrera (Solo carreras con fichas) -->
+      <div class="filter-item filter-span-2 relative">
+        <label for="buscarCarrera" class="filter-label">Carrera (con fichas)</label>
+        <div class="filter-input-wrap" [class.pointer-events-none]="esCoordinadorCarrera()">
+          <i class="fas fa-graduation-cap search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="buscarCarrera" 
+            type="text" 
+            [formControl]="filtroCarreraControl" 
+            [readonly]="esCoordinadorCarrera()"
+            autocomplete="off" 
+            placeholder="Seleccionar carrera..." 
+            (focus)="!esCoordinadorCarrera() && dropdownCarreraAbierto.set(true)" 
+            (blur)="cerrarDropdownCarrera()" 
+            class="table-column-input uppercase has-clear-btn" 
+          />
+          @if (filtroCarreraControl.value && !esCoordinadorCarrera()) {
+            <button 
+              type="button" 
+              (click)="limpiarFiltroCarrera()" 
+              class="btn-clear-micro"
+              title="Limpiar filtro de carrera"
+              aria-label="Limpiar filtro de carrera"
+            >
+              <i class="fas fa-circle-xmark" aria-hidden="true"></i>
+            </button>
+          }
+          @if (esCoordinadorCarrera()) {
+            <span class="btn-clear-micro text-slate-400 cursor-not-allowed" title="Carrera fija de Coordinador">
+              <i class="fas fa-lock" aria-hidden="true"></i>
+            </span>
+          }
         </div>
+
+        @if (dropdownCarreraAbierto() && !esCoordinadorCarrera()) {
+          <ul class="dropdown-list-menu">
+            <li 
+              (mousedown)="limpiarFiltroCarrera()" 
+              class="dropdown-item"
+              [class.is-selected]="!filtroCarreraControl.value"
+            >
+              <i class="fas fa-list dropdown-icon" aria-hidden="true"></i>
+              <span class="text-ellipsis">Todas las Carreras</span>
+            </li>
+            @for (c of carrerasFiltradas(); track c.nombre) {
+              <li 
+                (mousedown)="seleccionarCarrera(c)" 
+                class="dropdown-item flex justify-between items-center"
+                [class.is-selected]="filtroCarreraControl.value === c.nombre"
+              >
+                <div class="flex items-center gap-2 text-ellipsis">
+                  <i class="fas fa-graduation-cap dropdown-icon" aria-hidden="true"></i>
+                  <span class="text-ellipsis">{{ c.nombre }}</span>
+                </div>
+                <span class="text-xs bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full ml-2">
+                  {{ c.totalFichas }}
+                </span>
+              </li>
+            } @empty {
+              <li class="dropdown-item-empty">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <span>No hay carreras con fichas registradas</span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- ================= FILA 3 ================= -->
+      <!-- Filtro 7: Formulario / Ficha -->
+      <div class="filter-item filter-span-all relative">
+        <label for="buscarFormulario" class="filter-label">Formulario / Ficha</label>
+        <div class="filter-input-wrap">
+          <i class="fas fa-file-signature search-micro-icon" aria-hidden="true"></i>
+          <input 
+            id="buscarFormulario" 
+            type="text" 
+            [formControl]="filtroFormularioControl" 
+            autocomplete="off" 
+            placeholder="Buscar formulario..." 
+            (focus)="dropdownFormularioAbierto.set(true)" 
+            (blur)="cerrarDropdownFormulario()" 
+            class="table-column-input has-clear-btn" 
+          />
+          @if (filtroFormularioControl.value || formularioSeleccionadoId()) {
+            <button 
+              type="button" 
+              (click)="limpiarFiltroFormulario()" 
+              class="btn-clear-micro"
+              title="Limpiar filtro de formulario"
+              aria-label="Limpiar filtro de formulario"
+            >
+              <i class="fas fa-circle-xmark" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
+
+        @if (dropdownFormularioAbierto()) {
+          <ul class="dropdown-list-menu">
+            <li 
+              (mousedown)="limpiarFiltroFormulario()" 
+              class="dropdown-item"
+              [class.is-selected]="!formularioSeleccionadoId()"
+            >
+              <i class="fas fa-list dropdown-icon" aria-hidden="true"></i>
+              <span class="text-ellipsis">Todos los Formularios</span>
+            </li>
+            @for (f of formulariosFiltrados(); track f.id) {
+              <li 
+                (mousedown)="seleccionarFormulario(f)" 
+                class="dropdown-item"
+                [class.is-selected]="formularioSeleccionadoId() === f.id"
+              >
+                <i class="fas fa-file-signature dropdown-icon" aria-hidden="true"></i>
+                <span class="text-ellipsis">{{ f.titulo }} (v{{ f.version }})</span>
+              </li>
+            } @empty {
+              <li class="dropdown-item-empty">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <span>No se encontraron formularios</span>
+              </li>
+            }
+          </ul>
+        }
       </div>
     </div>
   </section>
@@ -212,6 +293,7 @@
               <th scope="col" class="col-estudiante">Estudiante</th>
               <th scope="col" class="col-cedula">Cédula</th>
               <th scope="col" class="col-carrera">Carrera / Ciclo</th>
+              <th scope="col" class="col-formulario">Formulario / Ficha</th>
               <th scope="col" class="col-periodo">Periodo</th>
               <th scope="col" class="col-balance">Balance</th>
               <th scope="col" class="col-estado text-center">Estado</th>
@@ -224,13 +306,16 @@
                 <td class="col-estudiante">
                   <div class="user-identity">
                     <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
-                    <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
+                    <span class="user-email text-ellipsis">{{ f.usuario?.email_institucional }}</span>
                   </div>
                 </td>
                 <td class="col-cedula font-mono">{{ f.usuario?.cedula || 'N/A' }}</td>
                 <td class="col-carrera">
                   <span class="carrera-text">{{ getCarreraNombre(f) }}</span>
                   <small class="ciclo-text">{{ getCicloNombre(f) }}</small>
+                </td>
+                <td class="col-formulario">
+                  <span class="formulario-text">{{ getFormularioNombre(f) }}</span>
                 </td>
                 <td class="col-periodo text-muted">{{ f.periodo?.nombre || 'General' }}</td>
                 <td class="col-balance font-mono">
@@ -245,14 +330,19 @@
                     {{ f.estado_ficha === 'ENVIADA' ? 'Por Validar' : f.estado_ficha }}
                   </span>
                 </td>
-                <td class="col-acc text-right">
+                <td class="col-acc text-right" style="white-space: nowrap;">
+                  @if (esCoordinadorCarrera()) {
+                    <span class="lock-indicator" title="Acceso de solo lectura" aria-label="Solo lectura">
+                      <i class="fas fa-lock" aria-hidden="true"></i>
+                    </span>
+                  }
                   <button 
                     type="button"
                     class="btn-icon text-blue" 
                     (click)="verDetalleFicha(f)" 
                     [disabled]="guardandoEstado()"
-                    [attr.aria-label]="'Revisar ficha de ' + f.usuario?.primer_nombre + ' ' + f.usuario?.primer_apellido"
-                    title="Revisar Ficha"
+                    [attr.aria-label]="'Revisar ficha de ' + f.usuario?.primer_nombre"
+                    title="Ver Ficha"
                   >
                     <i class="fas fa-eye" aria-hidden="true"></i>
                   </button>
@@ -260,7 +350,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="7">
+                <td colspan="8">
                   <div class="state-card empty-state">
                     <i class="fas fa-folder-open empty-icon" aria-hidden="true"></i>
                     <p class="state-title">No hay fichas encontradas</p>
@@ -286,7 +376,7 @@
           <header class="card-mobile-header">
             <div class="user-identity">
               <strong class="user-fullname">{{ f.usuario?.primer_nombre }} {{ f.usuario?.primer_apellido }}</strong>
-              <span class="text-muted text-ellipsis">{{ f.usuario?.email_institucional }}</span>
+              <span class="user-email text-ellipsis">{{ f.usuario?.email_institucional }}</span>
             </div>
             <span class="badge" [ngClass]="{
               'badge-success': f.estado_ficha === 'VALIDADO',
@@ -307,6 +397,10 @@
               <span class="info-val">{{ getCarreraNombre(f) }} ({{ getCicloNombre(f) }})</span>
             </div>
             <div class="info-row">
+              <span class="info-label">Formulario / Ficha:</span>
+              <span class="info-val strong text-purple">{{ getFormularioNombre(f) }}</span>
+            </div>
+            <div class="info-row">
               <span class="info-label">Periodo:</span>
               <span class="info-val">{{ f.periodo?.nombre || 'General' }}</span>
             </div>
@@ -316,14 +410,20 @@
             </div>
           </div>
 
-          <footer class="card-mobile-footer">
+          <footer class="card-mobile-footer" style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+            @if (esCoordinadorCarrera()) {
+              <span class="text-amber-500 font-bold" style="font-size: 0.85rem;" title="Solo lectura">
+                <i class="fas fa-lock" aria-hidden="true"></i> Modo Lectura
+              </span>
+            }
             <button 
               type="button" 
-              class="btn btn-outline btn-full"
+              class="btn btn-outline"
+              style="flex: 1;"
               (click)="verDetalleFicha(f)"
               [disabled]="guardandoEstado()"
             >
-              <i class="fas fa-eye" aria-hidden="true"></i> Revisar Detalle
+              <i class="fas fa-eye" aria-hidden="true"></i> Ver Ficha
             </button>
           </footer>
         </article>
@@ -371,7 +471,7 @@
     }
   }
 
-  <!-- MODAL DE REVISIÓN -->
+  <!-- MODAL DE REVISIÓN ALTERNATIVO -->
   @if (fichaSeleccionada()) {
     <div class="modal-backdrop" (click)="cerrarModal()">
       <div 
@@ -398,7 +498,6 @@
             [class.active]="tabActiva() === 'DETALLE'" 
             (click)="setTab('DETALLE')"
             role="tab"
-            [attr.aria-selected]="tabActiva() === 'DETALLE'"
           >
             <i class="fas fa-file-alt" aria-hidden="true"></i> Detalle de Ficha
           </button>
@@ -408,7 +507,6 @@
             [class.active]="tabActiva() === 'HISTORIAL'" 
             (click)="setTab('HISTORIAL')"
             role="tab"
-            [attr.aria-selected]="tabActiva() === 'HISTORIAL'"
           >
             <i class="fas fa-history" aria-hidden="true"></i> Línea de Tiempo
           </button>
@@ -468,39 +566,53 @@
               }
             </div>
 
-            <div class="review-actions">
-              <label class="form-label" for="txt-comentario">Comentario de Revisión / Justificación</label>
-              <textarea
-                id="txt-comentario"
-                [value]="comentarioCambio()"
-                (input)="comentarioCambio.set($any($event.target).value)"
-                class="form-control"
-                rows="3"
-                placeholder="Escriba la razón de aprobación o rechazo..."
-                [disabled]="guardandoEstado()"
-              ></textarea>
-
-              <div class="actions-row">
-                <button 
-                  type="button" 
-                  class="btn btn-reject" 
-                  (click)="cambiarEstado('RECHAZADO')" 
-                  [disabled]="guardandoEstado()"
-                >
-                  <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-times-circle'" aria-hidden="true"></i>
-                  <span>Rechazar</span>
-                </button>
-                <button 
-                  type="button" 
-                  class="btn btn-approve" 
-                  (click)="cambiarEstado('VALIDADO')" 
-                  [disabled]="guardandoEstado()"
-                >
-                  <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-check-circle'" aria-hidden="true"></i>
-                  <span>Validar Ficha</span>
-                </button>
+            @if (esCoordinadorCarrera()) {
+              <div class="read-only-banner p-4 border rounded-lg bg-amber-50 border-amber-200 mt-4 flex items-center gap-3">
+                <div class="text-amber-500 text-xl">
+                  <i class="fas fa-lock" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-amber-900 text-sm">Modo Solo Consulta</h4>
+                  <p class="text-xs text-amber-800 mt-0.5">
+                    Como Coordinador de Carrera tienes permisos limitados de solo lectura. No puedes cambiar el estado, descargar PDF ni enviar a edición.
+                  </p>
+                </div>
               </div>
-            </div>
+            } @else {
+              <div class="review-actions mt-4">
+                <label class="form-label" for="txt-comentario">Comentario de Revisión / Justificación</label>
+                <textarea
+                  id="txt-comentario"
+                  [value]="comentarioCambio()"
+                  (input)="comentarioCambio.set($any($event.target).value)"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Escriba la razón de aprobación o rechazo..."
+                  [disabled]="guardandoEstado()"
+                ></textarea>
+
+                <div class="actions-row mt-3">
+                  <button 
+                    type="button" 
+                    class="btn btn-reject" 
+                    (click)="cambiarEstado('RECHAZADO')" 
+                    [disabled]="guardandoEstado()"
+                  >
+                    <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-times-circle'" aria-hidden="true"></i>
+                    <span>Rechazar</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn btn-approve" 
+                    (click)="cambiarEstado('VALIDADO')" 
+                    [disabled]="guardandoEstado()"
+                  >
+                    <i class="fas" [ngClass]="guardandoEstado() ? 'fa-spinner fa-spin' : 'fa-check-circle'" aria-hidden="true"></i>
+                    <span>Validar Ficha</span>
+                  </button>
+                </div>
+              </div>
+            }
           }
 
           @if (tabActiva() === 'HISTORIAL') {

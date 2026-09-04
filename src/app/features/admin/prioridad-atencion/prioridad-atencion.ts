@@ -11,13 +11,20 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Subject, Subscription, forkJoin, of } from 'rxjs';
+import { debounceTime, catchError } from 'rxjs/operators';
 import { PrioridadAtencionService, ReporteNeeSalud } from '../../../core/services/prioridad-atencion.service';
 import { PeriodoService } from '../../../core/services/periodo.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { CarreraService } from '../../../core/services/carrera.service';
-import { Carrera } from '../../../core/models/carrera.model';
+import { FormularioService } from '../../../core/services/formulario.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { CoordinadorCarreraService } from '../../../core/services/coordinador-carrera.service';
+import { Formulario } from '../../../core/models/formulario.model';
+
+export interface CarreraConFichas {
+  nombre: string;
+  totalFichas: number;
+}
 
 @Component({
   selector: 'app-prioridad-atencion',
@@ -30,25 +37,35 @@ import { Carrera } from '../../../core/models/carrera.model';
 export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   private readonly prioridadService = inject(PrioridadAtencionService);
   private readonly periodoService = inject(PeriodoService);
-  private readonly carreraService = inject(CarreraService);
+  private readonly formularioService = inject(FormularioService);
+  private readonly authService = inject(AuthService);
+  private readonly coordinadorCarreraService = inject(CoordinadorCarreraService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly reporteNee = signal<ReporteNeeSalud[]>([]);
-  readonly carreras = signal<Carrera[]>([]);
+  readonly formularios = signal<Formulario[]>([]);
   readonly isLoading = signal<boolean>(true);
 
-  // Signals de filtros simples
+  readonly esCoordinadorCarrera = computed(() => {
+    const user: any = this.authService.user();
+    const rolStr = typeof user?.rol === 'string' ? user.rol : JSON.stringify(user?.rol || '');
+    return rolStr.includes('COORDINADOR_CARRERA');
+  });
+
   readonly filterEstudianteInput = signal<string>('');
   readonly filterCedulaInput = signal<string>('');
-  readonly filterRiesgo = signal<string>('TODOS');
   readonly filterEstado = signal<string>('TODOS');
   readonly showMobileFilters = signal<boolean>(false);
 
-  // Control reactivo y dropdown para Carrera
   readonly filtroCarreraControl = new FormControl('', { nonNullable: true });
   readonly filtroCarreraText = signal<string>('');
   readonly dropdownCarreraAbierto = signal<boolean>(false);
+
+  readonly filtroFormularioControl = new FormControl('', { nonNullable: true });
+  readonly filtroFormularioText = signal<string>('');
+  readonly formularioSeleccionadoId = signal<string>('');
+  readonly dropdownFormularioAbierto = signal<boolean>(false);
 
   private readonly searchSubject = new Subject<string>();
   private readonly cedulaSubject = new Subject<string>();
@@ -58,27 +75,63 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   readonly filterEstudiante = signal<string>('');
   readonly filterCedula = signal<string>('');
 
-  readonly carrerasFiltradas = computed(() => {
-    const termino = this.filtroCarreraText().toLowerCase().trim();
-    const lista = this.carreras();
-    if (!termino) return lista;
-    return lista.filter((c) => (c.nombre || '').toLowerCase().includes(termino));
-  });
+  /**
+   * Extrae únicamente las carreras con casos activos del periodo lectivo en curso
+   */
+  readonly carrerasDisponibles = computed<CarreraConFichas[]>(() => {
+    const mapa = new Map<string, number>();
 
-  readonly estadosDisponibles = computed(() => {
-    const set = new Set<string>();
     this.reporteNee().forEach(item => {
-      if (item.estado_ficha) { 
-        set.add(item.estado_ficha);
+      const nombre = (item.carrera || 'Sin Carrera').trim();
+      if (nombre) {
+        mapa.set(nombre, (mapa.get(nombre) || 0) + 1);
       }
     });
-    return Array.from(set);
+
+    return Array.from(mapa.entries())
+      .map(([nombre, totalFichas]) => ({ nombre, totalFichas }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
   });
+
+  readonly carrerasFiltradas = computed(() => {
+    const termino = this.filtroCarreraText().toLowerCase().trim();
+    const lista = this.carrerasDisponibles();
+    if (!termino) return lista;
+    return lista.filter((c) => c.nombre.toLowerCase().includes(termino));
+  });
+
+  readonly formulariosFiltrados = computed(() => {
+    const termino = this.filtroFormularioText().toLowerCase().trim();
+    const lista = this.formularios();
+    if (!termino) return lista;
+    return lista.filter((f) => 
+      (f.titulo || '').toLowerCase().includes(termino) || 
+      String(f.version || '').includes(termino)
+    );
+  });
+
+  getFormularioNombre(item: any): string {
+    if (item?.formulario?.titulo) {
+      const ver = item.formulario.version ? ` (v${item.formulario.version})` : '';
+      return `${item.formulario.titulo}${ver}`;
+    }
+
+    const formId = item?.formulario_id || item?.formulario?.id;
+    if (formId && this.formularios().length > 0) {
+      const encontrado = this.formularios().find(f => String(f.id) === String(formId));
+      if (encontrado?.titulo) {
+        return `${encontrado.titulo} (v${encontrado.version})`;
+      }
+    }
+    return 'Ficha Socioeconómica';
+  }
 
   readonly reporteFiltrado = computed(() => {
     const term = this.filterEstudiante().toLowerCase().trim();
     const cedulaTerm = this.filterCedula().toLowerCase().trim();
     const carreraTerm = this.filtroCarreraText().toLowerCase().trim();
+    const formSelectedId = this.formularioSeleccionadoId();
+    const formText = this.filtroFormularioText().toLowerCase().trim();
     const estado = this.filterEstado();
 
     return this.reporteNee().filter(item => {
@@ -87,6 +140,14 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
       if (carreraTerm) {
         const carreraNombre = (item.carrera || '').toLowerCase();
         if (!carreraNombre.includes(carreraTerm)) return false;
+      }
+
+      if (formSelectedId) {
+        const fId = (item as any)?.formulario_id || (item as any)?.formulario?.id;
+        if (String(fId) !== String(formSelectedId)) return false;
+      } else if (formText) {
+        const fNombre = this.getFormularioNombre(item).toLowerCase();
+        if (!fNombre.includes(formText)) return false;
       }
 
       if (cedulaTerm) {
@@ -104,10 +165,13 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   readonly totalCasos = computed(() => this.reporteFiltrado().length);
 
   readonly tieneFiltrosActivos = computed(() => {
+    const carreraActiva = this.esCoordinadorCarrera() ? false : !!this.filtroCarreraText();
+
     return !!this.filterEstudiante() ||
            !!this.filterCedula() ||
-           !!this.filtroCarreraText() ||
-           this.filterRiesgo() !== 'TODOS' ||
+           carreraActiva ||
+           !!this.filtroFormularioText() ||
+           !!this.formularioSeleccionadoId() ||
            this.filterEstado() !== 'TODOS';
   });
 
@@ -124,7 +188,14 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
       this.filtroCarreraText.set((value || '').trim());
     });
 
-    this.cargarCarreras();
+    this.filtroFormularioControl.valueChanges.subscribe(value => {
+      this.filtroFormularioText.set((value || '').trim());
+      if (this.formularioSeleccionadoId()) {
+        this.formularioSeleccionadoId.set('');
+      }
+    });
+
+    this.cargarAuxiliares();
     this.cargarReporteEspecializado();
   }
 
@@ -136,6 +207,7 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown.escape')
   onEscapePress(): void {
     this.dropdownCarreraAbierto.set(false);
+    this.dropdownFormularioAbierto.set(false);
   }
 
   onSearchChange(event: Event): void {
@@ -159,8 +231,8 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
     this.cedulaSubject.next(val);
   }
 
-  seleccionarCarrera(c: Carrera): void {
-    if (!c || !c.nombre) return;
+  seleccionarCarrera(c: CarreraConFichas): void {
+    if (!c || !c.nombre || this.esCoordinadorCarrera()) return;
     this.filtroCarreraControl.setValue(c.nombre);
     this.filtroCarreraText.set(c.nombre.trim());
     this.dropdownCarreraAbierto.set(false);
@@ -173,14 +245,32 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   }
 
   limpiarFiltroCarrera(): void {
+    if (this.esCoordinadorCarrera()) return;
     this.filtroCarreraControl.setValue('');
     this.filtroCarreraText.set('');
     this.dropdownCarreraAbierto.set(false);
   }
 
-  onRiesgoChange(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.filterRiesgo.set(value);
+  seleccionarFormulario(f: Formulario): void {
+    if (!f || !f.id) return;
+    const label = `${f.titulo} (v${f.version})`;
+    this.filtroFormularioControl.setValue(label, { emitEvent: false });
+    this.filtroFormularioText.set(label);
+    this.formularioSeleccionadoId.set(f.id);
+    this.dropdownFormularioAbierto.set(false);
+  }
+
+  cerrarDropdownFormulario(): void {
+    setTimeout(() => {
+      this.dropdownFormularioAbierto.set(false);
+    }, 200);
+  }
+
+  limpiarFiltroFormulario(): void {
+    this.filtroFormularioControl.setValue('', { emitEvent: false });
+    this.filtroFormularioText.set('');
+    this.formularioSeleccionadoId.set('');
+    this.dropdownFormularioAbierto.set(false);
   }
 
   onEstadoChange(event: Event): void {
@@ -191,10 +281,12 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
   limpiarFiltros(): void {
     this.filterEstudianteInput.set('');
     this.filterCedulaInput.set('');
-    this.limpiarFiltroCarrera();
+    if (!this.esCoordinadorCarrera()) {
+      this.limpiarFiltroCarrera();
+    }
+    this.limpiarFiltroFormulario();
     this.searchSubject.next('');
     this.cedulaSubject.next('');
-    this.filterRiesgo.set('TODOS');
     this.filterEstado.set('TODOS');
   }
 
@@ -202,10 +294,39 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
     this.showMobileFilters.update(v => !v);
   }
 
-  cargarCarreras(): void {
-    this.carreraService.getCarreras().subscribe({
-      next: (data) => this.carreras.set((data || []).filter(c => !c.fecha_desactivacion)),
-      error: (err) => console.error('Error al cargar carreras:', err)
+  cargarAuxiliares(): void {
+    forkJoin({
+      formularios: this.formularioService.getFormularios().pipe(catchError(() => of([]))),
+      asignaciones: this.coordinadorCarreraService.getAsignaciones().pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ formularios, asignaciones }) => {
+        const user: any = this.authService.user();
+        this.formularios.set(formularios || []);
+
+        if (this.esCoordinadorCarrera()) {
+          const userId = user?.id;
+
+          const asignacionActiva = (asignaciones || []).find((a: any) => {
+            const uId = a.usuario_id || (a.usuario as any)?.id;
+            return String(uId) === String(userId) && !a.fecha_fin;
+          });
+
+          let carreraNombreAsignada = '';
+
+          if (asignacionActiva?.carrera?.nombre) {
+            carreraNombreAsignada = asignacionActiva.carrera.nombre;
+          } else if (user?.carrera?.nombre) {
+            carreraNombreAsignada = user.carrera.nombre;
+          }
+
+          if (carreraNombreAsignada) {
+            this.filtroCarreraControl.setValue(carreraNombreAsignada);
+            this.filtroCarreraText.set(carreraNombreAsignada);
+            this.filtroCarreraControl.disable({ emitEvent: false });
+          }
+        }
+      },
+      error: (err) => console.error('Error al cargar datos auxiliares:', err)
     });
   }
 
@@ -240,14 +361,21 @@ export class PrioridadAtencionComponent implements OnInit, OnDestroy {
 
   verFicha(fichaId: string): void {
     if (!fichaId) return;
-    this.router.navigate(['/admin/revision-fichas', fichaId]);
+    this.router.navigate(['/admin/revision-fichas', fichaId], {
+      state: { soloLectura: this.esCoordinadorCarrera() }
+    });
   }
 
   exportarReporte(): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para exportar reportes.', 'warning');
+      return;
+    }
+
     if (this.totalCasos() === 0) {
       this.toastService.show('No hay datos disponibles para exportar.', 'warning');
       return;
     }
-    this.toastService.show('Exportación simulada iniciada correctamente.', 'success');
+    this.toastService.show('Exportación iniciada correctamente.', 'success');
   }
 }

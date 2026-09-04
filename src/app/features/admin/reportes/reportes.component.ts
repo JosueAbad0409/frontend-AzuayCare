@@ -155,11 +155,17 @@ export class ReportesComponent implements OnInit, OnDestroy {
       this.filtrosDisponibles.set([]);
 
       if (periodoId) {
+        // 🔥 CORRECCIÓN: Filtrar los formularios que pertenecen AL NUEVO periodo seleccionado
+        const filtrados = this.formularios().filter(f => f.periodo_id === periodoId);
+        this.formulariosDelPeriodo.set(filtrados);
+        
         this.cargarEstadisticas(periodoId);
       } else {
+        // Si se limpia el periodo, limpiamos la lista de formularios
+        this.formulariosDelPeriodo.set([]); 
         this.estadisticas.set(null);
-        this.cdRef.markForCheck();
       }
+      this.cdRef.markForCheck(); // Asegurarnos de renderizar los cambios
     });
 
     this.filterForm.get('carrera_id')?.valueChanges.subscribe((carreraId: string) => {

@@ -27,7 +27,7 @@
 }
 
 /* ========================================================== */
-/*  MODAL DE EDICIÓN NATIVO (Angular Reactive Forms)           */
+/*  MODAL DE EDICIÓN NATIVO                                   */
 /* ========================================================== */
 
 .edit-modal-overlay {
@@ -222,7 +222,7 @@
   box-sizing: border-box;
 }
 .edit-control:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
-.edit-control:disabled { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+.edit-control:disabled { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
 .edit-control.is-invalid { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
 
 .edit-error {
@@ -288,15 +288,12 @@
 .edit-btn-primary:hover { background-color: #6d28d9; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.4); }
 .edit-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 
-/* Scrollbar limpio dentro del modal */
 .edit-modal-body::-webkit-scrollbar { width: 8px; }
 .edit-modal-body::-webkit-scrollbar-track { background: transparent; }
 .edit-modal-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 9999px; }
 .edit-modal-body::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
 
-/* ========================================================== */
-/*  SWAL Y MODAL "ASIGNAR COORDINADOR" (sin cambios)           */
-/* ========================================================== */
+/* SWAL REUSABLE */
 ::ng-deep .custom-swal-popup {
   border-radius: 1rem !important;
   padding: 1.5rem !important;

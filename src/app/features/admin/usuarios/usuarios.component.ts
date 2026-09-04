@@ -17,6 +17,7 @@ import { CiclosService } from '../../../core/services/ciclos.service';
 import { CoordinadorCarreraService } from '../../../core/services/coordinador-carrera.service';
 import { UbicacionesService } from '../../../core/services/ubicaciones.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { cedulaEcuatorianaValidator } from '../../../core/validators/cedula.validator';
 
 type TabEdicion = 'identidad' | 'academico' | 'socioeconomico';
@@ -39,7 +40,18 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly coordinadorCarreraService = inject(CoordinadorCarreraService);
   private readonly ubicacionesService = inject(UbicacionesService);
   private readonly toastService = inject(ToastService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+
+  // Detección de Rol Coordinador
+  readonly esCoordinadorCarrera = computed(() => {
+    const user: any = this.authService.user();
+    const rolStr = typeof user?.rol === 'string' ? user.rol : JSON.stringify(user?.rol || '');
+    return rolStr.includes('COORDINADOR_CARRERA');
+  });
+
+  // Nombre de la carrera asignada al coordinador
+  readonly carreraCoordinadorNombre = signal<string>('');
 
   // Estados reactivos (Signals) - Directorio
   readonly usuarios = signal<Usuario[]>([]);
@@ -67,7 +79,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   private readonly filterSubject = new Subject<{ campo: string; valor: string }>();
   private filterSubscription?: Subscription;
 
-  // Clases CSS personalizadas para modales SweetAlert2 (solo se usan en "Asignar Coordinador")
+  // Clases CSS personalizadas para modales SweetAlert2
   private readonly SWAL_CUSTOM_CLASS = {
     popup: 'custom-swal-popup custom-swal-centered',
     confirmButton: 'custom-swal-confirm',
@@ -75,9 +87,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     htmlContainer: 'custom-swal-html'
   };
 
-  // ==========================================================
-  //  MODAL DE EDICIÓN NATIVO (Reactive Forms) - Reemplaza SweetAlert2
-  // ==========================================================
+  // Modal de edición nativo
   readonly modalEdicionAbierto = signal(false);
   readonly guardandoEdicion = signal(false);
   readonly cargandoUsuarioEdicion = signal(false);
@@ -102,7 +112,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   readonly minDateNacimiento: string;
   readonly edicionForm: FormGroup;
 
-  // Mapa de qué pestaña pertenece cada control (para saltar automáticamente al error)
+  // Mapa de pestaña por control
   private readonly tabPorControl: Record<string, TabEdicion> = {
     tipo_documento: 'identidad', cedula: 'identidad', primer_nombre: 'identidad', segundo_nombre: 'identidad',
     primer_apellido: 'identidad', segundo_apellido: 'identidad', email_institucional: 'identidad',
@@ -123,8 +133,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     });
   });
 
-  // Listado de roles para el filtro y para el select de edición
+  // Listado de roles para el filtro: SOLO 'ESTUDIANTE' si es Coordinador de Carrera
   readonly rolesDisponibles = computed(() => {
+    if (this.esCoordinadorCarrera()) {
+      return ['ESTUDIANTE'];
+    }
     const set = new Set<string>();
     this.usuarios().forEach(u => {
       if (u.rol?.nombre) set.add(u.rol.nombre);
@@ -142,12 +155,15 @@ export class UsuariosComponent implements OnInit, OnDestroy {
 
   // Verificador de filtros activos
   readonly tieneFiltrosActivos = computed(() => {
+    const carreraFiltroActivo = this.esCoordinadorCarrera() ? false : !!this.filterCarrera();
+    const rolFiltroActivo = this.esCoordinadorCarrera() ? false : !!this.filterRol();
+
     return !!(
       this.filterNombre() ||
       this.filterCorreo() ||
       this.filterCedula() ||
-      this.filterRol() ||
-      this.filterCarrera() ||
+      rolFiltroActivo ||
+      carreraFiltroActivo ||
       this.filtroEstado() !== 'ACTIVOS' ||
       this.filterAsigCoord() ||
       this.filterAsigCarrera() ||
@@ -163,8 +179,21 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     const fRol = this.filterRol();
     const fCarrera = this.filterCarrera().toLowerCase().trim();
     const estado = this.filtroEstado();
+    const esCoord = this.esCoordinadorCarrera();
+    const carreraCoordNorm = this.carreraCoordinadorNombre().toLowerCase().trim();
 
     return this.usuarios().filter(u => {
+      const carreraUsuarioNorm = this.getCarreraNombreDeAsignacion(u).toLowerCase().trim();
+
+      // RESTRICCIÓN ROL COORDINADOR DE CARRERA (Solo estudiantes de su carrera)
+      if (esCoord) {
+        if (carreraCoordNorm && !carreraUsuarioNorm.includes(carreraCoordNorm)) {
+          return false;
+        }
+        const rolNombre = u.rol?.nombre || 'ESTUDIANTE';
+        if (rolNombre !== 'ESTUDIANTE') return false;
+      }
+
       const estaInactivo = !!u.fecha_desactivacion;
       if (estado === 'ACTIVOS' && estaInactivo) return false;
       if (estado === 'INACTIVOS' && !estaInactivo) return false;
@@ -182,14 +211,13 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         if (!u.cedula || !u.cedula.includes(fCedula)) return false;
       }
 
-      if (fRol) {
+      if (fRol && !esCoord) {
         const rolNombre = u.rol?.nombre || 'ESTUDIANTE';
         if (rolNombre !== fRol) return false;
       }
 
-      if (fCarrera) {
-        const carreraNombre = this.getCarreraNombreDeAsignacion(u).toLowerCase();
-        if (!carreraNombre.includes(fCarrera)) return false;
+      if (fCarrera && !esCoord) {
+        if (!carreraUsuarioNorm.includes(fCarrera)) return false;
       }
 
       return true;
@@ -201,15 +229,22 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     const fCoord = this.filterAsigCoord().toLowerCase().trim();
     const fCarr = this.filterAsigCarrera().toLowerCase().trim();
     const fFecha = this.filterAsigFecha().trim();
+    const esCoord = this.esCoordinadorCarrera();
+    const carreraCoordNorm = this.carreraCoordinadorNombre().toLowerCase().trim();
 
     return this.asignaciones().filter(a => {
+      const nombreCarrera = (a.carrera?.nombre || '').toLowerCase().trim();
+
+      if (esCoord && carreraCoordNorm) {
+        if (!nombreCarrera.includes(carreraCoordNorm)) return false;
+      }
+
       if (fCoord) {
         const nombreCoord = `${a.usuario?.primer_nombre || ''} ${a.usuario?.primer_apellido || ''}`.toLowerCase();
         if (!nombreCoord.includes(fCoord)) return false;
       }
 
-      if (fCarr) {
-        const nombreCarrera = (a.carrera?.nombre || '').toLowerCase();
+      if (fCarr && !esCoord) {
         if (!nombreCarrera.includes(fCarr)) return false;
       }
 
@@ -273,6 +308,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         this.aplicarFiltroSignal(campo, valor);
       });
 
+    // Si es coordinador de carrera, fijar automáticamente el filtro a ESTUDIANTE
+    if (this.esCoordinadorCarrera()) {
+      this.filterRol.set('ESTUDIANTE');
+    }
+
     this.cargarTodo();
   }
 
@@ -289,8 +329,12 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     this.filterNombre.set('');
     this.filterCorreo.set('');
     this.filterCedula.set('');
-    this.filterRol.set('');
-    this.filterCarrera.set('');
+    if (!this.esCoordinadorCarrera()) {
+      this.filterRol.set('');
+      this.filterCarrera.set('');
+    } else {
+      this.filterRol.set('ESTUDIANTE');
+    }
     this.filtroEstado.set('ACTIVOS');
     this.filterAsigCoord.set('');
     this.filterAsigCarrera.set('');
@@ -302,8 +346,12 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       case 'nombre': this.filterNombre.set(valor); break;
       case 'correo': this.filterCorreo.set(valor); break;
       case 'cedula': this.filterCedula.set(valor); break;
-      case 'rol': this.filterRol.set(valor); break;
-      case 'carrera': this.filterCarrera.set(valor); break;
+      case 'rol': 
+        if (!this.esCoordinadorCarrera()) this.filterRol.set(valor);
+        break;
+      case 'carrera': 
+        if (!this.esCoordinadorCarrera()) this.filterCarrera.set(valor);
+        break;
       case 'estado': this.filtroEstado.set(valor as 'ACTIVOS' | 'INACTIVOS' | 'TODOS'); break;
       case 'asigCoord': this.filterAsigCoord.set(valor); break;
       case 'asigCarrera': this.filterAsigCarrera.set(valor); break;
@@ -330,6 +378,31 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         this.paises.set(paises || []);
         this.asignaciones.set(asignaciones || []);
         this.usuarios.set(usuarios || []);
+
+        if (this.esCoordinadorCarrera()) {
+          const user: any = this.authService.user();
+          const userId = user?.id;
+
+          const asignacionActiva = (asignaciones || []).find((a: any) => {
+            const uId = a.usuario_id || (a.usuario as any)?.id;
+            return String(uId) === String(userId) && !a.fecha_fin;
+          });
+
+          let nombreCarrera = '';
+          if (asignacionActiva?.carrera?.nombre) {
+            nombreCarrera = asignacionActiva.carrera.nombre;
+          } else if (user?.carrera?.nombre) {
+            nombreCarrera = user.carrera.nombre;
+          } else if (user?.carrera_id) {
+            const matchC = (carreras || []).find(c => String(c.id) === String(user.carrera_id));
+            if (matchC?.nombre) nombreCarrera = matchC.nombre;
+          }
+
+          if (nombreCarrera) {
+            this.carreraCoordinadorNombre.set(nombreCarrera);
+            this.filterCarrera.set(nombreCarrera);
+          }
+        }
       },
       error: (err: HttpErrorResponse) => {
         console.error('Error al cargar datos:', err);
@@ -351,9 +424,13 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   // ==========================================================
-  //  MODAL "ASIGNAR COORDINADOR" (se conserva con SweetAlert2, sin cambios funcionales)
+  //  MODAL "ASIGNAR COORDINADOR"
   // ==========================================================
   abrirModalAsignar(): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para realizar asignaciones.', 'warning');
+      return;
+    }
     if (this.isSaving()) return;
 
     const listaUsuarios = this.coordinadoresCarreraList();
@@ -481,6 +558,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   desasignar(usuarioId: string, carreraId: string): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para remover asignaciones.', 'warning');
+      return;
+    }
     if (this.isSaving()) return;
 
     Swal.fire({
@@ -512,6 +593,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   eliminarUsuario(id: string): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para desactivar usuarios.', 'warning');
+      return;
+    }
     if (this.isSaving()) return;
 
     Swal.fire({
@@ -542,16 +627,47 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==========================================================
-  //  MODAL DE EDICIÓN NATIVO - LÓGICA REPLICADA DE completar-perfil
-  // ==========================================================
+  // 🟢 NUEVO MÉTODO: Reactivar usuario
+  reactivarUsuario(id: string): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para reactivar usuarios.', 'warning');
+      return;
+    }
+    if (this.isSaving()) return;
 
+    Swal.fire({
+      title: '¿Reactivar usuario?',
+      text: 'Se restaurará el acceso del usuario al sistema.',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="fas fa-user-check"></i> Sí, reactivar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      customClass: this.SWAL_CUSTOM_CLASS
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isSaving.set(true);
+        this.usuarioService.reactivar(id)
+          .pipe(finalize(() => this.isSaving.set(false)))
+          .subscribe({
+            next: () => {
+              this.toastService.show('Usuario reactivado con éxito.', 'success');
+              this.cargarTodo();
+            },
+            error: (err: HttpErrorResponse) => {
+              this.toastService.show(this.extraerMensajeError(err, 'Error al reactivar usuario.'), 'error');
+            }
+          });
+      }
+    });
+  }
+
+  // Configuración de form edicion
   private configurarSuscripcionesEdicion(): void {
-    // Bloqueo inicial estricto de los buscadores dependientes de ubicación
     this.edicionForm.controls['provincia_nacimiento_id'].disable({ emitEvent: false });
     this.edicionForm.controls['canton_nacimiento_id'].disable({ emitEvent: false });
 
-    // Tipo de documento -> validadores dinámicos de cédula
     this.edicionForm.controls['tipo_documento'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tipo) => {
       const controlDoc = this.edicionForm.controls['cedula'];
       controlDoc.clearValidators();
@@ -560,7 +676,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       controlDoc.updateValueAndValidity({ emitEvent: false });
     });
 
-    // Carrera -> filtra y habilita ciclo académico
     let prevCarreraId: string | null = null;
     this.edicionForm.controls['carrera_id'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((carreraId) => {
       if (carreraId === prevCarreraId) return;
@@ -579,10 +694,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       const cicloActual = cicloControl.value;
       const sigueSiendoValido = ciclosFiltrados.some(c => c.id === cicloActual);
       if (!sigueSiendoValido) cicloControl.setValue(null, { emitEvent: false });
-      if (ciclosFiltrados.length > 0) cicloControl.enable({ emitEvent: false }); else cicloControl.disable({ emitEvent: false });
+      if (ciclosFiltrados.length > 0 && !this.esCoordinadorCarrera()) cicloControl.enable({ emitEvent: false }); 
+      else cicloControl.disable({ emitEvent: false });
     });
 
-    // Etnia -> pueblo / etnia otra
     this.edicionForm.controls['etnia'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((etnia) => {
       const pueblo = this.edicionForm.controls['pueblo_nacionalidad'];
       const etniaOtra = this.edicionForm.controls['etnia_otra'];
@@ -594,7 +709,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       etniaOtra.updateValueAndValidity({ emitEvent: false });
     });
 
-    // Idioma -> idioma otro
     this.edicionForm.controls['idioma'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((idioma) => {
       const idiomaOtro = this.edicionForm.controls['idioma_otro'];
       if (idioma === 'Otro') idiomaOtro.setValidators([Validators.required, Validators.pattern(this.nombreRegex)]);
@@ -602,7 +716,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       idiomaOtro.updateValueAndValidity({ emitEvent: false });
     });
 
-    // Nacionalidad -> autocompleta y bloquea país de nacimiento
     this.edicionForm.controls['nacionalidad_id'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((nacionalidadId) => {
       const ctrlPaisNac = this.edicionForm.controls['pais_nacimiento_id'];
       if (nacionalidadId) {
@@ -610,11 +723,10 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         ctrlPaisNac.disable({ emitEvent: false });
       } else {
         ctrlPaisNac.setValue('', { emitEvent: true });
-        ctrlPaisNac.enable({ emitEvent: false });
+        if (!this.esCoordinadorCarrera()) ctrlPaisNac.enable({ emitEvent: false });
       }
     });
 
-    // País de nacimiento -> carga provincias
     this.edicionForm.controls['pais_nacimiento_id'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((paisId) => {
       const ctrlProv = this.edicionForm.controls['provincia_nacimiento_id'];
       const ctrlCan = this.edicionForm.controls['canton_nacimiento_id'];
@@ -631,7 +743,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
           next: (provs) => {
             this.provinciasEdicion.set(provs || []);
             if (provs && provs.length > 0) {
-              ctrlProv.enable({ emitEvent: false });
+              if (!this.esCoordinadorCarrera()) ctrlProv.enable({ emitEvent: false });
               ctrlProv.setValidators([Validators.required]);
             } else {
               ctrlProv.clearValidators();
@@ -650,7 +762,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Provincia de nacimiento -> carga cantones
     this.edicionForm.controls['provincia_nacimiento_id'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((provId) => {
       const ctrlCan = this.edicionForm.controls['canton_nacimiento_id'];
       ctrlCan.setValue('', { emitEvent: false });
@@ -662,7 +773,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
           next: (cants) => {
             this.cantonesEdicion.set(cants || []);
             if (cants && cants.length > 0) {
-              ctrlCan.enable({ emitEvent: false });
+              if (!this.esCoordinadorCarrera()) ctrlCan.enable({ emitEvent: false });
               ctrlCan.setValidators([Validators.required]);
             } else {
               ctrlCan.clearValidators();
@@ -683,6 +794,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   onIdentificacionInput(event: any): void {
+    if (this.esCoordinadorCarrera()) return;
     const tipo = this.edicionForm.get('tipo_documento')?.value;
     let valor = this.sanitizeInput(event?.target?.value || '');
     if (tipo === 'Cédula Ecuatoriana') valor = valor.replace(/[^0-9]/g, '').substring(0, 10);
@@ -691,11 +803,13 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   onCelularInput(event: any): void {
+    if (this.esCoordinadorCarrera()) return;
     let valor = this.sanitizeInput(event?.target?.value || '').replace(/[^0-9]/g, '').substring(0, 10);
     this.edicionForm.controls['numero_celular'].setValue(valor, { emitEvent: false });
   }
 
   onLetrasInput(controlName: string, event: any): void {
+    if (this.esCoordinadorCarrera()) return;
     let valor = this.sanitizeInput(event?.target?.value || '').replace(/[^a-zA-ZñÑáéíóúÁÉÍÓÚüÜ\s]/g, '');
     if (this.edicionForm.controls[controlName]) this.edicionForm.controls[controlName].setValue(valor, { emitEvent: false });
   }
@@ -724,7 +838,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
     this.cantonesEdicion.set([]);
     this.ciclosDisponiblesEdicion.set([]);
 
-    // Reset completo del formulario antes de cargar el nuevo usuario
     this.edicionForm.reset({
       tipo_documento: 'Cédula Ecuatoriana',
       cedula: '', numero_celular: '', email_institucional: '',
@@ -736,6 +849,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       fecha_nacimiento: '', nacionalidad_id: '', pais_nacimiento_id: '',
       provincia_nacimiento_id: '', canton_nacimiento_id: ''
     }, { emitEvent: false });
+
     this.edicionForm.controls['ciclo_id'].disable({ emitEvent: false });
     this.edicionForm.controls['provincia_nacimiento_id'].disable({ emitEvent: false });
     this.edicionForm.controls['canton_nacimiento_id'].disable({ emitEvent: false });
@@ -771,7 +885,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       nacionalidad_id: idNacionalidadSel,
     }, { emitEvent: false });
 
-    // Carrera / Ciclo (carga manual para evitar condiciones de carrera con el listener)
     const carreraId = u.carrera_id || u.carrera?.id || null;
     this.edicionForm.controls['carrera_id'].setValue(carreraId, { emitEvent: false });
     if (carreraId) {
@@ -779,12 +892,13 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         (c?.ciclosCarreras || []).some((cc: any) => String(cc.carrera_id || cc.carrera?.id) === String(carreraId))
       );
       this.ciclosDisponiblesEdicion.set(ciclosFiltrados);
-      if (ciclosFiltrados.length > 0) this.edicionForm.controls['ciclo_id'].enable({ emitEvent: false });
+      if (ciclosFiltrados.length > 0 && !this.esCoordinadorCarrera()) {
+        this.edicionForm.controls['ciclo_id'].enable({ emitEvent: false });
+      }
     }
     const cicloId = u.ciclo_id || u.ciclo?.id || null;
     this.edicionForm.controls['ciclo_id'].setValue(cicloId, { emitEvent: false });
 
-    // Ubicación en cascada: país -> provincia -> cantón (carga manual)
     this.edicionForm.controls['pais_nacimiento_id'].setValue(idPaisNacSel, { emitEvent: false });
     if (idNacionalidadSel) this.edicionForm.controls['pais_nacimiento_id'].disable({ emitEvent: false });
 
@@ -793,7 +907,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         next: (provs) => {
           this.provinciasEdicion.set(provs || []);
           if (provs && provs.length > 0) {
-            this.edicionForm.controls['provincia_nacimiento_id'].enable({ emitEvent: false });
+            if (!this.esCoordinadorCarrera()) this.edicionForm.controls['provincia_nacimiento_id'].enable({ emitEvent: false });
             this.edicionForm.controls['provincia_nacimiento_id'].setValidators([Validators.required]);
           }
           const provinciaId = u.provincia_nacimiento_id || null;
@@ -805,7 +919,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
               next: (cants) => {
                 this.cantonesEdicion.set(cants || []);
                 if (cants && cants.length > 0) {
-                  this.edicionForm.controls['canton_nacimiento_id'].enable({ emitEvent: false });
+                  if (!this.esCoordinadorCarrera()) this.edicionForm.controls['canton_nacimiento_id'].enable({ emitEvent: false });
                   this.edicionForm.controls['canton_nacimiento_id'].setValidators([Validators.required]);
                 }
                 this.edicionForm.controls['canton_nacimiento_id'].setValue(u.canton_nacimiento_id || null, { emitEvent: false });
@@ -819,6 +933,12 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       });
     }
 
+    if (this.esCoordinadorCarrera()) {
+      this.edicionForm.disable({ emitEvent: false });
+    } else {
+      this.edicionForm.enable({ emitEvent: false });
+    }
+
     this.modalEdicionAbierto.set(true);
   }
 
@@ -830,6 +950,11 @@ export class UsuariosComponent implements OnInit, OnDestroy {
   }
 
   guardarEdicion(): void {
+    if (this.esCoordinadorCarrera()) {
+      this.toastService.show('No tienes permisos para modificar usuarios.', 'warning');
+      return;
+    }
+
     if (this.guardandoEdicion()) return;
     this.errorEdicion.set('');
 
@@ -863,7 +988,7 @@ export class UsuariosComponent implements OnInit, OnDestroy {
       primer_apellido: this.sanitizeInput(v.primer_apellido),
       segundo_apellido: this.sanitizeInput(v.segundo_apellido),
       email_institucional: this.sanitizeInput(v.email_institucional),
-      numero_celular: this.sanitizeInput(v.numero_celular), // 🔥 ESTA ES LA LÍNEA QUE FALTABA
+      numero_celular: this.sanitizeInput(v.numero_celular),
       carrera_id: v.carrera_id,
       ciclo_id: v.ciclo_id,
       sexo: v.sexo,
@@ -907,7 +1032,6 @@ export class UsuariosComponent implements OnInit, OnDestroy {
         });
       },
       error: (err: HttpErrorResponse) => {
-        // El error real del backend siempre se muestra, tal como se pidió
         const msg = this.extraerMensajeError(err, 'Ocurrió un error en el servidor al actualizar el usuario.');
         this.errorEdicion.set(msg);
 
