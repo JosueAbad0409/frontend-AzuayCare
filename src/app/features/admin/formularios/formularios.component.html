@@ -17,6 +17,12 @@
         <i class="fas" [ngClass]="isSaving() ? 'fa-spinner fa-spin' : 'fa-plus'" aria-hidden="true"></i>
         <span>Nueva Ficha</span>
       </button>
+
+      <!-- Botón Informativo de Ayuda -->
+      <button type="button" class="btn btn-outline" (click)="showHelpModal.set(true)">
+        <i class="fas fa-question-circle" aria-hidden="true"></i>
+        <span>Ayuda del Sistema</span>
+      </button>
     </div>
   </header>
 
@@ -290,3 +296,89 @@
     </div>
   }
 </main>
+
+<!-- ========================================== -->
+<!-- MODAL FAQ / AYUDA INFORMACIÓN DE FICHAS    -->
+<!-- ========================================== -->
+@if (showHelpModal()) {
+<div class="qr-modal-backdrop" (click)="showHelpModal.set(false)" (keydown.escape)="showHelpModal.set(false)" tabindex="-1">
+  <div class="help-modal-card" role="dialog" aria-modal="true" aria-labelledby="help-list-title" (click)="$event.stopPropagation()">
+    <button type="button" class="qr-modal-close" (click)="showHelpModal.set(false)" aria-label="Cerrar ayuda">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="help-modal-header">
+      <div class="help-modal-icon">
+        <i class="fas fa-book-open"></i>
+      </div>
+      <h3 id="help-list-title">Gestión de Fichas Socioeconómicas</h3>
+      <p>Aprende a administrar los estados y periodos académicos</p>
+    </div>
+
+    <div class="help-faq-list">
+      <details class="help-faq-item" open>
+        <summary>
+          <span class="faq-title-text">¿Qué sucede al clonar una ficha?</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p>Se genera una nueva versión en estado Borrador vinculada al periodo académico que selecciones, conservando todas las secciones, preguntas, matrices y ponderaciones originales.</p>
+        </div>
+      </details>
+
+      <details class="help-faq-item">
+        <summary>
+          <span class="faq-title-text">¿Puedo eliminar un formulario publicado?</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p>No. Por motivos de integridad de datos e historial institucional, las fichas publicadas o que ya contienen respuestas registradas se bloquean para evitar la pérdida de información.</p>
+        </div>
+      </details>
+    </div>
+
+    <button type="button" class="btn-primary-modal mt-4" (click)="abrirTourDesdeAyuda()">
+      Ver Tour Interactivo de Gestión &rarr;
+    </button>
+  </div>
+</div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL GUÍA INTERACTIVA DE GESTIÓN          -->
+<!-- ========================================== -->
+@if (showGuideModal()) {
+<div class="qr-modal-backdrop" (click)="showGuideModal.set(false)" (keydown.escape)="showGuideModal.set(false)" tabindex="-1">
+  <div class="guide-modal-card" role="dialog" aria-modal="true" aria-labelledby="guide-list-title" (click)="$event.stopPropagation()">
+    <button type="button" class="qr-modal-close" (click)="showGuideModal.set(false)" aria-label="Cerrar ventana">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="guide-progress">
+      @for (step of guideSteps; track $index) {
+        <span class="guide-dot" [class.active]="$index === guideStep()"></span>
+      }
+    </div>
+
+    <div class="guide-content">
+      <h3 id="guide-list-title">{{ guideSteps[guideStep()].title }}</h3>
+      <p>{{ guideSteps[guideStep()].text }}</p>
+    </div>
+
+    <div class="guide-nav">
+      <button type="button" class="guide-nav-btn secondary" (click)="prevGuideStep()" [disabled]="guideStep() === 0">
+        Anterior
+      </button>
+      @if (guideStep() < guideSteps.length - 1) {
+        <button type="button" class="guide-nav-btn primary" (click)="nextGuideStep()">
+          Siguiente
+        </button>
+      } @else {
+        <button type="button" class="guide-nav-btn primary" (click)="showGuideModal.set(false)">
+          Entendido
+        </button>
+      }
+    </div>
+  </div>
+</div>
+}

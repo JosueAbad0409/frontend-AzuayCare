@@ -27,6 +27,11 @@
     </div>
 
     <div class="header-actions">
+      <!-- Botón de Ayuda Informativa -->
+      <button type="button" class="btn btn-outline" (click)="showHelpModal.set(true)">
+        <i class="fas fa-question-circle" aria-hidden="true"></i> Ayuda del Builder
+      </button>
+
       <button type="button" class="btn btn-outline" (click)="toggleTodasSecciones()">
         <i class="fas" [ngClass]="todasColapsadas() ? 'fa-expand-alt' : 'fa-compress-alt'" aria-hidden="true"></i>
         {{ todasColapsadas() ? 'Desplegar Todo' : 'Ocultar Preguntas' }}
@@ -211,7 +216,6 @@
 
   <!-- LISTA DE SECCIONES -->
   <main class="sections-list" aria-label="Lista de Secciones">
-    <!-- 🔥 INDICADOR DE CARGA PARA PLANTILLA Y NUEVAS SECCIONES -->
     @if (isSavingSeccion()) {
       <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-4 flex items-center justify-center gap-3 shadow-sm animate-pulse w-full box-border">
         <i class="fas fa-circle-notch fa-spin text-xl text-blue-600"></i>
@@ -264,7 +268,7 @@
         }
       </div>
 
-      <!-- CONTENIDO DE PREGUNTAS (COLAPSABLE) -->
+      <!-- CONTENIDO DE PREGUNTAS -->
       @if (!isSeccionColapsada(seccion.id)) {
       <div class="questions-container animate-fade-in" (dragover)="onDragOver($event)">
 
@@ -415,7 +419,6 @@
           </div>
           }
 
-          <!-- 🔥 PREGUNTA TIPO MATRIZ EN LISTA (BLOQUEADA SI NO ESTÁ EN MODO EDICIÓN) -->
           @if (esTipoMatriz(pregunta.tipo_campo_id) && editingPreguntaId() !== pregunta.id) {
           <div class="w-full overflow-x-auto box-border mt-2">
             <app-matriz-builder
@@ -682,7 +685,6 @@
               </div>
               }
 
-              <!-- FORMULARIO EDITABLE DE MATRIZ DENTRO DE LA CAJA DE CONFIGURACIÓN DE PREGUNTA -->
               @if (esTipoMatriz(preguntaForm.get('tipo_campo_id')?.value)) {
               <div class="my-4 animate-fade-in w-full overflow-x-auto box-border">
                 <app-matriz-builder
@@ -727,5 +729,121 @@
     }
   </main>
 
+</div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL DE AYUDA Y GUÍA DE TIPOS DE CAMPO    -->
+<!-- ========================================== -->
+@if (showHelpModal()) {
+<div class="qr-modal-backdrop" (click)="showHelpModal.set(false)" (keydown.escape)="showHelpModal.set(false)" tabindex="-1">
+  <div class="help-modal-card large" role="dialog" aria-modal="true" aria-labelledby="help-builder-title" (click)="$event.stopPropagation()">
+    <button type="button" class="qr-modal-close" (click)="showHelpModal.set(false)" aria-label="Cerrar ventana">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="help-modal-header">
+      <div class="help-modal-icon">
+        <i class="fas fa-layer-group"></i>
+      </div>
+      <h3 id="help-builder-title">Guía de Tipos de Campo y Estructura</h3>
+      <p>Aprende cuándo usar cada tipo de pregunta en tus fichas socioeconómicas</p>
+    </div>
+
+    <div class="help-faq-list">
+      <details class="help-faq-item" open>
+        <summary>
+          <span class="faq-title-text"><i class="fas fa-align-left text-purple-600 mr-2"></i>Campos de Texto (TEXTO, TEXTO_CORTO, TEXTO_LARGO)</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p><strong>Uso ideal:</strong> Para nombres, observaciones o explicaciones abiertas. Usa <code>TEXTO_CORTO</code> para respuestas breves (hasta 100 caracteres) y <code>TEXTO_LARGO</code> para párrafos detallados.</p>
+        </div>
+      </details>
+
+      <details class="help-faq-item">
+        <summary>
+          <span class="faq-title-text"><i class="fas fa-calculator text-blue-600 mr-2"></i>Campos Numéricos (NUMERICO, ENTERO, DECIMAL)</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p><strong>Uso ideal:</strong> Secciones financieras, ingresos, gastos o montos exactos. Las secciones configuradas como <em>Financieras</em> calculan automáticamente la suma total de estos valores.</p>
+        </div>
+      </details>
+
+      <details class="help-faq-item">
+        <summary>
+          <span class="faq-title-text"><i class="fas fa-list-check text-emerald-600 mr-2"></i>Selección Única y Múltiple</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p><strong>Uso ideal:</strong> Listas desplegables, opciones tipo radio (única) o casillas de verificación (múltiple). Permiten asociar <em>Subpreguntas condicionales</em> que se despliegan únicamente al marcar una opción específica.</p>
+        </div>
+      </details>
+
+      <details class="help-faq-item">
+        <summary>
+          <span class="faq-title-text"><i class="fas fa-th text-amber-600 mr-2"></i>Preguntas Tipo Matriz (MATRIZ)</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p><strong>Uso ideal:</strong> Tablas de doble entrada (Ej. evaluar el estado de varios artefactos en el hogar o listar miembros familiares con sus respectivos datos).</p>
+        </div>
+      </details>
+
+      <details class="help-faq-item">
+        <summary>
+          <span class="faq-title-text"><i class="fas fa-id-card text-rose-600 mr-2"></i>Validadores Nativos (CEDULA, RUC, CORREO, TELEFONO)</span>
+          <i class="fas fa-chevron-down faq-arrow"></i>
+        </summary>
+        <div class="faq-content">
+          <p><strong>Uso ideal:</strong> Garantizan que el estudiante ingrese números de documento o contactos válidos mediante expresiones regulares del sistema.</p>
+        </div>
+      </details>
+    </div>
+
+    <button type="button" class="btn-primary-modal mt-4" (click)="abrirTourDesdeAyuda()">
+      Ver Tour Paso a Paso del Builder &rarr;
+    </button>
+  </div>
+</div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL GUÍA INTERACTIVA DE PASOS BUILDER    -->
+<!-- ========================================== -->
+@if (showGuideModal()) {
+<div class="qr-modal-backdrop" (click)="showGuideModal.set(false)" (keydown.escape)="showGuideModal.set(false)" tabindex="-1">
+  <div class="guide-modal-card" role="dialog" aria-modal="true" aria-labelledby="guide-builder-title" (click)="$event.stopPropagation()">
+    <button type="button" class="qr-modal-close" (click)="showGuideModal.set(false)" aria-label="Cerrar ventana">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="guide-progress">
+      @for (step of guideSteps; track $index) {
+        <span class="guide-dot" [class.active]="$index === guideStep()"></span>
+      }
+    </div>
+
+    <div class="guide-content">
+      <h3 id="guide-builder-title">{{ guideSteps[guideStep()].title }}</h3>
+      <p>{{ guideSteps[guideStep()].text }}</p>
+    </div>
+
+    <div class="guide-nav">
+      <button type="button" class="guide-nav-btn secondary" (click)="prevGuideStep()" [disabled]="guideStep() === 0">
+        Anterior
+      </button>
+      @if (guideStep() < guideSteps.length - 1) {
+        <button type="button" class="guide-nav-btn primary" (click)="nextGuideStep()">
+          Siguiente
+        </button>
+      } @else {
+        <button type="button" class="guide-nav-btn primary" (click)="showGuideModal.set(false)">
+          Entendido
+        </button>
+      }
+    </div>
+  </div>
 </div>
 }

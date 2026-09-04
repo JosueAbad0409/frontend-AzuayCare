@@ -31,6 +31,26 @@ export class FormulariosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  // Control de modales informativos (FAQ y Tour)
+  readonly showHelpModal = signal<boolean>(false);
+  readonly showGuideModal = signal<boolean>(false);
+  readonly guideStep = signal<number>(0);
+
+  readonly guideSteps = [
+    {
+      title: '1. Creación de Borradores',
+      text: 'Usa el botón "Nueva Ficha" para configurar los metadatos de un formulario. Mientras permanezca en borrador, podrás estructurar sus secciones y preguntas libremente.'
+    },
+    {
+      title: '2. Publicación y Seguridad',
+      text: 'Al publicar la ficha, estará disponible para los estudiantes. Si una ficha ya fue publicada o contiene respuestas, no podrá eliminarse para preservar el historial institucional.'
+    },
+    {
+      title: '3. Versionamiento y Clonación',
+      text: 'Puedes duplicar la estructura completa de un formulario publicado de un periodo académico anterior hacia el periodo activo utilizando la función de clonación.'
+    }
+  ];
+
   readonly formularios = signal<Formulario[]>([]);
   readonly periodos = signal<PeriodoMatricula[]>([]);
   readonly tiposFormulario = signal<TipoFormulario[]>([]);
@@ -101,6 +121,28 @@ export class FormulariosComponent implements OnInit {
     });
 
     this.cargarDatos();
+  }
+
+  openGuideModal(): void {
+    this.guideStep.set(0);
+    this.showGuideModal.set(true);
+  }
+
+  abrirTourDesdeAyuda(): void {
+    this.showHelpModal.set(false);
+    this.openGuideModal();
+  }
+
+  nextGuideStep(): void {
+    if (this.guideStep() < this.guideSteps.length - 1) {
+      this.guideStep.update(s => s + 1);
+    }
+  }
+
+  prevGuideStep(): void {
+    if (this.guideStep() > 0) {
+      this.guideStep.update(s => s - 1);
+    }
   }
 
   onSearchChange(event: Event): void {

@@ -39,10 +39,28 @@ export class FormularioBuilderComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  // ✅ ViewChild para matriz-builder
   @ViewChild('matrizBuilder') matrizBuilder?: MatrizBuilderComponent;
 
-  // 🔥 ACTUALIZADO: Rangos predeterminados con tus QUINTILES
+  // Modales informativos (FAQ y Tour)
+  readonly showHelpModal = signal<boolean>(false);
+  readonly showGuideModal = signal<boolean>(false);
+  readonly guideStep = signal<number>(0);
+
+  readonly guideSteps = [
+    {
+      title: '1. Creación de Secciones y Preguntas',
+      text: 'Divide tu formulario en bloques temáticos. Agrega preguntas especificando su tipo de respuesta (Texto, Números, Selección o Matriz) e indica si son obligatorias.'
+    },
+    {
+      title: '2. Subpreguntas y Lógica Condicional',
+      text: 'En preguntas de Selección Única o Múltiple puedes marcar "Despliega subpregunta" para que solo aparezca una nueva pregunta al elegir esa opción específica.'
+    },
+    {
+      title: '3. Evaluación Financiera y Quintiles',
+      text: 'Usa secciones financieras (Ingresos / Gastos) para calcular el balance neto socioeconómico del estudiante y evaluar su vulnerabilidad en la tabla de Rangos.'
+    }
+  ];
+
   private readonly RANGOS_BALANCE_PREDETERMINADOS = [
     { variable_calculo: 'BALANCE', nombre: 'QUINTIL 1', valor_min: 0, valor_max: 300, es_vulnerable: true, orden: 1 },
     { variable_calculo: 'BALANCE', nombre: 'QUINTIL 2', valor_min: 301, valor_max: 520, es_vulnerable: true, orden: 2 },
@@ -52,13 +70,12 @@ export class FormularioBuilderComponent implements OnInit {
   ];
 
   private readonly SWAL_CUSTOM_CLASS = {
-  popup: 'custom-swal-popup',
-  confirmButton: 'custom-swal-confirm',
-  cancelButton: 'custom-swal-cancel',
-  title: 'custom-swal-title'
-};
+    popup: 'custom-swal-popup',
+    confirmButton: 'custom-swal-confirm',
+    cancelButton: 'custom-swal-cancel',
+    title: 'custom-swal-title'
+  };
 
-  // ✅ Properties para guardar datos de matriz
   private filasGuardar: any[] = [];
   private columnasGuardar: any[] = [];
 
@@ -187,7 +204,29 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // ✅ Métodos para capturar datos de matriz
+  // Métodos de navegación de la guía
+  openGuideModal(): void {
+    this.guideStep.set(0);
+    this.showGuideModal.set(true);
+  }
+
+  abrirTourDesdeAyuda(): void {
+    this.showHelpModal.set(false);
+    this.openGuideModal();
+  }
+
+  nextGuideStep(): void {
+    if (this.guideStep() < this.guideSteps.length - 1) {
+      this.guideStep.update(s => s + 1);
+    }
+  }
+
+  prevGuideStep(): void {
+    if (this.guideStep() > 0) {
+      this.guideStep.update(s => s - 1);
+    }
+  }
+
   onGuardarFilas(filas: any[]): void {
     this.filasGuardar = filas;
   }
@@ -350,7 +389,6 @@ export class FormularioBuilderComponent implements OnInit {
       const tipoTexto = this.tiposCampo().find(t => t.nombre === 'TEXTO')?.id || this.tiposCampo()[0].id;
       const tipoFecha = this.tiposCampo().find(t => t.nombre === 'FECHA')?.id || tipoTexto;
 
-      // 🔥 ACTUALIZADO: Aquí quité la pregunta del embarazo y los hijos
       const preguntasPlantilla = [
         { enunciado: 'Número de Cédula o Pasaporte', tipo_campo_id: tipoTexto },
         { enunciado: 'Nombres Completos', tipo_campo_id: tipoTexto },
@@ -877,7 +915,6 @@ export class FormularioBuilderComponent implements OnInit {
       return;
     }
 
-    // ✅ Recopilar datos de matriz si existe
     if (this.matrizBuilder) {
       this.matrizBuilder.guardarMatriz();
     }
@@ -1142,8 +1179,6 @@ export class FormularioBuilderComponent implements OnInit {
     }
   }
 
-  // Solo elimina filas/columnas que el usuario quitó del builder;
-  // la creación/actualización ya la hace el backend vía payloadUpdate en guardarPregunta.
   private async eliminarFilasColumnasQuitadas(preguntaId: string, filasTemp: any[], columnasTemp: any[]): Promise<void> {
     const preguntaOriginal = this.secciones().flatMap(s => s.preguntas || []).find(p => p.id === preguntaId);
     const idsFilasForm = filasTemp.filter(f => f.id).map(f => f.id);
@@ -1332,8 +1367,6 @@ export class FormularioBuilderComponent implements OnInit {
     });
   }
 
-  // 🔧 CORREGIDO: recibe preguntaId como segundo parámetro (igual que eliminarFilaExistente),
-  // porque el evento actualizarFila solo trae { filaId, es_multiple }, no el preguntaId.
   actualizarFilaExistente(event: { filaId: string; es_multiple: boolean }, preguntaId: string): void {
     if (this.esSoloLectura()) return;
     this.matricesService.updateFila(event.filaId, { es_multiple: event.es_multiple }).subscribe({
